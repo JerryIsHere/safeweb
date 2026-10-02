@@ -19,7 +19,11 @@
 
 on:
   push:
+<<<<<<< HEAD
     branches: [ "codespace-super-enigma-pjpj54qxwg55f7rv6" ]
+=======
+    branches: [ "main" ]
+>>>>>>> 396b493 (Add GitHub Actions workflow for Azure Node.js deployment)
   workflow_dispatch:
 
 env:
