@@ -1,0 +1,41 @@
+project:
+  name: SafeWeb
+  purpose: Educational research prototype for URL-based phishing signal analysis
+
+paths:
+  raw_data: data/raw
+  processed_data: data/processed
+  sample_data: data/sample
+  model: model/random_forest.joblib
+  reports: reports
+
+labels:
+  legitimate: 0
+  phishing: 1
+
+dataset:
+  url_column: url
+  label_column: label
+  remove_exact_duplicates: true
+
+training:
+  test_size: 0.20
+  random_state: 42
+  stratify: true
+
+model:
+  name: RandomForestClassifier
+  n_estimators: 200
+  random_state: 42
+
+risk_thresholds:
+  medium: 0.35
+  high: 0.70
+
+web:
+  host: 127.0.0.1
+  port: 5000
+
+safety:
+  analyze_url_string_only: true
+  make_network_requests: false

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en" class="language-pending">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f1f2ec">
+    <meta name="safeweb-deployment-mode" content="{{ deployment_mode }}">
+    <meta name="safeweb-api-url" content="{{ api_base_url }}">
+    <title data-i18n="pageTitle">SafeWeb | URL analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='translations.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='script.js') }}" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="{{ home_url }}" aria-label="SafeWeb home" data-i18n-attr="aria-label:homeLabel">
+        <span class="brand-mark" aria-hidden="true">S</span>
+        <span>SafeWeb</span>
+      </a>
+      <div class="header-actions">
+        <div class="topbar-meta">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span data-i18n="headerAnalysis">URL signal analysis</span>
+          <span class="topbar-divider" aria-hidden="true"></span>
+          <span class="model-state" data-i18n="{% if deployment_mode == 'static' %}{{ 'apiConfigured' if api_base_url else 'apiMissing' }}{% elif model_available %}modelReady{% else %}modelMissing{% endif %}">{% if deployment_mode == 'static' %}{{ 'API CONFIGURED' if api_base_url else 'API NOT CONFIGURED' }}{% elif model_available %}MODEL READY{% else %}MODEL NOT LOADED{% endif %}</span>
+        </div>
+        <button class="language-switcher" id="language-switcher" type="button" aria-haspopup="dialog" aria-controls="language-dialog" data-i18n-attr="aria-label:changeLanguage">
+          <span aria-hidden="true" id="language-code">EN</span>
+          <span class="switcher-caret" aria-hidden="true">⌄</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="intro" aria-labelledby="page-title">
+        <div class="eyebrow"><span data-i18n="researchLabel">RESEARCH PROTOTYPE</span><span class="eyebrow-rule" aria-hidden="true"></span><span data-i18n="reviewLabel">01 / URL REVIEW</span></div>
+        <h1 id="page-title"><span data-i18n="headlineOne">Read the signals.</span><br><em data-i18n="headlineTwo">Keep the context.</em></h1>
+        <p class="intro-copy" data-i18n="introCopy">Assess URL characteristics with a locally trained model. No page is opened, contacted, or downloaded.</p>
+      </section>
+
+      <section class="analysis-grid" aria-label="URL analysis" data-i18n-attr="aria-label:analysisLabel">
+        <form class="analysis-form" id="analysis-form" novalidate>
+          <label for="url-input" data-i18n="inputLabel">URL to assess</label>
+          <div class="input-wrap">
+            <span class="input-prefix" aria-hidden="true">↳</span>
+            <input id="url-input" name="url" type="url" placeholder="https://example.com/account" autocomplete="url" required aria-describedby="field-note form-message" data-i18n-attr="placeholder:inputPlaceholder">
+          </div>
+          <p class="field-note" id="field-note" data-i18n="fieldNote">Only the URL text is analyzed. Do not include passwords, tokens, or private links.</p>
+          <button class="analyze-button" type="submit">
+            <span class="button-label" data-i18n="analyze">Analyze URL</span><span class="button-arrow" aria-hidden="true">↗</span>
+          </button>
+          <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+          <div class="method-note">
+            <span class="note-index" data-i18n="scopeLabel">SCOPE</span>
+            <p data-i18n="methodNote">Predictions describe patterns learned from training data. They are not a verdict about a website.</p>
+          </div>
+        </form>
+
+        <section class="result-panel" aria-labelledby="result-title" aria-live="polite">
+          <div class="result-heading">
+            <div>
+              <div class="section-kicker" data-i18n="resultKicker">MODEL ASSESSMENT</div>
+              <h2 id="result-title" data-i18n="awaitingUrl">Awaiting a URL</h2>
+            </div>
+            <span class="risk-badge risk-idle" id="risk-badge" data-i18n="noResult">NO RESULT</span>
+          </div>
+          <div class="score-row">
+            <div class="score-value" id="score-value">--<span>%</span></div>
+            <div class="score-caption" data-i18n="scoreCaption">estimated phishing<br>class probability</div>
+          </div>
+          <div class="score-track" aria-hidden="true"><span id="score-fill"></span></div>
+          <div class="score-scale"><span data-i18n="lowerSignal">LOWER SIGNAL</span><span data-i18n="higherSignal">HIGHER SIGNAL</span></div>
+          <div class="result-divider"></div>
+          <div class="signals-heading"><h3 data-i18n="observedSignals">Observed signals</h3><span id="signal-count">0</span></div>
+          <ul class="signal-list" id="signal-list">
+            <li class="empty-signal" data-i18n="emptySignals">Signals will appear after analysis.</li>
+          </ul>
+          <details class="feature-details">
+            <summary data-i18n="featureSummary">View extracted features</summary>
+            <dl id="feature-list"></dl>
+          </details>
+          <p class="result-disclaimer" id="result-disclaimer" data-i18n="disclaimer">Risk level is a model warning, not a determination that a URL is safe or malicious.</p>
+        </section>
+      </section>
+      <footer class="page-footer"><span data-i18n="footerResearch">SAFEWEB · EDUCATIONAL RESEARCH</span><span data-i18n="footerNetwork">STRING-ONLY · NO NETWORK REQUESTS</span></footer>
+    </main>
+
+    <dialog class="language-dialog" id="language-dialog" open aria-labelledby="language-title" aria-describedby="language-subtitle">
+      <div class="language-dialog-heading">
+        <span class="section-kicker" data-i18n="languageKicker">LANGUAGE SETTINGS</span>
+        <h2 id="language-title" data-i18n="languageTitle">Choose your language</h2>
+        <p id="language-subtitle" data-i18n="languageSubtitle">Select your preferred language to continue.</p>
+      </div>
+      <div class="language-options" id="language-options" role="radiogroup" aria-label="Select your preferred language" data-i18n-attr="aria-label:languageLegend">
+        <button class="language-option" type="button" role="radio" aria-checked="false" data-language="vi"><span class="language-flag" aria-hidden="true">🇻🇳</span><span lang="vi">Tiếng Việt</span></button>
+        <button class="language-option" type="button" role="radio" aria-checked="true" data-language="en"><span class="language-flag" aria-hidden="true">🇬🇧</span><span lang="en">English</span></button>
+        <button class="language-option" type="button" role="radio" aria-checked="false" data-language="fr"><span class="language-flag" aria-hidden="true">🇫🇷</span><span lang="fr">Français</span></button>
+        <button class="language-option" type="button" role="radio" aria-checked="false" data-language="de"><span class="language-flag" aria-hidden="true">🇩🇪</span><span lang="de">Deutsch</span></button>
+      </div>
+      <div class="language-dialog-actions">
+        <button class="language-cancel" id="language-cancel" type="button" hidden data-i18n="languageCancel">Cancel</button>
+        <button class="language-confirm" id="language-confirm" type="button" data-i18n="languageConfirm">Continue</button>
+      </div>
+    </dialog>
+  </body>
+</html>

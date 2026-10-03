@@ -1,0 +1,1 @@
+"""SafeWeb Flask application package."""
