@@ -35,6 +35,13 @@ def create_app(
             home_url="/",
         )
 
+    @app.get("/health")
+    def health():
+        return jsonify({
+            "status": "ok",
+            "model_loaded": app.config["MODEL_BUNDLE"] is not None,
+        })
+
     @app.post("/predict")
     def predict():
         payload = request.get_json(silent=True)

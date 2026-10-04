@@ -1,3 +1,6 @@
+# safeweb
+hehehehehehhehhheheheheheheheheheheheheheheheheheheheheheheheheehehhe
+
 ## SafeWeb Research Prototype
 
 SafeWeb is an educational prototype that estimates whether URL characteristics resemble patterns in a labeled phishing dataset. It analyzes URL text only: it does not open submitted URLs, follow redirects, download files, or contact websites. A model result is a risk signal, not proof that a site is safe or malicious.
@@ -38,7 +41,13 @@ python -m src.evaluate data/raw/urls.csv
 python run.py
 ```
 
-Open `http://127.0.0.1:5000`. The API accepts `POST /predict` with JSON such as `{"url":"https://example.com"}`. Risk boundaries default to 0.35 for MEDIUM and 0.70 for HIGH; override them with `SAFEWEB_MEDIUM_THRESHOLD` and `SAFEWEB_HIGH_THRESHOLD`.
+The app exposes a health-check endpoint at `GET /health` and a prediction API at `POST /predict` with JSON such as `{"url":"https://example.com"}`. Open `http://127.0.0.1:5000`. Risk boundaries default to 0.35 for MEDIUM and 0.70 for HIGH; override them with `SAFEWEB_MEDIUM_THRESHOLD` and `SAFEWEB_HIGH_THRESHOLD`.
+
+For Render or another WSGI host, run:
+
+```bash
+gunicorn wsgi:app --bind 0.0.0.0:$PORT
+```
 
 ### GitHub Pages deployment
 

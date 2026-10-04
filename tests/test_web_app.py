@@ -39,6 +39,14 @@ def test_home_page_exposes_language_selection_and_translation_assets() -> None:
     assert b"window.safewebTranslations" in translations.data
 
 
+def test_health_check_reports_runtime_status() -> None:
+    response = create_app(model_path="missing-model.joblib").test_client().get("/health")
+
+    assert response.status_code == 200
+    assert response.json["status"] == "ok"
+    assert response.json["model_loaded"] is False
+
+
 def test_predict_rejects_empty_or_malformed_payloads() -> None:
     client = create_app(_bundle()).test_client()
 
