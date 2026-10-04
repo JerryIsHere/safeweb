@@ -20,8 +20,10 @@ def test_home_page_renders_model_state() -> None:
     response = create_app(model_path="missing-model.joblib").test_client().get("/")
 
     assert response.status_code == 200
-    assert b"MODEL NOT LOADED" in response.data
+    assert b"MODEL READY" in response.data
     assert b"No page is opened, contacted, or downloaded." in response.data
+    assert b"safeweb-api-url" not in response.data
+    assert b"/static/model-data.js" in response.data
 
 
 def test_home_page_exposes_language_selection_and_translation_assets() -> None:
@@ -87,26 +89,5 @@ def test_predict_reports_missing_model_without_stack_trace() -> None:
     assert response.json == {
         "error": {"code": "model_unavailable", "message": "No trained model is available yet."}
     }
+    assert not {"Access-Control-Allow-Origin", "Vary"} & set(response.headers.keys())
 
-
-def test_predict_cors_allows_only_configured_origin(monkeypatch) -> None:
-    monkeypatch.setenv("SAFEWEB_ALLOWED_ORIGIN", "https://jerryishere.github.io")
-    client = create_app(_bundle()).test_client()
-
-    allowed = client.options(
-        "/predict",
-        headers={
-            "Origin": "https://jerryishere.github.io",
-            "Access-Control-Request-Method": "POST",
-            "Access-Control-Request-Headers": "content-type",
-        },
-    )
-    rejected = client.post(
-        "/predict",
-        json={"url": "https://example.test"},
-        headers={"Origin": "https://attacker.example"},
-    )
-
-    assert allowed.headers["Access-Control-Allow-Origin"] == "https://jerryishere.github.io"
-    assert allowed.headers["Access-Control-Allow-Methods"] == "POST, OPTIONS"
-    assert "Access-Control-Allow-Origin" not in rejected.headers

@@ -20,16 +20,36 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
-      - name: Install template dependency
+          python-version: "3.11"
+      - name: Install static build dependency
         run: python -m pip install "Jinja2>=3.1,<4.0"
+      - name: Test browser inference
+        run: npm run test:browser
       - name: Build static site
-        run: python scripts/build_pages.py --output-dir _site
-        env:
-          SAFEWEB_API_URL: ${{ vars.SAFEWEB_API_URL }}
+        run: npm run build
+      - name: Verify Pages artifact
+        run: |
+          test -s _site/index.html
+          test -s _site/static/style.css
+          test -s _site/static/translations.js
+          test -s _site/static/browser-model.js
+          test -s _site/static/model-data.js
+          grep -Fq 'static/model-data.js' _site/index.html
+          if grep -R -E 'SAFEWEB_API_URL|SAFEWEB_ALLOWED_ORIGIN|safeweb-api-url|apiBaseUrl|/predict|localhost|render\.com' _site; then
+            echo "Backend or host-specific reference found in Pages artifact."
+            exit 1
+          fi
+          if grep -E '(src|href)="/' _site/index.html; then
+            echo "Root-relative asset path found; Pages repository subpaths require relative paths."
+            exit 1
+          fi
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

@@ -4,11 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f1f2ec">
-    <meta name="safeweb-deployment-mode" content="{{ deployment_mode }}">
-    <meta name="safeweb-api-url" content="{{ api_base_url }}">
     <title data-i18n="pageTitle">SafeWeb | URL analysis</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="{{ url_for('static', filename='translations.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='model-data.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='browser-model.js') }}" defer></script>
     <script src="{{ url_for('static', filename='script.js') }}" defer></script>
   </head>
   <body>
@@ -22,7 +22,7 @@
           <span class="status-dot" aria-hidden="true"></span>
           <span data-i18n="headerAnalysis">URL signal analysis</span>
           <span class="topbar-divider" aria-hidden="true"></span>
-          <span class="model-state" data-i18n="{% if deployment_mode == 'static' %}{{ 'apiConfigured' if api_base_url else 'apiMissing' }}{% elif model_available %}modelReady{% else %}modelMissing{% endif %}">{% if deployment_mode == 'static' %}{{ 'API CONFIGURED' if api_base_url else 'API NOT CONFIGURED' }}{% elif model_available %}MODEL READY{% else %}MODEL NOT LOADED{% endif %}</span>
+          <span class="model-state" data-i18n="modelReady">MODEL READY</span>
         </div>
         <button class="language-switcher" id="language-switcher" type="button" aria-haspopup="dialog" aria-controls="language-dialog" data-i18n-attr="aria-label:changeLanguage">
           <span aria-hidden="true" id="language-code">EN</span>
