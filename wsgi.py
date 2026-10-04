@@ -1,4 +1,4 @@
-"""WSGI entry point for production hosting such as Render or Gunicorn."""
+"""WSGI entry point for local Flask development and backend comparisons."""
 
 from web.app import app
 

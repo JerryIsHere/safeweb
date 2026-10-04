@@ -1,5 +1,3 @@
-# safeweb
-hehehehehehhehhheheheheheheheheheheheheheheheheheheheheheheheheehehhe
 
 ## SafeWeb Research Prototype
 
@@ -35,27 +33,28 @@ python -m src.train
 python -m src.evaluate data/raw/urls.csv
 ```
 
-### Web interface
+### Local development
 
 ```bash
 python run.py
 ```
 
-The app exposes a health-check endpoint at `GET /health` and a prediction API at `POST /predict` with JSON such as `{"url":"https://example.com"}`. Open `http://127.0.0.1:5000`. Risk boundaries default to 0.35 for MEDIUM and 0.70 for HIGH; override them with `SAFEWEB_MEDIUM_THRESHOLD` and `SAFEWEB_HIGH_THRESHOLD`.
+The Flask app is retained for local development and Python-side comparisons. It exposes `GET /health` and `POST /predict`; the production GitHub Pages frontend does not call either route. The browser frontend extracts features and runs the model locally. Python risk boundaries default to 0.35 for MEDIUM and 0.70 for HIGH; override them with `SAFEWEB_MEDIUM_THRESHOLD` and `SAFEWEB_HIGH_THRESHOLD` when using the development backend.
 
-For Render or another WSGI host, run:
+The browser model is exported from the trained scikit-learn artifact with:
 
 ```bash
-gunicorn wsgi:app --bind 0.0.0.0:$PORT
+python scripts/export_browser_model.py
+python scripts/compare_browser_model.py
 ```
 
 ### GitHub Pages deployment
 
-GitHub Pages serves the static interface; it cannot run the Flask app or the Python model. The `pages.yml` workflow exports the interface and deploys it on pushes to `main`. In the repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**. Without a backend, the interface is published but URL analysis is explicitly unavailable.
+The `pages.yml` workflow builds and deploys a fully static application on pushes to `main`. In repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**. The page-relative asset paths support project URLs such as `https://jerryishere.github.io/safeweb/`.
 
-To enable analysis, deploy the Flask app and trained model on a separate Python hosting service. Set the repository Actions variable `SAFEWEB_API_URL` to that service's base URL (without a trailing slash). Configure the backend environment variable `SAFEWEB_ALLOWED_ORIGIN` to `https://jerryishere.github.io`; this exact-origin allowlist enables the Pages browser to call `/predict`. The backend must also have the model artifact available. Redeploy the Pages workflow after setting or changing the repository variable.
+`web/static/model-data.js` contains the exported Random Forest trees and offline public-suffix rules required by the browser. It is generated from the actual trained model; after retraining, regenerate and commit the browser artifact. Once the page and static assets finish loading, URL analysis uses no network requests, opens no submitted URL, and requires no Python, Flask, Render service, or prediction API.
 
-Run the tests with `python -m pytest`. See `docs/project_report.md`, `docs/poster_content.md`, and `docs/presentation_outline.md` for research materials with experiment results intentionally left as placeholders.
+Run the browser tests with `npm run test:browser`, the Python tests with `python -m pytest`, and direct model parity checks with `python scripts/compare_browser_model.py` when the local Python model artifact is available. See `docs/project_report.md`, `docs/poster_content.md`, and `docs/presentation_outline.md` for research materials with experiment results intentionally left as placeholders.
 
 ## Architecture
 
@@ -64,10 +63,11 @@ data/
 	raw/          Synthetic development demo dataset; replace for research
 	processed/    Reproducible derived data (generated; not committed by default)
 	sample/       Reserved for clearly labeled development examples
-model/          Locally generated model artifacts
+model/          Locally generated Python model artifacts (not deployed)
 reports/        Locally generated evaluation outputs (not bundled)
 src/            Data, URL analysis, model, and explanation modules
-web/            Flask routes, HTML templates, and static CSS/JavaScript
+web/            Flask development routes, shared template, and static browser app/model
+scripts/        Static-site build, browser-model export, and parity validation
 tests/          Automated behavior tests
 config/         Shared project defaults
 docs/           Project plan and science-fair materials

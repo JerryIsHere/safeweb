@@ -1,27 +1,22 @@
 const translations = window.safewebTranslations || { en: {} };
+const { assessUrl, validateUrl } = window.SafewebBrowserModel || {};
 const supportedLanguages = ["vi", "en", "fr", "de"];
 const storageKey = "safeweb.language";
 const form = document.querySelector("#analysis-form");
 const input = document.querySelector("#url-input");
 const message = document.querySelector("#form-message");
-const submitButton = form.querySelector("button[type='submit']");
-const submitLabel = submitButton.querySelector(".button-label");
 const dialog = document.querySelector("#language-dialog");
 const languageSwitcher = document.querySelector("#language-switcher");
 const languageCode = document.querySelector("#language-code");
 const languageOptions = [...document.querySelectorAll(".language-option")];
 const confirmLanguage = document.querySelector("#language-confirm");
 const cancelLanguage = document.querySelector("#language-cancel");
-const deploymentMode = document.querySelector("meta[name='safeweb-deployment-mode']")?.content;
-const apiBaseUrl = document.querySelector("meta[name='safeweb-api-url']")?.content.trim().replace(/\/+$/, "") || "";
-
 let currentLanguage = "en";
 let selectedLanguage = "en";
 let hasConfirmedLanguage = false;
 let returnFocusElement = null;
 let latestResult = null;
 let currentMessageKey = null;
-let isSubmitting = false;
 
 function translation(key, language = currentLanguage) {
   const parts = key.split(".");
@@ -47,7 +42,10 @@ function applyLanguage(language) {
     setTranslatedAttributes(element, element.dataset.i18nAttr, locale);
   });
   languageCode.textContent = locale.toUpperCase();
-  submitLabel.textContent = translation(isSubmitting ? "analyzing" : "analyze", locale);
+  const modelState = document.querySelector(".model-state");
+  if (modelState) {
+    modelState.textContent = translation(window.safewebModel?.trees?.length ? "modelReady" : "modelMissing", locale);
+  }
   if (currentMessageKey) message.textContent = translation(currentMessageKey, locale);
   if (latestResult) renderResult(latestResult, locale);
 }
@@ -236,64 +234,37 @@ confirmLanguage.addEventListener("click", () => {
 
 cancelLanguage.addEventListener("click", () => dialog.close("cancel"));
 
-function validateUrl(value) {
-  if (!value.trim()) return "errorUrlRequired";
-  if (/\s/.test(value)) return "errorInvalidUrl";
-  try {
-    const parsed = new URL(value);
-    if (!["http:", "https:"].includes(parsed.protocol) || !parsed.hostname) return "errorInvalidUrl";
-  } catch {
-    return "errorInvalidUrl";
-  }
-  return null;
-}
-
-form.addEventListener("submit", async (event) => {
+form.addEventListener("submit", (event) => {
   event.preventDefault();
   setMessage(null);
-  const validationError = validateUrl(input.value);
-  if (validationError) {
-    setMessage(validationError);
+  if (!input.value.trim()) {
+    setMessage("errorUrlRequired");
+    input.setAttribute("aria-invalid", "true");
+    input.focus();
+    return;
+  }
+
+  let url;
+  try {
+    url = validateUrl(input.value);
+  } catch {
+    setMessage("errorInvalidUrl");
     input.setAttribute("aria-invalid", "true");
     input.focus();
     return;
   }
 
   input.removeAttribute("aria-invalid");
-  if (deploymentMode === "static" && !apiBaseUrl) {
-    setMessage("errorApiNotConfigured");
+  if (!window.safewebModel?.trees?.length || typeof assessUrl !== "function") {
+    setMessage("errorModelUnavailable");
     return;
   }
 
-  isSubmitting = true;
-  submitButton.disabled = true;
-  applyLanguage(currentLanguage);
-
   try {
-    const response = await fetch(`${apiBaseUrl}/predict`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: input.value.trim() }),
-    });
-    const result = await response.json();
-    if (!response.ok) {
-      const errorKey = {
-        invalid_request: "errorInvalidRequest",
-        invalid_url: "errorInvalidUrl",
-        model_unavailable: "errorModelUnavailable",
-        prediction_unavailable: "errorPredictionUnavailable",
-      }[result.error?.code] || "errorGeneric";
-      setMessage(errorKey);
-      return;
-    }
-    latestResult = result;
-    renderResult(result);
-  } catch {
-    setMessage("errorNetwork");
-  } finally {
-    isSubmitting = false;
-    submitButton.disabled = false;
-    submitLabel.textContent = translation("analyze");
+    latestResult = assessUrl(url);
+    renderResult(latestResult);
+  } catch (error) {
+    setMessage(error?.message === "The browser model is unavailable." ? "errorModelUnavailable" : "errorPredictionUnavailable");
   }
 });
 

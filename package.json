@@ -6,7 +6,8 @@
   "scripts": {
     "start": "./.venv/bin/python run.py",
     "dev": "./.venv/bin/python run.py",
-    "build": "./.venv/bin/python scripts/build_pages.py --output-dir _site",
+    "build": "python scripts/build_pages.py --output-dir _site",
+    "test:browser": "node --test tests/browser-model.test.js",
     "test": "./.venv/bin/python -m pytest -q"
   },
   "dependencies": {},
