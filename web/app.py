@@ -27,6 +27,7 @@ def create_app(
         return render_template(
             "index.html",
             home_url="/",
+            asset_version="dev",
         )
 
     @app.get("/health")

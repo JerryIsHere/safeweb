@@ -42,6 +42,7 @@ jobs:
           test -s _site/static/browser-model.js
           test -s _site/static/model-data.js
           grep -Fq 'static/model-data.js' _site/index.html
+          grep -Fq '?v=${{ github.sha }}' _site/index.html
           if grep -R -E 'SAFEWEB_API_URL|SAFEWEB_ALLOWED_ORIGIN|safeweb-api-url|apiBaseUrl|/predict|localhost|render\.com' _site; then
             echo "Backend or host-specific reference found in Pages artifact."
             exit 1
