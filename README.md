@@ -1,6 +1,3 @@
-# safeweb
-hehehehehehhehhheheheheheheheheheheheheheheheheheheheheheheheheehehhe
-
 ## SafeWeb Research Prototype
 
 SafeWeb is an educational prototype that estimates whether URL characteristics resemble patterns in a labeled phishing dataset. It analyzes URL text only: it does not open submitted URLs, follow redirects, download files, or contact websites. A model result is a risk signal, not proof that a site is safe or malicious.
