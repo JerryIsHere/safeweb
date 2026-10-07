@@ -1,0 +1,14 @@
+url,label,case_category,source
+https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa?ref=verify,0,long_legitimate,clearly synthetic
+https://short.example/login,1,short_phishing,clearly synthetic
+https://secure-login.example/verify?continue=account,1,https_phishing,clearly synthetic
+https://example.com/account,0,legitimate_with_suspicious_keyword,clearly synthetic
+https://update-profile.example/auth/validate,1,phishing_without_keyword,clearly synthetic
+http://192.0.2.10/path?x=1,1,ip_host,clearly synthetic
+https://xn--bcher-kva.example/,1,punycode,clearly synthetic
+https://example.com/%2Fsecure%2Fverify?token=a%2Fb,1,percent_encoded,clearly synthetic
+https://paypa1.example/account,1,typosquatting,clearly synthetic
+https://a.b.c.example.com/path,1,nested_subdomains,clearly synthetic
+https://example.com:8443/login,1,unusual_port,clearly synthetic
+https://example.com/path?username=admin&password=secret,1,embedded_credentials,clearly synthetic
+https://example.com/very/long/path?query=1&query=2&nested=3,0,complex_legitimate,clearly synthetic

@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 
 def explain_features(features: Mapping[str, int | float]) -> list[str]:
-    """Describe notable signals; none of these signals proves maliciousness."""
+    """Describe notable URL-only signals; none of these signals proves maliciousness."""
     explanations: list[str] = []
     if features.get("url_length", 0) >= 100:
         explanations.append("The URL is unusually long, a signal considered by the model.")
@@ -28,3 +28,8 @@ def explain_features(features: Mapping[str, int | float]) -> list[str]:
     if not explanations:
         explanations.append("No configured URL signals stood out; this is not proof of safety.")
     return explanations
+
+
+def explain_url_assessment(features: Mapping[str, int | float]) -> list[str]:
+    """Compatibility helper returning the same explanations for UI and API consumers."""
+    return explain_features(features)

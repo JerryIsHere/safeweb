@@ -64,13 +64,38 @@
             </div>
             <span class="risk-badge risk-idle" id="risk-badge" data-i18n="noResult">NO RESULT</span>
           </div>
-          <div class="score-row">
+          <div class="risk-summary">
             <div class="score-value" id="score-value">--<span>%</span></div>
-            <div class="score-caption" data-i18n="scoreCaption">estimated phishing<br>class probability</div>
+            <div class="risk-summary-body">
+              <div class="risk-level-label" id="risk-level-label" data-i18n="riskLevelUnknown">NO RESULT</div>
+              <p class="risk-verdict" id="risk-verdict" data-i18n="awaitingUrl">Awaiting a URL</p>
+            </div>
           </div>
           <div class="score-track" aria-hidden="true"><span id="score-fill"></span></div>
           <div class="score-scale"><span data-i18n="lowerSignal">LOWER SIGNAL</span><span data-i18n="higherSignal">HIGHER SIGNAL</span></div>
           <div class="result-divider"></div>
+          <div class="detail-grid">
+            <article class="insight-card">
+              <h3 data-i18n="whyThisResult">Why this result?</h3>
+              <ul class="signal-list" id="reason-list">
+                <li class="empty-signal" data-i18n="emptySignals">Signals will appear after analysis.</li>
+              </ul>
+            </article>
+            <article class="insight-card">
+              <h3 data-i18n="availableSignals">Available signals</h3>
+              <ul class="signal-list compact" id="signal-summary"></ul>
+            </article>
+          </div>
+          <div class="detail-grid">
+            <article class="insight-card">
+              <h3 data-i18n="whatShouldIDo">What should I do?</h3>
+              <ul class="signal-list compact" id="recommendation-list"></ul>
+            </article>
+            <article class="insight-card">
+              <h3 data-i18n="limitations">Limitations</h3>
+              <p class="limit-text" id="result-limitations">This assessment checks only URL text and local model features.</p>
+            </article>
+          </div>
           <div class="signals-heading"><h3 data-i18n="observedSignals">Observed signals</h3><span id="signal-count">0</span></div>
           <ul class="signal-list" id="signal-list">
             <li class="empty-signal" data-i18n="emptySignals">Signals will appear after analysis.</li>

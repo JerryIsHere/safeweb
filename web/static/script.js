@@ -111,7 +111,20 @@ function translateExplanation(explanation, language) {
     "The URL has relatively high character entropy.": "signalEntropy",
     "No configured URL signals stood out; this is not proof of safety.": "signalNone",
   };
-  if (explanationKeys[explanation]) return translation(explanationKeys[explanation], language);
+
+  if (typeof explanation === "string") {
+    if (explanationKeys[explanation]) return translation(explanationKeys[explanation], language);
+    if (explanation.startsWith("URL is unusually long:")) return translation("signalLong", language);
+    if (explanation.startsWith("Hostname contains")) return translation("signalSubdomains", language);
+    if (explanation.startsWith("Hostname uses an IP address")) return translation("signalIp", language);
+    if (explanation.startsWith("URL contains") && explanation.includes("special characters")) return translation("signalSpecial", language);
+    if (explanation.startsWith("URL entropy is")) return translation("signalEntropy", language);
+    if (explanation.startsWith("Suspicious keywords detected")) {
+      const keywordSuffix = explanation.replace(/^Suspicious keywords detected:\s*/, "").replace(/\.$/, "");
+      return translation("signalKeywords", language).replace("{keywords}", keywordSuffix);
+    }
+    if (explanation.startsWith("No strong URL-only signals")) return translation("signalNone", language);
+  }
 
   const keywordPrefix = "The URL contains configured keyword signals: ";
   if (typeof explanation === "string" && explanation.startsWith(keywordPrefix)) {
@@ -121,30 +134,100 @@ function translateExplanation(explanation, language) {
   return translation("signalUnknown", language);
 }
 
+function riskTheme(level) {
+  const themes = {
+    LOW: "safe",
+    CAUTION: "caution",
+    HIGH: "high-risk",
+    "VERY HIGH": "danger",
+  };
+  return themes[level] || "safe";
+}
+
+function riskClass(level) {
+  const classes = {
+    LOW: "low",
+    CAUTION: "caution",
+    HIGH: "high",
+    "VERY HIGH": "danger",
+  };
+  return classes[level] || "low";
+}
+
+function riskLabel(level, language = currentLanguage) {
+  const labels = {
+    LOW: "riskLevelLow",
+    CAUTION: "riskLevelCaution",
+    HIGH: "riskLevelHigh",
+    "VERY HIGH": "riskLevelVeryHigh",
+  };
+  return translation(labels[level] || "riskLevelLow", language);
+}
+
 function renderResult(result, language = currentLanguage) {
+  const level = result.risk_level || "LOW";
+  const score = Number.isFinite(result.risk_score)
+    ? Math.max(0, Math.min(100, Number(result.risk_score)))
+    : Math.round((Number(result.probability) || 0) * 100);
+
+  document.body.dataset.riskState = riskTheme(level);
+
   const predictionKey = result.prediction === "phishing"
     ? "predictionSuspicious"
     : "predictionLegitimate";
-  document.querySelector("#result-title").textContent = translation(predictionKey, language);
+  document.querySelector("#result-title").textContent = result.verdict || translation(predictionKey, language);
 
-  const riskMap = {
-    HIGH: { key: "riskHigh", className: "high" },
-    MEDIUM: { key: "riskMedium", className: "medium" },
-    LOW: { key: "riskLow", className: "low" },
-  };
-  const risk = riskMap[result.risk_level] || riskMap.LOW;
   const badge = document.querySelector("#risk-badge");
-  badge.textContent = translation(risk.key, language);
-  badge.className = `risk-badge risk-${risk.className}`;
+  badge.textContent = riskLabel(level, language);
+  badge.className = `risk-badge risk-${riskClass(level)}`;
 
-  const rawProbability = Number(result.probability);
-  const probability = Number.isFinite(rawProbability) ? Math.max(0, Math.min(1, rawProbability)) : 0;
-  const percentage = Math.round(probability * 100);
-  const score = document.querySelector("#score-value");
-  score.firstChild.textContent = String(percentage);
+  const levelLabel = document.querySelector("#risk-level-label");
+  levelLabel.textContent = riskLabel(level, language);
+  const verdict = document.querySelector("#risk-verdict");
+  verdict.textContent = result.verdict || translation(predictionKey, language);
+
+  const scoreValue = document.querySelector("#score-value");
+  scoreValue.innerHTML = `${score}<span>%</span>`;
   const fill = document.querySelector("#score-fill");
-  fill.style.width = `${percentage}%`;
-  fill.classList.toggle("high", risk.className === "high");
+  fill.style.width = `${score}%`;
+  fill.classList.toggle("high", level === "HIGH" || level === "VERY HIGH");
+  fill.classList.toggle("danger", level === "VERY HIGH");
+
+  const reasons = Array.isArray(result.reasons) && result.reasons.length
+    ? result.reasons
+    : Array.isArray(result.explanations)
+      ? result.explanations
+      : [];
+  const reasonList = document.querySelector("#reason-list");
+  reasonList.replaceChildren();
+  reasons.forEach((explanation) => {
+    const item = document.createElement("li");
+    item.textContent = translateExplanation(explanation, language);
+    reasonList.append(item);
+  });
+
+  const availableSignals = result.available_signals || {};
+  const signalSummary = document.querySelector("#signal-summary");
+  signalSummary.replaceChildren();
+  Object.entries(availableSignals).forEach(([name, value]) => {
+    const item = document.createElement("li");
+    item.textContent = `${name.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase())}: ${value}`;
+    signalSummary.append(item);
+  });
+
+  const recommendations = Array.isArray(result.recommendations) && result.recommendations.length
+    ? result.recommendations
+    : [translation("recommendationGeneric", language)];
+  const recommendationList = document.querySelector("#recommendation-list");
+  recommendationList.replaceChildren();
+  recommendations.forEach((itemText) => {
+    const item = document.createElement("li");
+    item.textContent = itemText;
+    recommendationList.append(item);
+  });
+
+  const limitations = document.querySelector("#result-limitations");
+  limitations.textContent = result.disclaimer || translation("disclaimer", language);
 
   const explanations = Array.isArray(result.explanations) ? result.explanations : [];
   const signalList = document.querySelector("#signal-list");

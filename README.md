@@ -1,11 +1,32 @@
 
-## SafeWeb Research Prototype
+## Mẫu nghiên cứu SafeWeb
 
-SafeWeb is an educational prototype that estimates whether URL characteristics resemble patterns in a labeled phishing dataset. It analyzes URL text only: it does not open submitted URLs, follow redirects, download files, or contact websites. A model result is a risk signal, not proof that a site is safe or malicious.
+SafeWeb là một nguyên mẫu giáo dục ước tính liệu các đặc trưng của URL có giống các mẫu trong tập dữ liệu lừa đảo đã gán nhãn hay không. Nó chỉ phân tích văn bản URL: không mở URL được gửi lên, không theo redirect, không tải xuống tệp hoặc liên hệ với trang web. Kết quả là một đánh giá rủi ro theo thang 0–100, kết hợp xác suất mô hình và các tín hiệu URL có sẵn, không phải bằng chứng cho thấy một trang web an toàn hoặc độc hại.
 
-### Setup
+### Mô hình rủi ro mới
 
-Use Python 3.11 or newer, then install the dependencies from the repository root:
+SafeWeb hiện đánh giá rủi ro theo thang bốn mức rõ ràng:
+
+- `LOW`: 0–24
+- `CAUTION`: 25–49
+- `HIGH`: 50–74
+- `VERY HIGH`: 75–100
+
+Mỗi kết quả đều đi kèm giải thích dựa trên các tín hiệu thực tế thu được từ URL: độ dài URL, số tầng subdomain, địa chỉ IP, ký tự đặc biệt, từ khóa như `login`, `verify`, `password`, `bank`, v.v., cùng với tín hiệu HTTPS/HTTP. Các thông tin như độ tuổi tên miền, danh sách đen, DNS, redirect hoặc nội dung trang web không được giả định nếu chưa có nguồn đáng tin cậy và tương thích với GitHub Pages.
+
+Nếu thông tin không thể kiểm tra an toàn trong trình duyệt, hệ thống hiển thị `Not checked` hoặc `Not available` thay vì giả cách đã xác minh.
+
+### Trạng thái mô hình
+
+- **Mô hình production hiện hành:** Random Forest 200 cây trên 30 đặc trưng URL baseline.
+- **Trạng thái:** Không thay đổi/không nâng cấp production model.
+- **Mô hình thử nghiệm:** Có tính năng mở rộng 12 đặc trưng xác định được, nhưng chưa được triển khai. Dữ liệu hiện tại là tổng hợp và không đại diện cho dữ liệu phòng chống lừa đảo thực tế.
+- **Kết luận:** Chọn **B. Improve dataset first**. Cần bộ dữ liệu đã ghi lại nguồn, ngày thu thập, quy tắc gán nhãn và phân tách domain/source trước khi xem xét thay đổi mô hình.
+- **Điểm rủi ro:** Kết quả cuối cùng 0–100 là **Risk Score**, không phải mức độ tin cậy cân bằng hay độ chắc chắn ML.
+
+### Thiết lập
+
+Sử dụng Python 3.11 hoặc mới hơn, sau đó cài đặt các phụ thuộc từ thư mục gốc của kho mã:
 
 ```bash
 python -m venv .venv
@@ -13,66 +34,80 @@ source .venv/bin/activate
 python -m pip install -r requirements.txt
 ```
 
-On Windows, activate the environment with `.venv\\Scripts\\activate`.
+Trên Windows, kích hoạt môi trường với `.venv\\Scripts\\activate`.
 
-### Dataset and model
+### Bộ dữ liệu và mô hình
 
-`data/raw/urls.csv` is synthetic development demo data. It is useful for exercising the training pipeline and web interface, but it is not research data and cannot establish real-world phishing detection performance. Do not present metrics from this file as real-world results or research findings. For research, replace it with a documented dataset and record its source, license, collection date, and labeling method.
+`data/raw/urls.csv` là dữ liệu mô phỏng phát triển tổng hợp. Nó hữu ích cho việc thực thi quy trình huấn luyện và giao diện web, nhưng không phải là dữ liệu nghiên cứu và không thể xác lập hiệu suất phát hiện lừa đảo trong thế giới thực. Không trình bày các số liệu từ tệp này như kết quả thực tế hoặc kết luận nghiên cứu. Đối với nghiên cứu, hãy thay thế bằng bộ dữ liệu đã được ghi chép rõ ràng và lưu lại nguồn gốc, giấy phép, ngày thu thập và phương pháp gán nhãn.
 
-The CSV must contain these required columns:
+CSV phải chứa các cột bắt buộc sau:
 
-| Column | Required values |
+| Cột | Giá trị bắt buộc |
 | --- | --- |
-| `url` | A non-empty URL string |
-| `label` | `0` for legitimate or `1` for phishing |
+| `url` | Chuỗi URL không rỗng |
+| `label` | `0` cho hợp pháp hoặc `1` cho lừa đảo |
 
-The default command reads `data/raw/urls.csv`, or you can pass another CSV path explicitly. Training validates HTTP(S) URLs and binary labels, reports invalid or conflicting rows clearly, removes exact duplicate URLs, and fits the Random Forest on the reproducible 80% training partition only. Evaluation recreates the isolated 20% test partition and writes metrics, a classification report, confusion matrix, feature importance, and error analysis under `reports/`. Any metrics generated from the bundled synthetic demo data are for pipeline verification only.
+Lệnh mặc định đọc `data/raw/urls.csv`, hoặc bạn có thể truyền đường dẫn CSV khác một cách rõ ràng. Quá trình huấn luyện kiểm tra các URL HTTP(S) và nhãn nhị phân, báo cáo các hàng không hợp lệ hoặc mâu thuẫn rõ ràng, loại bỏ các URL trùng chính xác, và huấn luyện Random Forest trên tập huấn luyện 80% có thể tái lập. Đánh giá tái tạo tập kiểm tra riêng 20% và ghi các số liệu, báo cáo phân loại, ma trận nhầm lẫn, độ quan trọng của đặc trưng và phân tích lỗi trong `reports/`. Bất kỳ số liệu nào được tạo từ dữ liệu demo tổng hợp đi kèm đều chỉ nhằm xác minh quy trình.
 
 ```bash
 python -m src.train
 python -m src.evaluate data/raw/urls.csv
 ```
 
-### Local development
+### Phát triển cục bộ
 
 ```bash
 python run.py
 ```
 
-The Flask app is retained for local development and Python-side comparisons. It exposes `GET /health` and `POST /predict`; the production GitHub Pages frontend does not call either route. The browser frontend extracts features and runs the model locally. Python risk boundaries default to 0.35 for MEDIUM and 0.70 for HIGH; override them with `SAFEWEB_MEDIUM_THRESHOLD` and `SAFEWEB_HIGH_THRESHOLD` when using the development backend.
+Ứng dụng Flask được giữ lại cho phát triển cục bộ và so sánh ở phía Python. Nó lộ ra `GET /health` và `POST /predict`; giao diện phía production trên GitHub Pages không gọi đến route nào trong số này. Giao diện trình duyệt trích xuất đặc trưng, chạy mô hình cục bộ và bổ sung một lớp đánh giá rủi ro theo quy tắc có thể giải thích. Giới hạn rủi ro của Python là 0.25 cho `CAUTION`, 0.50 cho `HIGH` và 0.75 cho `VERY HIGH`; có thể ghi đè bằng `SAFEWEB_LOW_THRESHOLD`, `SAFEWEB_MEDIUM_THRESHOLD` và `SAFEWEB_HIGH_THRESHOLD` khi sử dụng backend phát triển.
 
-The browser model is exported from the trained scikit-learn artifact with:
+### Tính mô tả và hướng dẫn khuyến nghị
+
+Kết quả không chỉ hiển thị `phishing` hay `legitimate`; nó hiển thị:
+
+- Điểm rủi ro 0–100
+- Mức rủi ro theo thang 4 mức
+- Lý do khả quan sát được từ URL
+- Danh sách tín hiệu càng sớm càng rõ
+- Hướng dẫn action phù hợp với mức độ cảnh báo: không nhập mật khẩu, không cung cấp tài khoản/chứng từ, xác minh qua kênh chính thức, đóng tab nếu rủi ro cao.
+
+Giao diện cũng đổi màu theo trạng thái rủi ro: an toàn, cảnh báo, nguy cơ cao, nguy hiểm rất cao. Điểm nhấn là không dựa hoàn toàn vào màu sắc; có nhãn văn bản và icon phụ trợ cho khả năng truy cập.
+
+Mô hình trình duyệt được xuất từ tệp tin mô hình scikit-learn đã huấn luyện với:
 
 ```bash
 python scripts/export_browser_model.py
 python scripts/compare_browser_model.py
 ```
 
-### GitHub Pages deployment
+### Triển khai trên GitHub Pages
 
-The `pages.yml` workflow builds and deploys a fully static application on pushes to `main`. In repository settings, set **Pages → Build and deployment → Source** to **GitHub Actions**. The page-relative asset paths support project URLs such as `https://jerryishere.github.io/safeweb/`.
+Workflow `pages.yml` xây dựng và triển khai ứng dụng tĩnh hoàn toàn trên các đẩy lên `main`. Trong cài đặt kho mã, hãy đặt **Pages → Build and deployment → Source** thành **GitHub Actions**. Các đường dẫn tài sản tương đối với trang hỗ trợ các URL dự án như `https://jerryishere.github.io/safeweb/`.
 
-`web/static/model-data.js` contains the exported Random Forest trees and offline public-suffix rules required by the browser. It is generated from the actual trained model; after retraining, regenerate and commit the browser artifact. Once the page and static assets finish loading, URL analysis uses no network requests, opens no submitted URL, and requires no Python, Flask, Render service, or prediction API.
+SafeWeb vẫn là ứng dụng client-side: không có localhost backend bắt buộc, không gửi URL ra ngoài, không cần Flask để phân tích trên GitHub Pages. Quy trình build tĩnh giữ nguyên và nội dung mô hình trình duyệt được tạo từ tệp mô hình Python đã huấn luyện.
 
-Run the browser tests with `npm run test:browser`, the Python tests with `python -m pytest`, and direct model parity checks with `python scripts/compare_browser_model.py` when the local Python model artifact is available. See `docs/project_report.md`, `docs/poster_content.md`, and `docs/presentation_outline.md` for research materials with experiment results intentionally left as placeholders.
+`web/static/model-data.js` chứa các cây Random Forest đã xuất và các quy tắc public-suffix ngoại tuyến cần thiết cho trình duyệt. Nó được tạo từ mô hình đã huấn luyện thực tế; sau khi huấn luyện lại, hãy tạo lại và cam kết tệp mô hình trình duyệt. Một khi trang và tài sản tĩnh tải xong, phân tích URL không gửi bất kỳ yêu cầu mạng nào, không mở URL nào được gửi lên và không cần Python, Flask, dịch vụ Render hoặc API dự đoán.
 
-## Architecture
+Chạy kiểm thử trình duyệt với `npm run test:browser`, kiểm thử Python với `python -m pytest`, và kiểm tra tính đồng nhất trực tiếp của mô hình với `python scripts/compare_browser_model.py` khi có sẵn tệp mô hình Python cục bộ. Xem `docs/project_report.md`, `docs/poster_content.md` và `docs/presentation_outline.md` để xem tài liệu nghiên cứu với kết quả thí nghiệm được giữ lại như placeholders.
+
+## Kiến trúc
 
 ```text
 data/
-	raw/          Synthetic development demo dataset; replace for research
-	processed/    Reproducible derived data (generated; not committed by default)
-	sample/       Reserved for clearly labeled development examples
-model/          Locally generated Python model artifacts (not deployed)
-reports/        Locally generated evaluation outputs (not bundled)
-src/            Data, URL analysis, model, and explanation modules
-web/            Flask development routes, shared template, and static browser app/model
-scripts/        Static-site build, browser-model export, and parity validation
-tests/          Automated behavior tests
-config/         Shared project defaults
-docs/           Project plan and science-fair materials
+	raw/          Dữ liệu demo phát triển tổng hợp; thay thế cho nghiên cứu
+	processed/    Dữ liệu dẫn xuất có thể tái lập (được tạo; không được cam kết theo mặc định)
+	sample/       Dành riêng cho các ví dụ phát triển được gán nhãn rõ ràng
+model/          Tệp mô hình Python do cục bộ tạo ra (không triển khai)
+reports/        Kết quả đánh giá do cục bộ tạo ra (không được đóng gói)
+src/            Các mô-đun dữ liệu, phân tích URL, mô hình và giải thích
+web/            Các route phát triển Flask, template dùng chung và ứng dụng/trình duyệt mô hình tĩnh
+scripts/        Xây dựng site tĩnh, xuất mô hình trình duyệt và xác thực tính đồng nhất
+tests/          Các kiểm thử hành vi tự động
+config/         Thiết lập chung của dự án
+docs/           Kế hoạch dự án và tài liệu hội nghị khoa học
 ```
 
-## Planned Workflow
+## Quy trình dự kiến
 
-The intended research workflow is to validate a documented labeled URL dataset, preprocess and split it reproducibly, extract numeric URL/domain features, train the Random Forest on training data, evaluate once on held-out test data, then expose predictions, risk levels, and signal-based explanations through the local Flask interface. The web MVP analyzes URL strings only; it must not visit submitted websites or follow redirects. Model outputs are risk assessments, not proof that a site is safe or malicious. Do not add research data or report metrics until their source and experiment are documented.
+Quy trình nghiên cứu dự kiến là xác thực một tập dữ liệu URL đã gán nhãn và được ghi chép rõ ràng, tiền xử lý và chia tách có thể tái lập, trích xuất các đặc trưng số của URL/miền, huấn luyện Random Forest trên dữ liệu huấn luyện, đánh giá một lần trên tập kiểm tra tách biệt, rồi hiển thị dự đoán, mức rủi ro và giải thích dựa trên tín hiệu thông qua giao diện Flask cục bộ. Web MVP chỉ phân tích chuỗi URL; nó không được truy cập trang web đã gửi hoặc theo redirect. Đầu ra của mô hình là đánh giá rủi ro, không phải bằng chứng cho thấy một trang web an toàn hoặc độc hại. Không thêm dữ liệu nghiên cứu hoặc báo cáo số liệu cho đến khi nguồn và thí nghiệm của chúng được ghi chép.

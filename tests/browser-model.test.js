@@ -31,12 +31,30 @@ test("browser features handle IP hosts, paths, queries, and Unicode", () => {
   assert.equal(browserModel.extractFeatures("https://x.www.ck/").num_subdomains, 1);
 });
 
-test("browser model performs real inference and returns a bounded probability", () => {
+test("experimental browser features are opt-in and preserve the default schema", () => {
+  const defaultFeatures = browserModel.extractFeatures("https://example.com/login?next=home");
+  const experimentalFeatures = browserModel.extractFeatures(
+    "https://example.com/login?next=home",
+    true,
+  );
+
+  assert.equal(Object.keys(defaultFeatures).length, 30);
+  assert.equal(Object.keys(experimentalFeatures).length, 42);
+  assert.equal(experimentalFeatures.query_parameter_count, 1);
+  assert.equal(experimentalFeatures.hostname_depth, 2);
+  assert.equal(experimentalFeatures.has_unusual_port, 0);
+});
+
+test("browser model returns a four-tier risk score and transparent signal status", () => {
   const result = browserModel.assessUrl("https://example.com/login");
 
   assert.ok(["phishing", "legitimate"].includes(result.prediction));
   assert.ok(result.probability >= 0 && result.probability <= 1);
-  assert.ok(["LOW", "MEDIUM", "HIGH"].includes(result.risk_level));
+  assert.ok(["LOW", "CAUTION", "HIGH", "VERY HIGH"].includes(result.risk_level));
+  assert.ok(Number.isInteger(result.risk_score));
+  assert.ok(result.risk_score >= 0 && result.risk_score <= 100);
+  assert.ok(Array.isArray(result.reasons));
+  assert.equal(result.available_signals.domain_age, "Not checked");
   assert.equal(Object.keys(result.features).length, 30);
 });
 

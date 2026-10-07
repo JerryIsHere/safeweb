@@ -77,7 +77,7 @@ def test_predict_returns_structured_assessment() -> None:
         "disclaimer",
     } <= response.json.keys()
     assert response.json["prediction"] == "phishing"
-    assert response.json["risk_level"] == "HIGH"
+    assert response.json["risk_level"] == "VERY HIGH"
 
 
 def test_predict_reports_missing_model_without_stack_trace() -> None:

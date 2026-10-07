@@ -34,7 +34,16 @@ def test_prediction_uses_loaded_bundle_without_creating_model_file() -> None:
     assert result["status"] == "ok"
     assert result["prediction"] == "phishing"
     assert result["probability"] == 0.8
-    assert result["risk_level"] == "HIGH"
+    assert result["risk_level"] == "VERY HIGH"
+
+
+def test_risk_levels_follow_the_explicit_score_scale() -> None:
+    from src.config import risk_level
+
+    assert risk_level(0.20) == "LOW"
+    assert risk_level(0.30) == "CAUTION"
+    assert risk_level(0.60) == "HIGH"
+    assert risk_level(0.80) == "VERY HIGH"
 
 
 def test_prediction_rejects_empty_or_invalid_url() -> None:

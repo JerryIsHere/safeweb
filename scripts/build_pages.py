@@ -1,3 +1,5 @@
+"""Build the static browser pages for the project."""
+
 import argparse
 import os
 from pathlib import Path
