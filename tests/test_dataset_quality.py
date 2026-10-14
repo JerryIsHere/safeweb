@@ -11,19 +11,19 @@ from src.data_quality import (
 def test_dataset_quality_reports_requested_distributions() -> None:
     summary = analyze_dataset("data/raw/urls.csv")
 
-    assert summary["rows"] == 718
-    assert summary["class_balance"] == {"legitimate": 218, "phishing": 500}
+    assert summary["rows"] == 5000
+    assert summary["class_balance"] == {"legitimate": 2500, "phishing": 2500}
     assert summary["exact_duplicates"] == 0
-    assert summary["near_duplicates"] == 126
-    assert summary["overlapping_domains"] == 11
-    assert summary["overlapping_hostname_families"] == 5
-    assert summary["short_phishing_urls"] == 147
+    assert summary["near_duplicates"] == 0
+    assert summary["overlapping_domains"] == 1
+    assert summary["overlapping_hostname_families"] == 87
+    assert summary["short_phishing_urls"] == 2498
     assert summary["long_legitimate_urls"] == 0
-    assert summary["https_urls"] == 376
+    assert summary["https_urls"] == 498
     assert summary["ip_hosts"] == 0
-    assert summary["punycode_or_idn"] == 0
+    assert summary["punycode_or_idn"] == 6
     assert summary["percent_encoded_urls"] == 0
-    assert summary["suspicious_keyword_urls"] == 497
+    assert summary["suspicious_keyword_urls"] == 315
 
 
 def test_domain_disjoint_split_removes_overlapping_domains() -> None:

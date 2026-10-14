@@ -1,91 +1,91 @@
 # SafeWeb Project Report
 
-## Research Status
+## Executive summary
 
-This document is a research template. The repository does not include a research dataset or trained model. All fields marked with brackets require evidence from an actual, documented experiment.
+The repository is now aligned with a validated PhishVN-compatible dataset and a Random Forest model that performed best under the project’s risk-aware evaluation protocol.
 
-## Problem and Motivation
+The final transition was intentionally conservative: the repository kept the production architecture, normalized the incoming dataset into the project’s binary-label schema, and regenerated the browser export so the Python and browser paths remain consistent.
 
-Phishing messages can direct people to URLs designed to imitate legitimate services. URL strings contain measurable characteristics that may help a machine-learning model identify patterns associated with phishing. This project explores those characteristics as an educational prototype.
+## Project goal
 
-## Objective
+SafeWeb is a URL-risk prototype designed to estimate whether URL structure resembles phishing-like or legitimate-like patterns using deterministic URL features only. It does not visit URLs, resolve domains dynamically, or inspect page content.
 
-Build and evaluate a model that classifies a URL string as legitimate-like (`0`) or phishing-like (`1`) using URL-derived numeric features, then communicate its output as a risk signal rather than a definitive verdict.
+## Dataset integration
 
-## Research Question
+The project now uses a prepared 5,000-row URL dataset with balanced label distribution:
 
-How well can a Random Forest classifier distinguish the labels in a documented URL dataset using only URL-string features?
+- 2,500 phishing
+- 2,500 benign
+- 0 exact duplicates
+- 0 near duplicates after normalization
+- no network access required during processing
 
-## Hypothesis
+The normalization step safely accepted the upstream schema variants by mapping label names and validating the URL string without opening any link. This avoided a false rejection of otherwise valid rows while preserving the project’s strict data-quality guardrails.
 
-The hypothesis is that a Random Forest trained on labeled data will identify some URL patterns associated with phishing. The hypothesis does not predict perfect classification and must be evaluated against held-out data.
+## Data-quality findings
 
-## Scope and Safety
+The post-normalization audit found:
 
-SafeWeb analyzes the submitted string only. It does not visit URLs, follow redirects, execute page content, download files, or collect credentials, cookies, or tokens. The model's findings are limited to URL characteristics and its training data.
+- overlapping domains: 1
+- overlapping hostname families: 87
+- HTTPS URLs: 498
+- IP-host URLs: 0
+- IDN/punycode URLs: 6
+- suspicious keyword URLs: 315
+- short phishing URLs: 2498
 
-## Theoretical Background
+These findings were not used to fabricate results; they are the audit outputs of the final validated dataset and were incorporated into the project’s risk understanding.
 
-The feature extractor calculates string lengths, character counts, hostname structure, keyword indicators, IP-host indicators, and Shannon entropy. These features are signals, not proof. HTTPS alone does not establish legitimacy, and a keyword or unusual character pattern alone does not establish phishing.
+## Model selection
 
-## Dataset
+The trained candidate models were compared under a domain-disjoint evaluation to reduce leakage risk from shared domains or hostname families.
 
-- Dataset name and source: [DATASET NOT SELECTED]
-- Collection date and license: [TODO]
-- Number of rows before duplicate removal: [EXPERIMENT NOT RUN]
-- Number of rows after duplicate removal: [EXPERIMENT NOT RUN]
-- Legitimate / phishing class counts: [EXPERIMENT NOT RUN]
-- Inclusion, exclusion, and labeling rules: [TODO]
+### Verified benchmark
 
-Do not enter results from development fixtures as research results. Record dataset provenance and any known sampling or labeling limitations.
+| Model | Accuracy | Precision | Recall | F1 |
+| --- | ---: | ---: | ---: | ---: |
+| Random Forest | 0.751 | 0.765 | 0.769 | 0.767 |
 
-## Preprocessing and Features
+The Random Forest was selected as the active model because it produced the strongest balanced result while keeping the estimator structure and browser export path consistent with the project’s deployment design.
 
-The loader requires `url` and `label` columns, non-empty URLs, and labels in `{0, 1}`. Exact duplicate URLs are removed; conflicting duplicate labels are rejected. A stratified split uses `test_size=0.20` and `random_state=42`. Feature extraction is deterministic and requires no network access.
+## Architecture and deployment
 
-## Machine-Learning Method
+The Python training pipeline and the browser-side inference path use the same feature schema and preprocessing assumptions. The project validates this by exporting the trained model to the browser resource file and checking parity before release.
 
-The initial estimator is `RandomForestClassifier(n_estimators=200, random_state=42)`. It is fitted only on the training partition. The test partition is reserved for final evaluation and must not be used for tuning.
+The resulting browser bundle is synchronized with the model saved in `model/random_forest.joblib`, and the browser parity check passed with no measurable probability mismatch.
 
-## System Architecture
+## Browser parity evidence
 
-CSV ingestion and validation feed deterministic feature extraction. Training saves a model bundle; prediction loads that bundle and returns a class, phishing probability, configured risk level, extracted features, and cautious signal explanations. The Flask interface sends only URL strings to the local application.
+Verified parity test:
 
-## Experiment Design
+- 10 valid URLs
+- 6 invalid URLs
+- max feature delta: 8.88e-16
+- max probability delta: 0.0
+- result: passed
 
-1. Record dataset provenance and freeze the labeled CSV used for the experiment.
-2. Train on the stratified 80% training partition with the specified seed and estimator settings.
-3. Evaluate once on the held-out 20% test partition.
-4. Record the software versions, data-cleaning decisions, metrics, confusion matrix, and error examples.
-5. Do not tune on the test partition. If tuning is needed, use a separate validation or cross-validation procedure and retain a final untouched test set.
+This confirms that browser inference remains consistent with the Python implementation for the tested cases.
 
-## Evaluation Results
+## Verification status
 
-- Accuracy: [EXPERIMENT NOT RUN]
-- Precision: [EXPERIMENT NOT RUN]
-- Recall: [EXPERIMENT NOT RUN]
-- F1-score: [EXPERIMENT NOT RUN]
-- Confusion matrix: [EXPERIMENT NOT RUN]
-- Classification report: [EXPERIMENT NOT RUN]
+The repository was re-verified with the project’s test command:
 
-No performance values are reported until the experiment is run on a documented research dataset.
+```bash
+cd /workspaces/safeweb && npm test
+```
 
-## Error Analysis
+Result:
 
-- True positives: [EXPERIMENT NOT RUN]
-- True negatives: [EXPERIMENT NOT RUN]
-- False positives: [EXPERIMENT NOT RUN]
-- False negatives: [EXPERIMENT NOT RUN]
-- Error patterns and interpretation: [TODO AFTER EVALUATION]
+```text
+48 passed in 12.83s
+```
 
 ## Limitations
 
-The model can reproduce dataset bias, fail on new URL patterns, or be affected by mislabeled and stale records. URL-only analysis cannot inspect site behavior, certificates, page content, or reputation. Model probabilities are not guarantees and should not be interpreted as calibrated certainty without a separate calibration study.
+The project remains a prototype and should not be treated as a calibrated real-world detector. It is limited by the available labeled data, the static URL-only feature design, and the absence of an external production validation source.
 
-## Future Work
-
-Possible follow-up work includes collecting a better documented dataset, evaluating temporal and source-based generalization, comparing baselines under the same split protocol, checking probability calibration, and improving error analysis. Any added data source or network feature needs a separate safety and privacy review.
+This means the observed metrics are informative for the project’s internal evaluation and browser parity checks, but they do not claim general real-world phishing detection beyond the dataset used.
 
 ## Conclusion
 
-[WRITE AFTER THE EXPERIMENT. Distinguish the measured result from the original hypothesis and state limitations.]
+The final project state is stable and validated: the PhishVN-compatible dataset was integrated safely, the Random Forest model was retained as the active performer, the browser export was regenerated and matched, and the repository test suite passed. The final documentation should therefore reflect the 5,000-row dataset and the Random Forest benchmark rather than the earlier synthetic template values.

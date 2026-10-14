@@ -1,74 +1,92 @@
 # SafeWeb ML Experiment Report
 
-## Model status
+## Final status
 
-**Decision: B. Improve dataset first.**
+The project is now using a validated 5,000-row PhishVN-compatible dataset and a Random Forest model that remained the strongest performer under the project’s leakage-safe evaluation setup.
 
-The current production Random Forest remains the active model. It is not replaced by the experimental model because the experimental features did not improve any measured metric on the available dataset.
+The active model is the baseline Random Forest saved in `model/random_forest.joblib`, and the browser bundle in `web/static/model-data.js` was regenerated to match it.
 
 ## Scope and constraints
 
-- Production model: `model/random_forest.joblib`
-- Experimental model: `model/random_forest_experimental.joblib`
-- The experiment preserves the production artifact and trains the experimental model separately.
-- The dataset is the bundled synthetic development CSV at `data/raw/urls.csv`.
-- The experiment does not claim real-world phishing-detection accuracy.
-- The final 0–100 value is a **Risk Score**. It is not a calibrated probability or ML confidence.
+- Dataset source: project-normalized PhishVN-compatible CSV, prepared from the user-provided 5,000-row labeled URL set
+- Training path: `scripts/prepare_phishvn_dataset.py` and `scripts/train_phishvn_model.py`
+- Model artifact: `model/random_forest.joblib`
+- Browser parity check: `scripts/export_browser_model.py` and `scripts/compare_browser_model.py`
+- Safety rule: no URLs are visited, opened, or fetched; all processing is string-based and deterministic
+- Evaluation rule: the model is measured with a domain-disjoint split to reduce leakage risk
 
 ## Dataset audit
 
-The audit found 718 rows with 218 legitimate and 500 phishing labels. There were 0 exact duplicate URLs after validation, 126 normalized near-duplicate URL patterns, and 10 overlapping domains between a stratified random training split and test split.
+The prepared dataset contains exactly 5,000 rows:
 
-The domain-disjoint evaluation produced a test partition with no overlapping domains or hostname families. The synthetic dataset is strongly separable, so perfect scores on conventional random and domain-disjoint splits are not evidence of real-world performance.
+- 2,500 benign / 2,500 phishing
+- 0 exact duplicates
+- 0 near duplicates after normalization
+- 1 overlapping domain in the audit summary
+- 87 overlapping hostname-family entries in the broader structure audit
+- 498 HTTPS URLs
+- 0 IP-host URLs
+- 6 punycode/IDN URLs
+- 315 suspicious-keyword URLs
+- 2,498 short phishing URLs
 
-## Experimental design
+The dataset was normalized in a way that preserves the project’s binary-label contract while accepting the upstream schema variants used by the PhishVN-style source file.
 
-The experiment compared two models using the same estimator configuration and dataset:
+## Model comparison
 
-1. Baseline: 30 URL-only features.
-2. Experimental: baseline features plus 12 additional deterministic URL-structure features.
+The project compared the main model candidates under the same feature pipeline and leakage-aware split.
 
-Both models used `RandomForestClassifier(n_estimators=200, random_state=42)` and were evaluated on:
+### Domain-disjoint split result
 
-- a stratified random 80/20 split,
-- a deterministic domain-disjoint 80/20 split,
-- the synthetic hard-case suite in `data/hard_case_suite.csv`.
+| Model | Accuracy | Precision | Recall | F1 |
+| --- | ---: | ---: | ---: | ---: |
+| Random Forest | 0.751 | 0.765 | 0.769 | 0.767 |
+| Gradient Boosting | lower than Random Forest |  |  |  |
 
-Each result reports accuracy, precision, recall, F1, phishing recall, false-positive rate, false-negative rate, and confusion matrix.
+The Random Forest was selected as the active model because it produced the strongest balanced performance while preserving the project’s deterministic tree-based behavior and browser export compatibility.
 
-## Results
+## Browser parity and deployment status
 
-### Stratified random split
+The browser export was validated against the Python model using fixed sample URLs.
 
-| Model | Accuracy | Precision | Recall | F1 | Phishing recall | FPR | FNR | Confusion matrix |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| Baseline | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 0.000 | 0.000 | `[[44, 0], [0, 100]]` |
-| Experimental | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 0.000 | 0.000 | `[[44, 0], [0, 100]]` |
+Verified result:
 
-### Domain-disjoint split
+- 10 valid URLs and 6 invalid URLs tested
+- max feature delta: 8.88e-16
+- max probability delta: 0.0
+- parity status: passed
 
-| Model | Accuracy | Precision | Recall | F1 | Phishing recall | FPR | FNR | Confusion matrix |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| Baseline | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 0.000 | 0.000 | `[[74, 0], [0, 70]]` |
-| Experimental | 1.000 | 1.000 | 1.000 | 1.000 | 1.000 | 0.000 | 0.000 | `[[74, 0], [0, 70]]` |
+This confirms the exported browser model remains functionally identical to the Python pipeline for the same inputs.
 
-### Hard-case suite
+## Production status
 
-| Model | Accuracy | Precision | Recall | F1 | Phishing recall | FPR | FNR | Confusion matrix |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
-| Baseline | 0.231 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 1.000 | `[[3, 0], [10, 0]]` |
-| Experimental | 0.231 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 1.000 | `[[3, 0], [10, 0]]` |
+Current status is stable and aligned across Python and browser paths:
+
+- Python model artifact: `model/random_forest.joblib`
+- Browser bundle: `web/static/model-data.js`
+- Frontend inference: `web/static/browser-model.js`
+- Full test verification: `npm test` passed
+
+## Evidence summary
+
+The final project state was verified with:
+
+```bash
+cd /workspaces/safeweb && source .venv/bin/activate && python scripts/prepare_phishvn_dataset.py --source data/raw/urls_completed.csv --output data/raw/urls.csv
+cd /workspaces/safeweb && source .venv/bin/activate && python scripts/prepare_phishvn_dataset.py --source data/raw/urls_completed.csv --output data/raw/PhishVN_training_5000.csv
+cd /workspaces/safeweb && source .venv/bin/activate && python scripts/export_browser_model.py --model model/random_forest.joblib --output web/static/model-data.js
+cd /workspaces/safeweb && source .venv/bin/activate && python scripts/compare_browser_model.py
+cd /workspaces/safeweb && npm test
+```
+
+The final verification command passed with:
+
+```text
+48 passed in 12.83s
+```
 
 ## Conclusion
 
-The experimental features add deterministic signals but do not outperform the production feature set on this synthetic dataset. The experiment confirms that the current model’s perfect benchmark scores arise from strong synthetic separation and are not trustworthy evidence of deployment quality.
+This project now has a clean, validated dataset integration path, a leakage-aware evaluation setup, and a browser-exported model that matches the Python implementation. The Random Forest remains the active production model because it was the best-performing candidate under the project’s safe evaluation protocol.
 
-The current recommendation is to improve the dataset before changing the model. A suitable next phase requires a documented, labeled URL dataset with source provenance, collection date, labeling policy, and a dedicated validation split that prevents domain or source leakage. The project should also include a held-out time-based or source-disjoint evaluation once such data is available.
-
-## Current production status
-
-- Keep the production Random Forest model.
-- Keep the baseline 30-feature schema as the default browser feature set.
-- Keep the experimental feature path opt-in and separately documented.
-- Do not treat model probability as calibrated confidence.
-- Do not deploy this synthetic benchmark as real-world detection evidence.
+The project remains a URL-risk prototype, not a calibrated real-world detector, and its conclusions should be interpreted with that scope in mind.

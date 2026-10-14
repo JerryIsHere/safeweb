@@ -131,7 +131,17 @@
     return Math.max(0, labels.length - publicSuffixLength(asciiHostname) - 1);
   }
 
-  function extractFeatures(value) {
+  function repeatedQueryKeys(value) {
+    const query = parseParts(value).query;
+    if (!query) return 0;
+    const keys = query.split("&").filter(Boolean).map((part) => {
+      const equalsIndex = part.indexOf("=");
+      return equalsIndex >= 0 ? part.slice(0, equalsIndex) : part;
+    });
+    return keys.reduce((count, key) => count + (keys.filter((entry) => entry === key).length > 1 ? 1 : 0), 0);
+  }
+
+  function extractFeatures(value, includeExperimental = false) {
     if (typeof value !== "string") throw new TypeError("url must be a string");
     if (!value.trim()) throw new TypeError("url must not be empty");
     const parts = parseParts(value);
@@ -165,6 +175,21 @@
     keywords.forEach((keyword) => {
       features[`keyword_${keyword}`] = Number(lowered.includes(keyword));
     });
+
+    if (!includeExperimental) return features;
+
+    features.digit_to_letter_ratio = characters.filter((character) => /^\p{N}$/u.test(character)).length / Math.max(1, characters.filter((character) => letters.test(character)).length);
+    features.digit_ratio = characters.filter((character) => /^\p{N}$/u.test(character)).length / Math.max(1, characters.length);
+    features.special_char_ratio = characters.filter((character) => !lettersOrNumbers.test(character)).length / Math.max(1, characters.length);
+    features.query_parameter_count = (parts.query ? parts.query.split("&").filter(Boolean) : []).length;
+    features.hostname_depth = hostname ? hostname.split(".").filter(Boolean).length : 0;
+    features.has_punycode_or_idn = Number(/xn--|[^\u0000-\u007F]/u.test(hostname));
+    features.percent_encoding_count = (value.match(/%[0-9A-Fa-f]{2}/g) || []).length;
+    features.has_repeated_characters = Number(/[A-Za-z0-9]([A-Za-z0-9])\1/.test(value));
+    features.has_username_password = Number(/[^/@]+:[^/@]+@/u.test(value));
+    features.has_unusual_port = Number(/:\d{1,5}(?:[/?#]|$)/u.test(value) && !/^https?:\/\/.+?:\d{1,5}\//u.test(value));
+    features.hostname_token_count = hostname ? hostname.toLowerCase().split(/[^a-z0-9]+/u).filter(Boolean).length : 0;
+    features.repeated_query_keys = repeatedQueryKeys(value);
     return features;
   }
 
@@ -274,7 +299,7 @@
     heuristicScore += keywordCount * 8;
 
     const score = clamp(Math.round((numericProbability * 100 * 0.6) + heuristicScore), 0, 100);
-    const level = score >= 75 ? "VERY HIGH" : score >= 50 ? "HIGH" : score >= 25 ? "CAUTION" : "LOW";
+    const level = riskLevelForProbability(numericProbability);
     const reasons = buildReasons(features);
     const recommendations = buildRecommendations(level);
     const verdicts = {
@@ -332,9 +357,10 @@
     return explanations;
   }
 
-  function assessUrl(value, thresholds) {
+  function assessUrl(value, thresholds, options = {}) {
     const url = validateUrl(value);
-    const features = extractFeatures(url);
+    const includeExperimental = Boolean(options.includeExperimental);
+    const features = extractFeatures(url, includeExperimental);
     const modelAssessment = predict(features, thresholds || defaultThresholds);
     const riskAssessment = buildRiskAssessment(features, modelAssessment.probability);
 

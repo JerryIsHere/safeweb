@@ -18,6 +18,23 @@ def test_load_dataset_validates_and_removes_exact_duplicates(tmp_path) -> None:
     assert set(dataset["label"]) == {0, 1}
 
 
+def test_load_dataset_accepts_phishvn_style_labels_and_normalized_urls(tmp_path) -> None:
+    dataset_path = tmp_path / "phishvn.csv"
+    dataset_path.write_text(
+        "url,label,url_norm,source,tier\n"
+        "www.example.com,benign,http://www.example.com,feed,gold\n"
+        "https://phish.example,phishing,https://phish.example,feed,silver\n"
+        "www.example.com,benign,http://www.example.com,feed,gold\n",
+        encoding="utf-8",
+    )
+
+    dataset = load_dataset(dataset_path)
+
+    assert list(dataset.columns) == ["url", "label"]
+    assert dataset["url"].tolist() == ["http://www.example.com", "https://phish.example"]
+    assert dataset["label"].tolist() == [0, 1]
+
+
 @pytest.mark.parametrize(
     ("contents", "message"),
     [

@@ -1,5 +1,7 @@
 """Load and validate URL classification datasets."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import pandas as pd
@@ -8,6 +10,42 @@ from src.url_validation import validate_url
 
 
 REQUIRED_COLUMNS = {"url", "label"}
+_LABEL_MAP = {
+    "0": 0,
+    "1": 1,
+    "legitimate": 0,
+    "benign": 0,
+    "safe": 0,
+    "phishing": 1,
+    "malicious": 1,
+    "fraud": 1,
+}
+
+
+def _normalize_url(raw_value: object, preferred_value: object | None = None) -> str:
+    """Return a canonical HTTP(S) URL while accepting project dataset variants."""
+    candidates = [preferred_value, raw_value]
+    for candidate in candidates:
+        if candidate is None or pd.isna(candidate):
+            continue
+        value = str(candidate).strip()
+        if not value:
+            continue
+        if value.lower().startswith(("http://", "https://")):
+            return value
+        if preferred_value is not None and value and not value.lower().startswith(("http://", "https://")):
+            return value
+        return value
+    return ""
+
+
+def _coerce_labels(label_series: pd.Series) -> pd.Series:
+    """Map common label spellings to 0/1 integers."""
+    normalized = label_series.astype(str).str.strip().str.lower()
+    mapped = normalized.map(_LABEL_MAP.get)
+    if mapped.isna().any():
+        raise ValueError("Dataset labels must be either 0 (legitimate) or 1 (phishing).")
+    return mapped.astype(int)
 
 
 def class_distribution(frame: pd.DataFrame) -> dict[str, int]:
@@ -32,13 +70,21 @@ def load_dataset(path: str | Path) -> pd.DataFrame:
     missing = REQUIRED_COLUMNS - set(frame.columns)
     if missing:
         raise ValueError(f"Dataset is missing required columns: {', '.join(sorted(missing))}")
-    frame = frame.loc[:, ["url", "label"]].copy()
-    if frame["url"].isna().any():
-        raise ValueError("Dataset URLs must not be empty.")
+
+    frame = frame.copy()
+    preferred_urls = None
+    if "url_norm" in frame.columns:
+        preferred_urls = frame["url_norm"].where(frame["url_norm"].notna(), None)
+
+    frame["url"] = frame.apply(
+        lambda row: _normalize_url(row.get("url"), preferred_urls.iloc[row.name] if preferred_urls is not None else None),
+        axis=1,
+    )
     if frame["label"].isna().any():
         raise ValueError("Dataset labels must not be missing.")
-    frame["url"] = frame["url"].astype(str).str.strip()
-    if frame["url"].eq("").any():
+    frame["label"] = _coerce_labels(frame["label"])
+
+    if frame["url"].isna().any() or frame["url"].eq("").any():
         raise ValueError("Dataset URLs must not be empty.")
     invalid_url_rows = []
     for row_number, url in enumerate(frame["url"], start=2):
@@ -53,11 +99,7 @@ def load_dataset(path: str | Path) -> pd.DataFrame:
     duplicate_labels = frame.groupby("url")["label"].nunique(dropna=False)
     if duplicate_labels.gt(1).any():
         raise ValueError("Duplicate URLs must not have conflicting labels.")
-    labels = pd.to_numeric(frame["label"], errors="coerce")
-    if labels.isna().any() or not labels.isin([0, 1]).all():
-        raise ValueError("Dataset labels must be either 0 (legitimate) or 1 (phishing).")
-    frame["label"] = labels.astype(int)
-    frame = frame.drop_duplicates(subset="url", keep="first").reset_index(drop=True)
+    frame = frame[["url", "label"]].drop_duplicates(subset="url", keep="first").reset_index(drop=True)
     if frame.empty:
         raise ValueError("Dataset must contain at least one valid data row.")
     return frame

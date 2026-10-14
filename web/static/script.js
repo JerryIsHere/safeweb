@@ -164,6 +164,26 @@ function riskLabel(level, language = currentLanguage) {
   return translation(labels[level] || "riskLevelLow", language);
 }
 
+function translateBackendText(text, language = currentLanguage) {
+  const verbatimText = text || "";
+  const textKeys = {
+    "No strong URL-only warning was detected.": "verdictLow",
+    "The URL shows some risky characteristics and deserves caution.": "verdictCaution",
+    "This URL shows multiple suspicious characteristics.": "verdictHigh",
+    "This URL shows strong phishing indicators and should not be trusted.": "verdictVeryHigh",
+    "No strong URL-only warning was detected. Still review the sender before sharing sensitive details.": "recommendationLow1",
+    "Verify the domain through an official source before entering credentials.": "recommendationLow2",
+    "Check the domain and sender carefully before continuing.": "recommendationCaution1",
+    "Do not enter passwords or payment details unless the destination has been verified separately.": "recommendationCaution2",
+    "Do not log in or provide personal information on this URL.": "recommendationHigh1",
+    "Verify the site through an official channel before you trust it.": "recommendationHigh2",
+    "Do not continue to this page or enter credentials, banking details, or MFA codes.": "recommendationVeryHigh1",
+    "Close the page and reach the service through the official website or app.": "recommendationVeryHigh2",
+    "This assessment uses only URL text and local model features. Domain age, DNS status, reputation feeds, and page content are not checked unless a trusted client-side source is available.": "disclaimer",
+  };
+  return translation(textKeys[verbatimText] || verbatimText, language);
+}
+
 function renderResult(result, language = currentLanguage) {
   const level = result.risk_level || "LOW";
   const score = Number.isFinite(result.risk_score)
@@ -175,7 +195,8 @@ function renderResult(result, language = currentLanguage) {
   const predictionKey = result.prediction === "phishing"
     ? "predictionSuspicious"
     : "predictionLegitimate";
-  document.querySelector("#result-title").textContent = result.verdict || translation(predictionKey, language);
+  const translatedVerdict = translateBackendText(result.verdict || translation(predictionKey, language), language);
+  document.querySelector("#result-title").textContent = translatedVerdict;
 
   const badge = document.querySelector("#risk-badge");
   badge.textContent = riskLabel(level, language);
@@ -184,7 +205,7 @@ function renderResult(result, language = currentLanguage) {
   const levelLabel = document.querySelector("#risk-level-label");
   levelLabel.textContent = riskLabel(level, language);
   const verdict = document.querySelector("#risk-verdict");
-  verdict.textContent = result.verdict || translation(predictionKey, language);
+  verdict.textContent = translatedVerdict;
 
   const scoreValue = document.querySelector("#score-value");
   scoreValue.innerHTML = `${score}<span>%</span>`;
@@ -222,12 +243,12 @@ function renderResult(result, language = currentLanguage) {
   recommendationList.replaceChildren();
   recommendations.forEach((itemText) => {
     const item = document.createElement("li");
-    item.textContent = itemText;
+    item.textContent = translateBackendText(itemText, language);
     recommendationList.append(item);
   });
 
   const limitations = document.querySelector("#result-limitations");
-  limitations.textContent = result.disclaimer || translation("disclaimer", language);
+  limitations.textContent = translateBackendText(result.disclaimer || translation("disclaimer", language), language);
 
   const explanations = Array.isArray(result.explanations) ? result.explanations : [];
   const signalList = document.querySelector("#signal-list");

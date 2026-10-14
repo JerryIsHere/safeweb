@@ -84,3 +84,91 @@ test("all four language dictionaries include local model states", () => {
     assert.ok(context.window.safewebTranslations[language].errorModelUnavailable);
   }
 });
+
+test("backend report text is translated using the selected locale", () => {
+  const context = { window: { safewebTranslations: {} }, document: {}, localStorage: {} };
+  const elementMap = new Map();
+  const makeElement = () => ({
+    textContent: "",
+    className: "",
+    style: {},
+    dataset: {},
+    classList: {
+      toggle() {},
+      add() {},
+    },
+    items: [],
+    replaceChildren() { this.items = []; },
+    append(item) { this.items.push(item); },
+    addEventListener() {},
+    setAttribute() {},
+    removeAttribute() {},
+    showModal() {},
+    hidden: false,
+  });
+
+  context.document.querySelector = (selector) => {
+    if (!elementMap.has(selector)) elementMap.set(selector, makeElement());
+    return elementMap.get(selector);
+  };
+  const languageOption = () => ({
+    dataset: { language: "en" },
+    addEventListener() {},
+    focus() {},
+    setAttribute() {},
+  });
+  const options = [languageOption(), languageOption(), languageOption(), languageOption()];
+  context.document.querySelectorAll = (selector) => {
+    if (selector === ".language-option") return options;
+    if (selector === "button:not([hidden]):not([disabled])") return options;
+    if (selector === "[data-i18n]" || selector === "[data-i18n-attr]") return [];
+    return [];
+  };
+  context.document.documentElement = { lang: "en", classList: { remove() {} } };
+  context.document.body = makeElement();
+  context.document.body.dataset = {};
+  context.document.body.classList = { add() {}, remove() {} };
+  context.document.activeElement = options[0];
+  context.document.createElement = (tagName) => ({
+    tagName,
+    textContent: "",
+    style: {},
+    classList: { toggle() {} },
+    append() {},
+    appendChild() {},
+    replaceChildren() {},
+    setAttribute() {},
+    focus() {},
+  });
+  context.requestAnimationFrame = (callback) => callback();
+
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../web/static/translations.js"), "utf8"), context);
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../web/static/script.js"), "utf8"), context);
+
+  context.renderResult({
+    risk_level: "HIGH",
+    risk_score: 80,
+    verdict: "This URL shows multiple suspicious characteristics.",
+    recommendations: [
+      "Do not log in or provide personal information on this URL.",
+      "Verify the site through an official channel before you trust it.",
+    ],
+    disclaimer: "This assessment uses only URL text and local model features. Domain age, DNS status, reputation feeds, and page content are not checked unless a trusted client-side source is available.",
+    reasons: [],
+    available_signals: {},
+    explanations: [],
+    features: {},
+    prediction: "phishing",
+  }, "fr");
+
+  assert.equal(elementMap.get("#result-title").textContent, "Cette URL présente plusieurs caractéristiques suspectes.");
+  assert.equal(elementMap.get("#risk-verdict").textContent, "Cette URL présente plusieurs caractéristiques suspectes.");
+  assert.equal(elementMap.get("#result-limitations").textContent, "Le niveau de risque est un avertissement du modèle, pas une preuve qu’une URL est sûre ou malveillante.");
+  assert.deepEqual(
+    elementMap.get("#recommendation-list").items.map((item) => item.textContent),
+    [
+      "Ne vous connectez pas et ne fournissez pas d’informations personnelles sur cette URL.",
+      "Vérifiez le site via un canal officiel avant de lui faire confiance.",
+    ],
+  );
+});
