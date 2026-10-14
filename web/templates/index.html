@@ -5,17 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f1f2ec">
     <title data-i18n="pageTitle">SafeWeb | URL analysis</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v={{ asset_version }}">
-    <script src="{{ url_for('static', filename='translations.js') }}?v={{ asset_version }}" defer></script>
-    <script src="{{ url_for('static', filename='model-data.js') }}?v={{ asset_version }}" defer></script>
-    <script src="{{ url_for('static', filename='browser-model.js') }}?v={{ asset_version }}" defer></script>
-    <script src="{{ url_for('static', filename='script.js') }}?v={{ asset_version }}" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.1.0">
+    <script src="{{ url_for('static', filename='translations.js') }}?v=2.1.0" defer></script>
+    <script src="{{ url_for('static', filename='model-data.js') }}?v=2.1.0" defer></script>
+    <script src="{{ url_for('static', filename='browser-model.js') }}?v=2.1.0" defer></script>
+    <script src="{{ url_for('static', filename='web-inspection.js') }}?v=2.1.0" defer></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=2.1.0" defer></script>
   </head>
   <body>
     <header class="topbar">
       <a class="brand" href="{{ home_url }}" aria-label="SafeWeb home" data-i18n-attr="aria-label:homeLabel">
         <span class="brand-mark" aria-hidden="true">S</span>
-        <span>SafeWeb</span>
+          <span>SafeWeb <small class="version-tag">v2.1.0</small></span>
       </a>
       <div class="header-actions">
         <div class="topbar-meta">
@@ -28,6 +29,7 @@
           <span aria-hidden="true" id="language-code">EN</span>
           <span class="switcher-caret" aria-hidden="true">⌄</span>
         </button>
+        <button class="theme-switcher" id="theme-switcher" type="button" data-i18n="themeDark" aria-label="Change contrast theme" data-i18n-attr="aria-label:themeControl"></button>
       </div>
     </header>
 
@@ -35,7 +37,7 @@
       <section class="intro" aria-labelledby="page-title">
         <div class="eyebrow"><span data-i18n="researchLabel">RESEARCH PROTOTYPE</span><span class="eyebrow-rule" aria-hidden="true"></span><span data-i18n="reviewLabel">01 / URL REVIEW</span></div>
         <h1 id="page-title"><span data-i18n="headlineOne">Read the signals.</span><br><em data-i18n="headlineTwo">Keep the context.</em></h1>
-        <p class="intro-copy" data-i18n="introCopy">Assess URL characteristics with a locally trained model. No page is opened, contacted, or downloaded.</p>
+        <p class="intro-copy" data-i18n="introCopy">Assess URL characteristics with the PhishVN database and a locally trained model. Live checks are optional.</p>
       </section>
 
       <section class="analysis-grid" aria-label="URL analysis" data-i18n-attr="aria-label:analysisLabel">
@@ -43,13 +45,24 @@
           <label for="url-input" data-i18n="inputLabel">URL to assess</label>
           <div class="input-wrap">
             <span class="input-prefix" aria-hidden="true">↳</span>
-            <input id="url-input" name="url" type="url" placeholder="https://example.com/account" autocomplete="url" required aria-describedby="field-note form-message" data-i18n-attr="placeholder:inputPlaceholder">
+            <input id="url-input" name="url" type="text" inputmode="url" placeholder="https://example.com/account" autocomplete="url" required aria-describedby="field-note normalized-note form-message" data-i18n-attr="placeholder:inputPlaceholder">
           </div>
           <p class="field-note" id="field-note" data-i18n="fieldNote">Only the URL text is analyzed. Do not include passwords, tokens, or private links.</p>
+          <p class="normalized-note" id="normalized-note" hidden></p>
+          <details class="contract-panel">
+            <summary data-i18n="contractTitle">Verification contract</summary>
+            <p data-i18n="contractLocal">Local mode: URL structure, PhishVN database, and Random Forest model. No external request.</p>
+            <label class="contract-toggle"><input id="live-inspection-toggle" type="checkbox"><span data-i18n="contractLive">Enable live DNS, redirect, metadata, and screenshot checks (shares the URL with lookup services).</span></label>
+          </details>
           <button class="analyze-button" type="submit">
             <span class="button-label" data-i18n="analyze">Analyze URL</span><span class="button-arrow" aria-hidden="true">↗</span>
           </button>
           <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+          <ol class="scan-progress" id="scan-progress" hidden aria-live="polite">
+            <li data-step="database" data-i18n="scanDatabase">Normalize URL and compare PhishVN records</li>
+            <li data-step="live" data-i18n="scanLive">Check DNS and inspect redirects</li>
+            <li data-step="model" data-i18n="scanModel">Evaluate Random Forest and retrieve page preview</li>
+          </ol>
           <div class="method-note">
             <span class="note-index" data-i18n="scopeLabel">SCOPE</span>
             <p data-i18n="methodNote">Predictions describe patterns learned from training data. They are not a verdict about a website.</p>
@@ -59,20 +72,20 @@
         <section class="result-panel" aria-labelledby="result-title" aria-live="polite">
           <div class="result-heading">
             <div>
-              <div class="section-kicker" data-i18n="resultKicker">MODEL ASSESSMENT</div>
+              <div class="section-kicker" data-i18n="resultKicker">TWO-STAGE VERIFICATION</div>
               <h2 id="result-title" data-i18n="awaitingUrl">Awaiting a URL</h2>
             </div>
             <span class="risk-badge risk-idle" id="risk-badge" data-i18n="noResult">NO RESULT</span>
           </div>
           <div class="risk-summary">
-            <div class="score-value" id="score-value">--<span>%</span></div>
+            <div class="verdict-icon" id="verdict-icon" aria-hidden="true">?</div>
             <div class="risk-summary-body">
               <div class="risk-level-label" id="risk-level-label" data-i18n="riskLevelUnknown">NO RESULT</div>
               <p class="risk-verdict" id="risk-verdict" data-i18n="awaitingUrl">Awaiting a URL</p>
             </div>
           </div>
-          <div class="score-track" aria-hidden="true"><span id="score-fill"></span></div>
-          <div class="score-scale"><span data-i18n="lowerSignal">LOWER SIGNAL</span><span data-i18n="higherSignal">HIGHER SIGNAL</span></div>
+          <div class="signal-meter" id="signal-meter" role="img" aria-label="No risk level"></div>
+          <div class="verification-sources" id="verification-sources"></div>
           <div class="result-divider"></div>
           <div class="detail-grid">
             <article class="insight-card">
@@ -93,13 +106,25 @@
             </article>
             <article class="insight-card">
               <h3 data-i18n="limitations">Limitations</h3>
-              <p class="limit-text" id="result-limitations">This assessment checks only URL text and local model features.</p>
+              <p class="limit-text" id="result-limitations" data-i18n="disclaimer">This is a dataset-backed risk assessment, not proof that a destination is safe or malicious.</p>
             </article>
           </div>
           <div class="signals-heading"><h3 data-i18n="observedSignals">Observed signals</h3><span id="signal-count">0</span></div>
           <ul class="signal-list" id="signal-list">
             <li class="empty-signal" data-i18n="emptySignals">Signals will appear after analysis.</li>
           </ul>
+          <section class="live-results" id="live-results" hidden aria-labelledby="live-results-title">
+            <h3 id="live-results-title" data-i18n="liveResultsTitle">Live web inspection</h3>
+            <div class="live-grid">
+              <article class="live-card"><h4 data-i18n="dnsTitle">DNS and domain status</h4><ul id="dns-summary" class="signal-list compact"></ul></article>
+              <article class="live-card"><h4 data-i18n="redirectTitle">Redirect chain</h4><ol id="redirect-chain" class="redirect-chain"></ol></article>
+              <article class="live-card"><h4 data-i18n="metadataTitle">Page metadata</h4><dl id="metadata-summary" class="metadata-list"></dl></article>
+              <article class="live-card screenshot-card" id="screenshot-card" hidden>
+                <div class="screenshot-heading"><h4 data-i18n="screenshotTitle">Destination preview</h4><label><input id="screenshot-toggle" type="checkbox" checked><span data-i18n="screenshotShow">Show preview</span></label></div>
+                <div class="screenshot-frame" id="screenshot-frame"><div class="screenshot-skeleton" data-i18n="screenshotLoading">Loading safe preview…</div><img id="site-screenshot" alt="Destination website screenshot" data-i18n-attr="alt:screenshotAlt" hidden></div>
+              </article>
+            </div>
+          </section>
           <details class="feature-details">
             <summary data-i18n="featureSummary">View extracted features</summary>
             <dl id="feature-list"></dl>
@@ -107,7 +132,7 @@
           <p class="result-disclaimer" id="result-disclaimer" data-i18n="disclaimer">Risk level is a model warning, not a determination that a URL is safe or malicious.</p>
         </section>
       </section>
-      <footer class="page-footer"><span data-i18n="footerResearch">SAFEWEB · EDUCATIONAL RESEARCH</span><span data-i18n="footerNetwork">STRING-ONLY · NO NETWORK REQUESTS</span></footer>
+      <footer class="page-footer"><span data-i18n="footerResearch">SAFEWEB · EDUCATIONAL RESEARCH</span><span>SafeWeb v2.1.0</span><span data-i18n="footerNetwork">LOCAL CHECKS · LIVE CHECKS OPTIONAL</span></footer>
     </main>
 
     <dialog class="language-dialog" id="language-dialog" open aria-labelledby="language-title" aria-describedby="language-subtitle">

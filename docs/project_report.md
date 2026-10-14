@@ -1,91 +1,51 @@
-# SafeWeb Project Report
+# SafeWeb v2.1.0 Project Report
 
-## Executive summary
+## Summary
 
-The repository is now aligned with a validated PhishVN-compatible dataset and a Random Forest model that performed best under the project’s risk-aware evaluation protocol.
+SafeWeb is a research prototype that combines an offline PhishVN reference index, a local Random Forest URL assessment, and optional live DNS/metadata/screenshot checks. The static GitHub Pages experience does not require a Flask backend. A result is a warning signal, not a guarantee of safety or maliciousness.
 
-The final transition was intentionally conservative: the repository kept the production architecture, normalized the incoming dataset into the project’s binary-label schema, and regenerated the browser export so the Python and browser paths remain consistent.
+## Dataset
 
-## Project goal
+The source is the PhishVN v3.1.0 open archive bundled at the repository root. Its URL table has 53,116 rows, timestamps (`collected_at`, `scraped_at`), label/provenance fields, official grouped train/validation/test partitions, and a companion CompPhish feature table.
 
-SafeWeb is a URL-risk prototype designed to estimate whether URL structure resembles phishing-like or legitimate-like patterns using deterministic URL features only. It does not visit URLs, resolve domains dynamically, or inspect page content.
+Dataset attribution: Thai Nguyen Vu, *PhishVN: A Time-Stamped Vietnamese URL Phishing Dataset with Impersonation-Scenario Labels and Confidence Tiers*, v3.1.0 (2026), DOI [10.17632/b97hxbxtpd.4](https://doi.org/10.17632/b97hxbxtpd.4), CC BY 4.0. Phishing entries include upstream NCSC Tin Nhiem Mang and community/feed sources; source and tier remain in the prepared table.
 
-## Dataset integration
+The reproducible preparation keeps 36,261 canonical URL records after removing 16,855 `www`/apex aliases. No conflicting-label groups or truncated/invalid URLs were observed. Counts after normalization are 25,185 train, 4,452 validation, and 6,624 test (19,909 phishing; 16,352 benign). The upstream partitions have zero shared registrable domains. Source dates and labels remain available for audit; scrape time is not used as event time.
 
-The project now uses a prepared 5,000-row URL dataset with balanced label distribution:
+## Features and Model
 
-- 2,500 phishing
-- 2,500 benign
-- 0 exact duplicates
-- 0 near duplicates after normalization
-- no network access required during processing
+The model has 52 ordered numeric features: SafeWeb URL/lexical features and 22 PhishVN-derived values, including the 21 CompPhish-aligned features and the suspicious-TLD flag. The supplied feature values were compared against local extraction for every retained row; all 797,742 values matched within floating-point tolerance after matching the upstream definition and domain profile.
 
-The normalization step safely accepted the upstream schema variants by mapping label names and validating the URL string without opening any link. This avoided a false rejection of otherwise valid rows while preserving the project’s strict data-quality guardrails.
+A 100-tree Random Forest (`max_depth=16`, `min_samples_leaf=3`, fixed seed) is trained on train plus validation. The grouped temporal test set remains untouched during fitting. Test metrics:
 
-## Data-quality findings
+| Metric | Value |
+| --- | ---: |
+| Accuracy | 0.8752 |
+| Phishing precision | 0.8231 |
+| Phishing recall | 0.8975 |
+| Phishing F1 | 0.8587 |
 
-The post-normalization audit found:
+The confusion matrix in `[benign, phishing]` order is `[[3285, 540], [287, 2512]]`. Database hits are a separate verification stage and are not included in these ML metrics.
 
-- overlapping domains: 1
-- overlapping hostname families: 87
-- HTTPS URLs: 498
-- IP-host URLs: 0
-- IDN/punycode URLs: 6
-- suspicious keyword URLs: 315
-- short phishing URLs: 2498
+## Verification Flow
 
-These findings were not used to fabricate results; they are the audit outputs of the final validated dataset and were incorporated into the project’s risk understanding.
+1. Normalize common user input, including missing schemes and bare names.
+2. Compare canonical URL, hostname, and feature signature against the PhishVN index.
+3. Run the Random Forest even when a database match exists; display both sources.
+4. If the user opts in, query Google DNS-over-HTTPS and request metadata/screenshot data from Microlink, with WordPress mShots as screenshot fallback. Embedded redirect parameters are unwrapped and the final candidate is assessed too.
 
-## Model selection
+Live requests are off by default. The URL is shared with external DNS/preview services only after consent. Browser CORS may prevent a complete HTTP redirect chain; SafeWeb reports only observed destinations. HTTPS indicates the URL scheme and is not an independent certificate validation.
 
-The trained candidate models were compared under a domain-disjoint evaluation to reduce leakage risk from shared domains or hostname families.
+## Architecture
 
-### Verified benchmark
-
-| Model | Accuracy | Precision | Recall | F1 |
-| --- | ---: | ---: | ---: | ---: |
-| Random Forest | 0.751 | 0.765 | 0.769 | 0.767 |
-
-The Random Forest was selected as the active model because it produced the strongest balanced result while keeping the estimator structure and browser export path consistent with the project’s deployment design.
-
-## Architecture and deployment
-
-The Python training pipeline and the browser-side inference path use the same feature schema and preprocessing assumptions. The project validates this by exporting the trained model to the browser resource file and checking parity before release.
-
-The resulting browser bundle is synchronized with the model saved in `model/random_forest.joblib`, and the browser parity check passed with no measurable probability mismatch.
-
-## Browser parity evidence
-
-Verified parity test:
-
-- 10 valid URLs
-- 6 invalid URLs
-- max feature delta: 8.88e-16
-- max probability delta: 0.0
-- result: passed
-
-This confirms that browser inference remains consistent with the Python implementation for the tested cases.
-
-## Verification status
-
-The repository was re-verified with the project’s test command:
-
-```bash
-cd /workspaces/safeweb && npm test
-```
-
-Result:
-
-```text
-48 passed in 12.83s
-```
+- `scripts/prepare_phishvn_dataset.py`: nested archive import, URL canonicalization, deduplication, conflict handling, split audit, and database index.
+- `scripts/train_phishvn_model.py`: official partition training and held-out evaluation.
+- `src/feature_extractor.py`, `src/predict.py`: Python features, model, and database stage.
+- `scripts/export_browser_model.py`: compact trees, public suffix rules, and PhishVN lookup data.
+- `web/static/browser-model.js`, `script.js`: local inference, localization, consent-gated live checks, and UI.
+- `web/templates/index.html`, `style.css`: responsive three-theme experience.
+- `.github/workflows/pages.yml`: main-only GitHub Pages build/deploy.
 
 ## Limitations
 
-The project remains a prototype and should not be treated as a calibrated real-world detector. It is limited by the available labeled data, the static URL-only feature design, and the absence of an external production validation source.
-
-This means the observed metrics are informative for the project’s internal evaluation and browser parity checks, but they do not claim general real-world phishing detection beyond the dataset used.
-
-## Conclusion
-
-The final project state is stable and validated: the PhishVN-compatible dataset was integrated safely, the Random Forest model was retained as the active performer, the browser export was regenerated and matched, and the repository test suite passed. The final documentation should therefore reflect the 5,000-row dataset and the Random Forest benchmark rather than the earlier synthetic template values.
+The metrics describe this dataset and split only; they do not establish real-world effectiveness or calibration. The dataset's source labels, temporal coverage, and class mix can bias results. DNS and metadata providers can fail or return partial information; screenshot services access the destination on the user's behalf. Redirect detection is limited by CORS and provider behavior. SafeWeb is not a browser isolation service and users should not enter credentials into URLs submitted for analysis.

@@ -8,6 +8,14 @@
   const letters = /^\p{L}$/u;
   const whitespace = /[\s\u0085]/u;
   const defaultThresholds = { low: 0.25, medium: 0.5, high: 0.75 };
+  const phishvnFeatureNames = [
+    "phishvn_url_len", "phishvn_dom_len", "phishvn_is_ip", "phishvn_tld_len",
+    "phishvn_subdom_cnt", "phishvn_letter_cnt", "phishvn_digit_cnt", "phishvn_special_cnt",
+    "phishvn_eq_cnt", "phishvn_qm_cnt", "phishvn_amp_cnt", "phishvn_dot_cnt",
+    "phishvn_dash_cnt", "phishvn_under_cnt", "phishvn_letter_ratio", "phishvn_digit_ratio",
+    "phishvn_spec_ratio", "phishvn_slash_cnt", "phishvn_entropy", "phishvn_path_len",
+    "phishvn_query_len", "phishvn_suspicious_tld",
+  ];
 
   function clamp(value, minimum, maximum) {
     return Math.min(Math.max(value, minimum), maximum);
@@ -69,20 +77,39 @@
     if (typeof value !== "string" || !value.trim()) {
       throw new TypeError("A non-empty URL string is required.");
     }
-    const trimmed = value.trim();
-    if (Array.from(trimmed).some((character) => whitespace.test(character))) {
+    let healed = value.trim();
+    if (Array.from(healed).some((character) => whitespace.test(character))) {
       throw new TypeError("The URL must not contain whitespace.");
+    }
+    if (healed.startsWith("//")) healed = `https:${healed}`;
+    else if (!healed.includes("://")) {
+      const host = healed.split(/[/?#]/u, 1)[0];
+      if (!host.includes(".") && host.toLowerCase() !== "localhost") {
+        healed = `${host}.com${healed.slice(host.length)}`;
+      }
+      healed = `https://${healed}`;
     }
     let parsed;
     try {
-      parsed = new URL(trimmed);
+      parsed = new URL(healed);
     } catch {
       throw new TypeError("The URL is malformed.");
     }
     if (!["http:", "https:"].includes(parsed.protocol) || !parsed.hostname) {
       throw new TypeError("Enter a complete HTTP or HTTPS URL with a hostname.");
     }
-    return trimmed;
+    const parts = parseParts(healed);
+    if (!parts.hostname || ["http", "https"].includes(parts.hostname)) {
+      throw new TypeError("Enter a complete HTTP or HTTPS URL with a hostname.");
+    }
+    const hostname = parts.hostname.toLowerCase().replace(/\.+$/u, "");
+    const authorityHost = hostname.includes(":") ? `[${hostname}]` : hostname;
+    const credentials = parsed.username
+      ? `${parsed.username}${parsed.password ? `:${parsed.password}` : ""}@`
+      : "";
+    const port = parsed.port ? `:${parsed.port}` : "";
+    const path = parts.path.replace(/\/+$/u, "");
+    return `${parsed.protocol.toLowerCase()}//${credentials}${authorityHost}${port}${path}${parsed.search}${parsed.hash}`;
   }
 
   function isIp(hostname) {
@@ -174,6 +201,52 @@
     };
     keywords.forEach((keyword) => {
       features[`keyword_${keyword}`] = Number(lowered.includes(keyword));
+    });
+
+    const phishvnDatabase = model?.phishvnDatabase || {};
+    const profileValues = phishvnDatabase.hostProfiles?.[hostname];
+    const profileFields = phishvnDatabase.hostProfileFields || [];
+    const profile = profileValues
+      ? Object.fromEntries(profileFields.map((name, index) => [name, profileValues[index]]))
+      : {};
+    const labels = hostname.split(".").filter(Boolean);
+    const ipAddress = isIp(hostname);
+    const suffixLength = ipAddress ? 0 : publicSuffixLength(hostname);
+    const registrableLength = ipAddress ? labels.length : Math.min(labels.length, suffixLength + 1);
+    const registrable = labels.slice(-registrableLength).join(".");
+    const tld = ipAddress ? "" : labels.slice(-Math.min(labels.length, suffixLength)).join(".");
+    const schemeStripped = value.replace(/^https?:\/\//iu, "");
+    const schemeCharacters = Array.from(schemeStripped);
+    const schemeLetters = schemeCharacters.filter((character) => letters.test(character)).length;
+    const schemeDigits = schemeCharacters.filter((character) => /^\p{N}$/u.test(character)).length;
+    const schemeLength = schemeCharacters.length;
+    const suspiciousTlds = new Set(phishvnDatabase.suspiciousTlds || []);
+    const sourceFeatureValues = {
+      phishvn_url_len: schemeLength,
+      phishvn_dom_len: pythonLength(registrable),
+      phishvn_is_ip: Number(isIp(hostname)),
+      phishvn_tld_len: pythonLength(tld),
+      phishvn_subdom_cnt: subdomainCount(hostname, isIp(hostname)),
+      phishvn_letter_cnt: schemeLetters,
+      phishvn_digit_cnt: schemeDigits,
+      phishvn_special_cnt: schemeLength - schemeLetters - schemeDigits,
+      phishvn_eq_cnt: schemeStripped.split("=").length - 1,
+      phishvn_qm_cnt: schemeStripped.split("?").length - 1,
+      phishvn_amp_cnt: schemeStripped.split("&").length - 1,
+      phishvn_dot_cnt: schemeStripped.split(".").length - 1,
+      phishvn_dash_cnt: schemeStripped.split("-").length - 1,
+      phishvn_under_cnt: schemeStripped.split("_").length - 1,
+      phishvn_letter_ratio: schemeLetters / Math.max(1, schemeLength),
+      phishvn_digit_ratio: schemeDigits / Math.max(1, schemeLength),
+      phishvn_spec_ratio: (schemeLength - schemeLetters - schemeDigits) / Math.max(1, schemeLength),
+      phishvn_slash_cnt: schemeStripped.split("/").length - 1,
+      phishvn_entropy: entropy(schemeStripped),
+      phishvn_path_len: pythonLength(parts.path.replace(/^\/+|\/+$/gu, "")),
+      phishvn_query_len: pythonLength(parts.query),
+      phishvn_suspicious_tld: Number(suspiciousTlds.has(tld)),
+    };
+    phishvnFeatureNames.forEach((name) => {
+      features[name] = profile[name] ?? sourceFeatureValues[name];
     });
 
     if (!includeExperimental) return features;
@@ -269,21 +342,49 @@
     ];
   }
 
-  function buildAvailableSignals(features) {
+  function buildAvailableSignals(features, databaseMatch, probability) {
+    const hasKeyword = keywords.some((keyword) => features[`keyword_${keyword}`]);
+    const structuralWarning = features.has_at || features.has_percent || features.num_special_chars >= 8;
+    const hostWarning = features.has_ip || features.num_subdomains >= 3;
     return {
-      url_structure: "Checked",
-      hostname_checks: "Checked",
-      keyword_scan: "Checked",
+      url_structure: structuralWarning ? "Warning" : "Checked",
+      hostname_checks: hostWarning ? "Warning" : "Checked",
+      keyword_scan: hasKeyword ? "Warning" : "Checked",
+      phishvn_database: databaseMatch.matched ? "Database match" : "Checked",
+      machine_learning: probability >= 0.5 ? "Warning" : "Checked",
       https_status: features.has_https ? "HTTPS detected" : "HTTP detected",
-      domain_age: "Not checked",
-      dns_reputation: "Not checked",
-      page_content: "Not checked",
+      dns_resolution: "Not checked",
       redirect_chain: "Not checked",
-      reputation_feed: "Not checked",
+      page_metadata: "Not checked",
+      screenshot_preview: "Not checked",
     };
   }
 
-  function buildRiskAssessment(features, probability) {
+  function databaseMatch(url, features) {
+    const database = model?.phishvnDatabase;
+    if (!database) return { matched: false, type: null, provenance: null };
+    const parts = parseParts(url);
+    let hostname = parts.hostname.toLowerCase().replace(/\.+$/u, "");
+    if (hostname.startsWith("www.")) hostname = hostname.slice(4);
+    const path = parts.path.replace(/\/+$/u, "");
+    const key = `${hostname}${path}?${parts.query}`.replace(/\?$/u, "");
+    if (database.knownPhishingUrlKeys?.includes(key)) {
+      return { matched: true, type: "exact_url", provenance: "Matched in PhishVN Database" };
+    }
+    if (database.knownPhishingHosts?.includes(parts.hostname.toLowerCase())) {
+      return { matched: true, type: "known_phishing_host", provenance: "Matched in PhishVN Database" };
+    }
+    const signatureNames = database.signatureFeatureNames || [];
+    const signature = signatureNames
+      .map((name) => Number(features[name] ?? features[`phishvn_${name}`] ?? 0).toFixed(5))
+      .join(",");
+    if (database.knownPhishingFeatureSignatures?.includes(signature)) {
+      return { matched: true, type: "feature_signature", provenance: "Matched in PhishVN Database" };
+    }
+    return { matched: false, type: null, provenance: null };
+  }
+
+  function buildRiskAssessment(features, probability, sourceMatch) {
     const numericProbability = Number.isFinite(probability) ? clamp(Number(probability), 0, 1) : 0;
     let heuristicScore = 0;
 
@@ -301,6 +402,7 @@
     const score = clamp(Math.round((numericProbability * 100 * 0.6) + heuristicScore), 0, 100);
     const level = riskLevelForProbability(numericProbability);
     const reasons = buildReasons(features);
+    if (sourceMatch.matched) reasons.unshift("Matched in PhishVN Database.");
     const recommendations = buildRecommendations(level);
     const verdicts = {
       LOW: "No strong URL-only warning was detected.",
@@ -316,8 +418,8 @@
       verdict: verdicts[level],
       reasons,
       recommendations,
-      available_signals: buildAvailableSignals(features),
-      disclaimer: "This assessment uses only URL text and local model features. Domain age, DNS status, reputation feeds, and page content are not checked unless a trusted client-side source is available.",
+      available_signals: buildAvailableSignals(features, sourceMatch, numericProbability),
+      disclaimer: "This is a dataset-backed risk assessment, not proof that a destination is safe or malicious.",
     };
   }
 
@@ -362,7 +464,13 @@
     const includeExperimental = Boolean(options.includeExperimental);
     const features = extractFeatures(url, includeExperimental);
     const modelAssessment = predict(features, thresholds || defaultThresholds);
-    const riskAssessment = buildRiskAssessment(features, modelAssessment.probability);
+    const sourceMatch = databaseMatch(url, features);
+    if (sourceMatch.matched) {
+      modelAssessment.prediction = "phishing";
+      modelAssessment.probability = Math.max(modelAssessment.probability, 0.99);
+      modelAssessment.risk_level = "VERY HIGH";
+    }
+    const riskAssessment = buildRiskAssessment(features, modelAssessment.probability, sourceMatch);
 
     return {
       ...modelAssessment,
@@ -373,6 +481,11 @@
       reasons: riskAssessment.reasons,
       recommendations: riskAssessment.recommendations,
       available_signals: riskAssessment.available_signals,
+      database_match: sourceMatch,
+      verification_stages: {
+        database: sourceMatch.matched ? "matched" : "checked_no_match",
+        machine_learning: "evaluated",
+      },
       features,
       explanations: explainFeatures(features),
       disclaimer: riskAssessment.disclaimer,

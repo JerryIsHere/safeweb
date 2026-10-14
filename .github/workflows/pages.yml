@@ -29,8 +29,10 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install static build dependency
-        run: python -m pip install "Jinja2>=3.1,<4.0"
+      - name: Install Python dependencies
+        run: python -m pip install -r requirements.txt
+      - name: Test Python application
+        run: python -m pytest -q
       - name: Test browser inference
         run: npm run test:browser
       - name: Build static site
@@ -41,9 +43,10 @@ jobs:
           test -s _site/static/style.css
           test -s _site/static/translations.js
           test -s _site/static/browser-model.js
+          test -s _site/static/web-inspection.js
           test -s _site/static/model-data.js
           grep -Fq 'static/model-data.js' _site/index.html
-          grep -Fq '?v=${{ github.sha }}' _site/index.html
+          grep -Fq '?v=2.1.0' _site/index.html
           if grep -R -E 'SAFEWEB_API_URL|SAFEWEB_ALLOWED_ORIGIN|safeweb-api-url|apiBaseUrl|/predict|localhost|render\.com' _site; then
             echo "Backend or host-specific reference found in Pages artifact."
             exit 1

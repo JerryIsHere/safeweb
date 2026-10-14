@@ -6,6 +6,7 @@ const vm = require("node:vm");
 
 require("../web/static/model-data.js");
 const browserModel = require("../web/static/browser-model.js");
+const webInspection = require("../web/static/web-inspection.js");
 
 test("browser features retain the Python model's ordered schema", () => {
   const features = browserModel.extractFeatures("https://one.two.example.co.uk/login?next=home");
@@ -38,8 +39,8 @@ test("experimental browser features are opt-in and preserve the default schema",
     true,
   );
 
-  assert.equal(Object.keys(defaultFeatures).length, 30);
-  assert.equal(Object.keys(experimentalFeatures).length, 42);
+  assert.equal(Object.keys(defaultFeatures).length, 52);
+  assert.equal(Object.keys(experimentalFeatures).length, 64);
   assert.equal(experimentalFeatures.query_parameter_count, 1);
   assert.equal(experimentalFeatures.hostname_depth, 2);
   assert.equal(experimentalFeatures.has_unusual_port, 0);
@@ -54,8 +55,20 @@ test("browser model returns a four-tier risk score and transparent signal status
   assert.ok(Number.isInteger(result.risk_score));
   assert.ok(result.risk_score >= 0 && result.risk_score <= 100);
   assert.ok(Array.isArray(result.reasons));
-  assert.equal(result.available_signals.domain_age, "Not checked");
-  assert.equal(Object.keys(result.features).length, 30);
+  assert.equal(result.available_signals.dns_resolution, "Not checked");
+  assert.equal(Object.keys(result.features).length, 52);
+  assert.equal(result.verification_stages.machine_learning, "evaluated");
+});
+
+test("known PhishVN hosts are attributed and still pass through model verification", () => {
+  const result = browserModel.assessUrl("http://tiktokshopseller-vn.com");
+
+  assert.equal(result.database_match.matched, true);
+  assert.equal(result.database_match.type, "exact_url");
+  assert.equal(result.database_match.provenance, "Matched in PhishVN Database");
+  assert.equal(result.prediction, "phishing");
+  assert.equal(result.risk_level, "VERY HIGH");
+  assert.equal(result.verification_stages.machine_learning, "evaluated");
 });
 
 test("browser validation rejects empty, malformed, and non-HTTP URLs", () => {
@@ -64,13 +77,55 @@ test("browser validation rejects empty, malformed, and non-HTTP URLs", () => {
   }
 });
 
-test("the client never fetches or submits the entered URL", () => {
+test("browser validation heals bare names, domains, default ports, and trailing slashes", () => {
+  assert.equal(browserModel.validateUrl("divineskins.gg"), "https://divineskins.gg");
+  assert.equal(browserModel.validateUrl("vietcombank"), "https://vietcombank.com");
+  assert.equal(browserModel.validateUrl("vietcombank/login?next=home"), "https://vietcombank.com/login?next=home");
+  assert.equal(browserModel.validateUrl("HTTP://WWW.Example.COM:80/path/"), "http://www.example.com/path");
+});
+
+test("redirect and DNS inspection distinguish nested targets, NXDOMAIN, and resolver failures", () => {
+  assert.equal(
+    webInspection.unwrapRedirectParameters("https://short.example/?next=https%3A%2F%2Fexample.org%2Flogin"),
+    "https://example.org/login",
+  );
+  assert.equal(
+    webInspection.summarizeDnsReplies([
+      ["A", { status: 3, answers: [] }],
+      ["AAAA", { status: 3, answers: [] }],
+    ]).domainExists,
+    false,
+  );
+  assert.equal(
+    webInspection.summarizeDnsReplies([["A", { status: 2, answers: [] }]]).domainExists,
+    null,
+  );
+  assert.equal(
+    webInspection.summarizeDnsReplies([
+      ["A", { status: 3, answers: [] }],
+      ["AAAA", null],
+    ]).domainExists,
+    null,
+  );
+  const resolved = webInspection.summarizeDnsReplies([
+    ["A", { status: 0, answers: [{ type: 1, data: "192.0.2.5" }] }],
+  ]);
+  assert.equal(resolved.domainExists, true);
+  assert.deepEqual(resolved.addresses, ["192.0.2.5"]);
+});
+
+test("live requests are gated by explicit consent after local assessment", () => {
   const clientScript = fs.readFileSync(
     path.join(__dirname, "../web/static/script.js"),
     "utf8",
   );
 
-  assert.doesNotMatch(clientScript, /\bfetch\s*\(/);
+  const localAssessment = clientScript.indexOf("latestResult = assessUrl(url)");
+  const optIn = clientScript.indexOf('if (document.querySelector("#live-inspection-toggle").checked)');
+  const liveRequest = clientScript.indexOf("latestResult = await inspectLive(url)");
+  assert.ok(localAssessment >= 0 && optIn > localAssessment && liveRequest > optIn);
+  assert.match(clientScript, /https:\/\/dns\.google\/resolve/);
+  assert.match(clientScript, /https:\/\/api\.microlink\.io/);
   assert.doesNotMatch(clientScript, /XMLHttpRequest|sendBeacon/);
 });
 
@@ -153,7 +208,7 @@ test("backend report text is translated using the selected locale", () => {
       "Do not log in or provide personal information on this URL.",
       "Verify the site through an official channel before you trust it.",
     ],
-    disclaimer: "This assessment uses only URL text and local model features. Domain age, DNS status, reputation feeds, and page content are not checked unless a trusted client-side source is available.",
+    disclaimer: "This is a dataset-backed risk assessment, not proof that a destination is safe or malicious.",
     reasons: [],
     available_signals: {},
     explanations: [],

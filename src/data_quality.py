@@ -40,7 +40,7 @@ def _hostname_family(hostname: str) -> str:
     if not hostname:
         return ""
     extracted = _DOMAIN_PARSER(hostname)
-    registrable = extracted.registered_domain or hostname
+    registrable = extracted.top_domain_under_public_suffix or hostname
     if "." not in registrable:
         return registrable
     labels = registrable.split(".")

@@ -6,6 +6,7 @@ import ipaddress
 import math
 import re
 from collections import Counter
+from collections.abc import Mapping
 from urllib.parse import SplitResult, urlsplit
 
 import tldextract
@@ -21,6 +22,30 @@ _KEYWORDS = (
     "bank",
     "payment",
     "confirm",
+)
+PHISHVN_FEATURE_NAMES = (
+    "phishvn_url_len",
+    "phishvn_dom_len",
+    "phishvn_is_ip",
+    "phishvn_tld_len",
+    "phishvn_subdom_cnt",
+    "phishvn_letter_cnt",
+    "phishvn_digit_cnt",
+    "phishvn_special_cnt",
+    "phishvn_eq_cnt",
+    "phishvn_qm_cnt",
+    "phishvn_amp_cnt",
+    "phishvn_dot_cnt",
+    "phishvn_dash_cnt",
+    "phishvn_under_cnt",
+    "phishvn_letter_ratio",
+    "phishvn_digit_ratio",
+    "phishvn_spec_ratio",
+    "phishvn_slash_cnt",
+    "phishvn_entropy",
+    "phishvn_path_len",
+    "phishvn_query_len",
+    "phishvn_suspicious_tld",
 )
 
 
@@ -171,7 +196,63 @@ def _base_features(url: str, parts: SplitResult, hostname: str) -> dict[str, int
     }
 
 
-def extract_features(url: str, *, include_experimental: bool = False) -> dict[str, int | float]:
+def _phishvn_features(
+    url: str,
+    parts: SplitResult,
+    hostname: str,
+    domain_profile: Mapping[str, int | float] | None = None,
+    suspicious_tlds: set[str] | None = None,
+) -> dict[str, int | float]:
+    """Compute the CompPhish-aligned features supplied with PhishVN."""
+    scheme_stripped = re.sub(r"^https?://", "", url, flags=re.IGNORECASE)
+    extracted = _DOMAIN_PARSER(hostname) if hostname else None
+    registrable = (
+        (extracted.top_domain_under_public_suffix or hostname)
+        if extracted is not None
+        else ""
+    )
+    tld = extracted.suffix if extracted is not None else ""
+    letters = sum(character.isalpha() for character in scheme_stripped)
+    digits = sum(character.isdigit() for character in scheme_stripped)
+    length = len(scheme_stripped)
+    profile = domain_profile or {}
+    tld_labels = suspicious_tlds or set()
+    return {
+        "phishvn_url_len": length,
+        "phishvn_dom_len": profile.get("phishvn_dom_len", len(registrable)),
+        "phishvn_is_ip": int(_is_ip(hostname)),
+        "phishvn_tld_len": profile.get("phishvn_tld_len", len(tld)),
+        "phishvn_subdom_cnt": profile.get("phishvn_subdom_cnt", _subdomain_count(hostname)),
+        "phishvn_letter_cnt": letters,
+        "phishvn_digit_cnt": digits,
+        "phishvn_special_cnt": length - letters - digits,
+        "phishvn_eq_cnt": scheme_stripped.count("="),
+        "phishvn_qm_cnt": scheme_stripped.count("?"),
+        "phishvn_amp_cnt": scheme_stripped.count("&"),
+        "phishvn_dot_cnt": scheme_stripped.count("."),
+        "phishvn_dash_cnt": scheme_stripped.count("-"),
+        "phishvn_under_cnt": scheme_stripped.count("_"),
+        "phishvn_letter_ratio": letters / length if length else 0.0,
+        "phishvn_digit_ratio": digits / length if length else 0.0,
+        "phishvn_spec_ratio": (length - letters - digits) / length if length else 0.0,
+        "phishvn_slash_cnt": scheme_stripped.count("/"),
+        "phishvn_entropy": _entropy(scheme_stripped),
+        "phishvn_path_len": len(parts.path.strip("/")),
+        "phishvn_query_len": len(parts.query),
+        "phishvn_suspicious_tld": profile.get(
+            "phishvn_suspicious_tld",
+            int(bool(tld) and tld.lower() in tld_labels),
+        ),
+    }
+
+
+def extract_features(
+    url: str,
+    *,
+    include_experimental: bool = False,
+    domain_profile: Mapping[str, int | float] | None = None,
+    suspicious_tlds: set[str] | None = None,
+) -> dict[str, int | float]:
     """Extract baseline features or the opt-in experimental feature schema."""
     if not isinstance(url, str):
         raise TypeError("url must be a string")
@@ -183,6 +264,7 @@ def extract_features(url: str, *, include_experimental: bool = False) -> dict[st
     lowered = url.lower()
     features = _base_features(url, parts, hostname)
     features.update({f"keyword_{keyword}": int(keyword in lowered) for keyword in _KEYWORDS})
+    features.update(_phishvn_features(url, parts, hostname, domain_profile, suspicious_tlds))
 
     if not include_experimental:
         return features
@@ -205,7 +287,11 @@ def extract_features(url: str, *, include_experimental: bool = False) -> dict[st
     return features
 
 
-BASELINE_FEATURE_ORDER = tuple(_base_features("https://example.com", _split_url("https://example.com"), "example.com").keys())
+BASELINE_FEATURE_ORDER = (
+    *tuple(_base_features("https://example.com", _split_url("https://example.com"), "example.com").keys()),
+    *(f"keyword_{keyword}" for keyword in _KEYWORDS),
+    *PHISHVN_FEATURE_NAMES,
+)
 EXPERIMENTAL_FEATURE_ORDER = BASELINE_FEATURE_ORDER + (
     "digit_to_letter_ratio",
     "digit_ratio",

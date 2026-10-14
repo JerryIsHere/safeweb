@@ -37,6 +37,26 @@ def test_prediction_uses_loaded_bundle_without_creating_model_file() -> None:
     assert result["risk_level"] == "VERY HIGH"
 
 
+def test_prediction_reports_phishvn_match_and_ml_stage() -> None:
+    bundle = {
+        "model": FixedModel(),
+        "feature_names": list(extract_features("https://example.com")),
+    }
+
+    result = predict_url("http://tiktokshopseller-vn.com", bundle=bundle)
+
+    assert result["database_match"] == {
+        "matched": True,
+        "type": "exact_url",
+        "provenance": "Matched in PhishVN Database",
+    }
+    assert result["prediction"] == "phishing"
+    assert result["verification_stages"] == {
+        "database": "matched",
+        "machine_learning": "evaluated",
+    }
+
+
 def test_risk_levels_follow_the_explicit_score_scale() -> None:
     from src.config import risk_level
 

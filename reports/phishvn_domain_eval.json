@@ -1,0 +1,106 @@
+{
+  "dataset": "/workspaces/safeweb/data/processed/phishvn_clean.csv",
+  "dataset_source": "PhishVN v3.1.0 open archive",
+  "split": "official_grouped_temporal_train_plus_val_test_untouched",
+  "train_rows": 29637,
+  "test_rows": 6624,
+  "feature_count": 52,
+  "features": [
+    "url_length",
+    "domain_length",
+    "path_length",
+    "query_length",
+    "num_dots",
+    "num_slashes",
+    "num_hyphens",
+    "num_underscores",
+    "num_digits",
+    "num_letters",
+    "num_special_chars",
+    "has_https",
+    "has_ip",
+    "num_subdomains",
+    "has_at",
+    "has_question_mark",
+    "has_equals",
+    "has_percent",
+    "has_double_slash",
+    "has_query",
+    "url_entropy",
+    "domain_entropy",
+    "keyword_login",
+    "keyword_signin",
+    "keyword_verify",
+    "keyword_account",
+    "keyword_password",
+    "keyword_bank",
+    "keyword_payment",
+    "keyword_confirm",
+    "phishvn_url_len",
+    "phishvn_dom_len",
+    "phishvn_is_ip",
+    "phishvn_tld_len",
+    "phishvn_subdom_cnt",
+    "phishvn_letter_cnt",
+    "phishvn_digit_cnt",
+    "phishvn_special_cnt",
+    "phishvn_eq_cnt",
+    "phishvn_qm_cnt",
+    "phishvn_amp_cnt",
+    "phishvn_dot_cnt",
+    "phishvn_dash_cnt",
+    "phishvn_under_cnt",
+    "phishvn_letter_ratio",
+    "phishvn_digit_ratio",
+    "phishvn_spec_ratio",
+    "phishvn_slash_cnt",
+    "phishvn_entropy",
+    "phishvn_path_len",
+    "phishvn_query_len",
+    "phishvn_suspicious_tld"
+  ],
+  "pre_extracted_comp_phish_features_used": 21,
+  "phishvn_pre_extracted_feature_columns_including_tld_flag": 22,
+  "test_domains_disjoint_from_train_val": true,
+  "train_labels": {
+    "benign": 12527,
+    "phishing": 17110
+  },
+  "test_labels": {
+    "benign": 3825,
+    "phishing": 2799
+  },
+  "evaluations": {
+    "random_forest": {
+      "accuracy": 0.8751509661835749,
+      "precision": 0.8230668414154653,
+      "recall": 0.8974633797784923,
+      "f1_score": 0.858656639890617,
+      "confusion_matrix": [
+        [
+          3285,
+          540
+        ],
+        [
+          287,
+          2512
+        ]
+      ],
+      "class_report": {
+        "benign": {
+          "precision": 0.9196528555431132,
+          "recall": 0.8588235294117647,
+          "f1_score": 0.8881979180748952,
+          "support": 3825
+        },
+        "phishing": {
+          "precision": 0.8230668414154653,
+          "recall": 0.8974633797784923,
+          "f1_score": 0.858656639890617,
+          "support": 2799
+        }
+      }
+    }
+  },
+  "selected_model": "random_forest"
+}

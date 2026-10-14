@@ -11,9 +11,12 @@ _site/
 
 model/*.joblib
 model/*.pkl
+!model/random_forest.joblib
 reports/*.json
 reports/*.txt
 reports/*.csv
 reports/*.png
+!reports/metrics.json
+!reports/phishvn_domain_eval.json
 data/processed/*
 !data/processed/.gitkeep

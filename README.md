@@ -1,113 +1,99 @@
+# SafeWeb v2.1.0
 
-## Mẫu nghiên cứu SafeWeb
+SafeWeb là công cụ nghiên cứu hỗ trợ nhận diện URL có dấu hiệu lừa đảo. Bản 2.1.0 kết hợp tra cứu dữ liệu PhishVN, Random Forest chạy cục bộ trên trình duyệt và các kiểm tra web tùy chọn. Kết quả là tín hiệu tham khảo, không phải chứng nhận một website an toàn hay độc hại.
 
-SafeWeb là một nguyên mẫu giáo dục ước tính liệu các đặc trưng của URL có giống các mẫu trong tập dữ liệu lừa đảo đã gán nhãn hay không. Nó chỉ phân tích văn bản URL: không mở URL được gửi lên, không theo redirect, không tải xuống tệp hoặc liên hệ với trang web. Kết quả là một đánh giá rủi ro theo thang 0–100, kết hợp xác suất mô hình và các tín hiệu URL có sẵn, không phải bằng chứng cho thấy một trang web an toàn hoặc độc hại.
+## Tính năng
 
-### Mô hình rủi ro mới
+- **Xác minh hai tầng:** đối chiếu URL, máy chủ và chữ ký đặc trưng với chỉ mục PhishVN; sau đó luôn chạy Random Forest để đánh giá mẫu rủi ro. Kết quả hiển thị nguồn khớp dữ liệu và trạng thái mô hình.
+- **Tự hoàn thiện URL:** thêm `https://` cho tên miền thiếu giao thức; với từ đơn như `vietcombank`, thử `https://vietcombank.com`. URL được chuẩn hóa hiển thị trước khi đánh giá.
+- **Kiểm tra trực tuyến có đồng ý:** mặc định URL chỉ được phân tích cục bộ. Khi bật phạm vi kiểm tra trực tuyến, SafeWeb truy vấn Google DNS-over-HTTPS và dịch vụ Microlink; nếu ảnh chụp không khả dụng, dùng WordPress mShots. Các dịch vụ này nhận URL và có thể truy cập trang đích.
+- **DNS và đích chuyển hướng:** hiển thị bản ghi A/AAAA/MX/NS/CNAME, nhận diện URL lồng trong tham số chuyển hướng và đánh giá URL đích. Trình duyệt có thể chặn việc đọc redirect HTTP trực tiếp do CORS; trường hợp đó không được tuyên bố là đã theo dõi đầy đủ.
+- **Thông tin trang và ảnh xem trước:** hiển thị tiêu đề, mô tả, tác giả/công cụ tạo trang nếu dịch vụ trả về, kèm ảnh xem trước có trạng thái tải và lỗi.
+- **Giao diện:** tiếng Việt/Anh cùng các bản dịch Pháp/Đức, ba chế độ tương phản, bảng tiêu chí có trạng thái rõ ràng và tiến trình kiểm tra.
 
-SafeWeb hiện đánh giá rủi ro theo thang bốn mức rõ ràng:
+## Phạm vi và quyền riêng tư
 
-- `LOW`: 0–24
-- `CAUTION`: 25–49
-- `HIGH`: 50–74
-- `VERY HIGH`: 75–100
+Chế độ cục bộ không gửi URL đi đâu: nó sử dụng đặc trưng URL, chỉ mục PhishVN và mô hình được đóng gói trong trang. Các truy vấn DNS, metadata và ảnh chụp chỉ chạy sau khi người dùng chủ động bật tùy chọn kiểm tra trực tuyến. URL khi đó được chia sẻ với nhà cung cấp DNS/xem trước bên thứ ba. Tắt tùy chọn để giữ phân tích hoàn toàn cục bộ.
 
-Mỗi kết quả đều đi kèm giải thích dựa trên các tín hiệu thực tế thu được từ URL: độ dài URL, số tầng subdomain, địa chỉ IP, ký tự đặc biệt, từ khóa như `login`, `verify`, `password`, `bank`, v.v., cùng với tín hiệu HTTPS/HTTP. Các thông tin như độ tuổi tên miền, danh sách đen, DNS, redirect hoặc nội dung trang web không được giả định nếu chưa có nguồn đáng tin cậy và tương thích với GitHub Pages.
+HTTPS chỉ phản ánh giao thức trong URL; SafeWeb không xác thực chứng thư TLS từ trình duyệt. Kết quả DNS, metadata, screenshot và redirect có thể không khả dụng do CORS, giới hạn dịch vụ hoặc website ngoại tuyến. Không nhập URL riêng tư, token hoặc thông tin đăng nhập.
 
-Nếu thông tin không thể kiểm tra an toàn trong trình duyệt, hệ thống hiển thị `Not checked` hoặc `Not available` thay vì giả cách đã xác minh.
+## Dữ liệu PhishVN
 
-### Trạng thái mô hình
+Nguồn chuẩn là archive `PhishVN A Time-Stamped Vietnamese URL Phishing Dat.zip`, bên trong chứa PhishVN v3.1.0 open release. Bộ dữ liệu có 53.116 dòng URL, nhãn phishing/benign, nguồn, mức tin cậy, ngày ghi nhận, thời điểm thu thập, phân vùng và bảng CompPhish 21 đặc trưng. Các phân vùng train/validation/test chính thức đã được nhóm theo tên miền đăng ký và có 0 giao nhau giữa các phân vùng.
 
-- **Mô hình production hiện hành:** Random Forest 200 cây trên 30 đặc trưng URL baseline.
-- **Trạng thái:** Không thay đổi/không nâng cấp production model.
-- **Mô hình thử nghiệm:** Có tính năng mở rộng 12 đặc trưng xác định được, nhưng chưa được triển khai. Dữ liệu hiện tại là tổng hợp và không đại diện cho dữ liệu phòng chống lừa đảo thực tế.
-- **Kết luận:** Chọn **B. Improve dataset first**. Cần bộ dữ liệu đã ghi lại nguồn, ngày thu thập, quy tắc gán nhãn và phân tách domain/source trước khi xem xét thay đổi mô hình.
-- **Điểm rủi ro:** Kết quả cuối cùng 0–100 là **Risk Score**, không phải mức độ tin cậy cân bằng hay độ chắc chắn ML.
+Quy trình chuẩn hóa hiện tạo 36.261 URL duy nhất: loại 16.855 biến thể trùng `www`/apex, không ghi nhận nhóm URL mâu thuẫn nhãn hoặc URL lỗi/truncated. Kết quả giữ lại 25.185 dòng train, 4.452 validation và 6.624 test; nhãn gồm 19.909 phishing và 16.352 benign. Các đặc trưng nguồn được kiểm tra khớp trên toàn bộ mẫu đã làm sạch. `scraped_at` và `collected_at` được giữ lại để truy xuất nguồn gốc; không dùng thời điểm scrape làm nhãn.
 
-### Thiết lập
+`data/raw/urls.csv` và các CSV 5.000 dòng cũ là dữ liệu tương thích/nghiên cứu trước đây, không phải nguồn huấn luyện production cho v2.1.0. Archive gốc không bị chỉnh sửa. Dữ liệu đã chuẩn hóa được tạo trong `data/processed/` (được gitignore); chỉ mục tra cứu PhishVN được xuất vào `data/phishvn_database.json` và `web/static/model-data.js`.
 
-Sử dụng Python 3.11 hoặc mới hơn, sau đó cài đặt các phụ thuộc từ thư mục gốc của kho mã:
+**Trích dẫn và giấy phép:** Thai Nguyen Vu, *PhishVN: A Time-Stamped Vietnamese URL Phishing Dataset with Impersonation-Scenario Labels and Confidence Tiers*, phiên bản 3.1.0 (2026), DOI [10.17632/b97hxbxtpd.4](https://doi.org/10.17632/b97hxbxtpd.4), giấy phép [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). SafeWeb đã chuẩn hóa URL, gộp bí danh `www`/apex và tạo chỉ mục chữ ký từ dữ liệu được cấp phép. URL phishing lấy từ nguồn NCSC Tin Nhiem Mang và các feed/cộng đồng được nêu trong datasheet PhishVN; nhãn nguồn/tier được giữ trong dữ liệu sạch.
+
+## Mô hình và đánh giá
+
+Random Forest 100 cây, giới hạn độ sâu 16, dùng 52 đặc trưng: đặc trưng URL SafeWeb và 22 trường PhishVN (21 đặc trưng CompPhish cùng cờ TLD đáng ngờ). Huấn luyện bằng train + validation; test chính thức được giữ ngoài huấn luyện.
+
+Kết quả trên 6.624 URL test:
+
+| Chỉ số | Giá trị |
+| --- | ---: |
+| Accuracy | 0,8752 |
+| Precision (phishing) | 0,8231 |
+| Recall (phishing) | 0,8975 |
+| F1 (phishing) | 0,8587 |
+
+Đây là kết quả trên một tập dữ liệu cụ thể, không phải ước lượng hiệu năng ngoài thực tế hoặc mức độ tin cậy đã hiệu chuẩn. Tra cứu database là một tầng tham chiếu riêng, không được tính vào các chỉ số ML trên.
+
+## Kiến trúc
+
+```text
+PhishVN archive
+  -> scripts/prepare_phishvn_dataset.py
+  -> data/processed/phishvn_clean.csv + data/phishvn_database.json
+  -> scripts/train_phishvn_model.py
+  -> model/random_forest.joblib
+  -> scripts/export_browser_model.py
+  -> web/static/model-data.js
+  -> web/static/browser-model.js + web/static/script.js
+```
+
+`src/` chứa xác thực URL, trích xuất đặc trưng, nạp dữ liệu và dự đoán Python. `web/` chứa ứng dụng Flask dùng khi phát triển cùng giao diện tĩnh production. GitHub Pages chạy mô hình trình duyệt; không cần backend Flask để phân tích URL.
+
+## Cài đặt và chạy
+
+Yêu cầu Python 3.11 trở lên và Node.js 22 trở lên.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
+npm install
+npm run dev
 ```
 
-Trên Windows, kích hoạt môi trường với `.venv\\Scripts\\activate`.
-
-### Bộ dữ liệu và mô hình
-
-`data/raw/urls.csv` là dữ liệu mô phỏng phát triển tổng hợp. Nó hữu ích cho việc thực thi quy trình huấn luyện và giao diện web, nhưng không phải là dữ liệu nghiên cứu và không thể xác lập hiệu suất phát hiện lừa đảo trong thế giới thực. Không trình bày các số liệu từ tệp này như kết quả thực tế hoặc kết luận nghiên cứu. Đối với nghiên cứu, hãy thay thế bằng bộ dữ liệu đã được ghi chép rõ ràng và lưu lại nguồn gốc, giấy phép, ngày thu thập và phương pháp gán nhãn.
-
-CSV phải chứa các cột bắt buộc sau:
-
-| Cột | Giá trị bắt buộc |
-| --- | --- |
-| `url` | Chuỗi URL không rỗng |
-| `label` | `0` cho hợp pháp hoặc `1` cho lừa đảo |
-
-Lệnh mặc định đọc `data/raw/urls.csv`, hoặc bạn có thể truyền đường dẫn CSV khác một cách rõ ràng. Quá trình huấn luyện kiểm tra các URL HTTP(S) và nhãn nhị phân, báo cáo các hàng không hợp lệ hoặc mâu thuẫn rõ ràng, loại bỏ các URL trùng chính xác, và huấn luyện Random Forest trên tập huấn luyện 80% có thể tái lập. Đánh giá tái tạo tập kiểm tra riêng 20% và ghi các số liệu, báo cáo phân loại, ma trận nhầm lẫn, độ quan trọng của đặc trưng và phân tích lỗi trong `reports/`. Bất kỳ số liệu nào được tạo từ dữ liệu demo tổng hợp đi kèm đều chỉ nhằm xác minh quy trình.
+Mở `http://127.0.0.1:5000`. Để mở bản production tĩnh cục bộ:
 
 ```bash
-python -m src.train
-python -m src.evaluate data/raw/urls.csv
+npm run build
+python -m http.server 8000 --directory _site
 ```
 
-### Phát triển cục bộ
+## Chuẩn bị dữ liệu, huấn luyện và kiểm thử
 
 ```bash
-python run.py
-```
-
-Ứng dụng Flask được giữ lại cho phát triển cục bộ và so sánh ở phía Python. Nó lộ ra `GET /health` và `POST /predict`; giao diện phía production trên GitHub Pages không gọi đến route nào trong số này. Giao diện trình duyệt trích xuất đặc trưng, chạy mô hình cục bộ và bổ sung một lớp đánh giá rủi ro theo quy tắc có thể giải thích. Giới hạn rủi ro của Python là 0.25 cho `CAUTION`, 0.50 cho `HIGH` và 0.75 cho `VERY HIGH`; có thể ghi đè bằng `SAFEWEB_LOW_THRESHOLD`, `SAFEWEB_MEDIUM_THRESHOLD` và `SAFEWEB_HIGH_THRESHOLD` khi sử dụng backend phát triển.
-
-### Tính mô tả và hướng dẫn khuyến nghị
-
-Kết quả không chỉ hiển thị `phishing` hay `legitimate`; nó hiển thị:
-
-- Điểm rủi ro 0–100
-- Mức rủi ro theo thang 4 mức
-- Lý do khả quan sát được từ URL
-- Danh sách tín hiệu càng sớm càng rõ
-- Hướng dẫn action phù hợp với mức độ cảnh báo: không nhập mật khẩu, không cung cấp tài khoản/chứng từ, xác minh qua kênh chính thức, đóng tab nếu rủi ro cao.
-
-Giao diện cũng đổi màu theo trạng thái rủi ro: an toàn, cảnh báo, nguy cơ cao, nguy hiểm rất cao. Điểm nhấn là không dựa hoàn toàn vào màu sắc; có nhãn văn bản và icon phụ trợ cho khả năng truy cập.
-
-Mô hình trình duyệt được xuất từ tệp tin mô hình scikit-learn đã huấn luyện với:
-
-```bash
+source .venv/bin/activate
+python scripts/prepare_phishvn_dataset.py
+python scripts/train_phishvn_model.py
 python scripts/export_browser_model.py
 python scripts/compare_browser_model.py
+python -m pytest -q
+npm run test:browser
+npm test
+npm run build
 ```
 
-### Triển khai trên GitHub Pages
+`compare_browser_model.py` đối chiếu vector đặc trưng, xác suất và phân loại giữa Python và trình duyệt trên các trường hợp cố định. Tệp `model/random_forest.joblib` được tạo cục bộ; bundle cần cho Pages nằm trong `web/static/model-data.js`.
 
-Workflow `pages.yml` xây dựng và triển khai ứng dụng tĩnh hoàn toàn trên các đẩy lên `main`. Trong cài đặt kho mã, hãy đặt **Pages → Build and deployment → Source** thành **GitHub Actions**. Các đường dẫn tài sản tương đối với trang hỗ trợ các URL dự án như `https://jerryishere.github.io/safeweb/`.
+## Triển khai GitHub Pages
 
-SafeWeb vẫn là ứng dụng client-side: không có localhost backend bắt buộc, không gửi URL ra ngoài, không cần Flask để phân tích trên GitHub Pages. Quy trình build tĩnh giữ nguyên và nội dung mô hình trình duyệt được tạo từ tệp mô hình Python đã huấn luyện.
+Workflow `.github/workflows/pages.yml` chỉ chạy khi push lên `main` (cũng hỗ trợ chạy thủ công). Nó chạy kiểm thử trình duyệt, build `_site`, kiểm tra đường dẫn tương đối và triển khai bằng GitHub Pages artifact/deploy actions. Trong GitHub, đặt **Settings → Pages → Build and deployment → Source** thành **GitHub Actions**.
 
-`web/static/model-data.js` chứa các cây Random Forest đã xuất và các quy tắc public-suffix ngoại tuyến cần thiết cho trình duyệt. Nó được tạo từ mô hình đã huấn luyện thực tế; sau khi huấn luyện lại, hãy tạo lại và cam kết tệp mô hình trình duyệt. Một khi trang và tài sản tĩnh tải xong, phân tích URL không gửi bất kỳ yêu cầu mạng nào, không mở URL nào được gửi lên và không cần Python, Flask, dịch vụ Render hoặc API dự đoán.
-
-Chạy kiểm thử trình duyệt với `npm run test:browser`, kiểm thử Python với `python -m pytest`, và kiểm tra tính đồng nhất trực tiếp của mô hình với `python scripts/compare_browser_model.py` khi có sẵn tệp mô hình Python cục bộ. Xem `docs/project_report.md`, `docs/poster_content.md` và `docs/presentation_outline.md` để xem tài liệu nghiên cứu với kết quả thí nghiệm được giữ lại như placeholders.
-
-## Kiến trúc
-
-```text
-data/
-	raw/          Dữ liệu demo phát triển tổng hợp; thay thế cho nghiên cứu
-	processed/    Dữ liệu dẫn xuất có thể tái lập (được tạo; không được cam kết theo mặc định)
-	sample/       Dành riêng cho các ví dụ phát triển được gán nhãn rõ ràng
-model/          Tệp mô hình Python do cục bộ tạo ra (không triển khai)
-reports/        Kết quả đánh giá do cục bộ tạo ra (không được đóng gói)
-src/            Các mô-đun dữ liệu, phân tích URL, mô hình và giải thích
-web/            Các route phát triển Flask, template dùng chung và ứng dụng/trình duyệt mô hình tĩnh
-scripts/        Xây dựng site tĩnh, xuất mô hình trình duyệt và xác thực tính đồng nhất
-tests/          Các kiểm thử hành vi tự động
-config/         Thiết lập chung của dự án
-docs/           Kế hoạch dự án và tài liệu hội nghị khoa học
-```
-
-## Quy trình dự kiến
-
-Quy trình nghiên cứu dự kiến là xác thực một tập dữ liệu URL đã gán nhãn và được ghi chép rõ ràng, tiền xử lý và chia tách có thể tái lập, trích xuất các đặc trưng số của URL/miền, huấn luyện Random Forest trên dữ liệu huấn luyện, đánh giá một lần trên tập kiểm tra tách biệt, rồi hiển thị dự đoán, mức rủi ro và giải thích dựa trên tín hiệu thông qua giao diện Flask cục bộ. Web MVP chỉ phân tích chuỗi URL; nó không được truy cập trang web đã gửi hoặc theo redirect. Đầu ra của mô hình là đánh giá rủi ro, không phải bằng chứng cho thấy một trang web an toàn hoặc độc hại. Không thêm dữ liệu nghiên cứu hoặc báo cáo số liệu cho đến khi nguồn và thí nghiệm của chúng được ghi chép.
+Tài liệu đánh giá và bằng chứng được lưu tại `ML_EXPERIMENT_REPORT.md`, `REPORT_EVIDENCE.md` và `docs/project_report.md`.

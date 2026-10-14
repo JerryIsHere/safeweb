@@ -1,92 +1,68 @@
-# SafeWeb ML Experiment Report
+# SafeWeb v2.1.0 ML Experiment Report
 
-## Final status
+## Objective and protocol
 
-The project is now using a validated 5,000-row PhishVN-compatible dataset and a Random Forest model that remained the strongest performer under the project’s leakage-safe evaluation setup.
+The experiment tests whether a Random Forest can distinguish the labels in the PhishVN v3.1.0 open URL dataset using URL-derived features. The released train/validation/test partitions are already grouped and temporally organized by registrable domain. SafeWeb trains on train plus validation and holds the official test partition out of fitting.
 
-The active model is the baseline Random Forest saved in `model/random_forest.joblib`, and the browser bundle in `web/static/model-data.js` was regenerated to match it.
+## Source data and preparation
 
-## Scope and constraints
+- Source: `PhishVN A Time-Stamped Vietnamese URL Phishing Dat.zip`, nested `PhishVN_v3.1.0_open.zip`.
+- Attribution/license: Thai Nguyen Vu, PhishVN v3.1.0 (2026), DOI [10.17632/b97hxbxtpd.4](https://doi.org/10.17632/b97hxbxtpd.4), CC BY 4.0.
+- Archive source rows: 53,116.
+- Canonical retained rows: 36,261 (19,909 phishing, 16,352 benign).
+- Alias duplicates removed: 16,855 (mostly `www`/apex variants).
+- Conflicting normalized URL labels removed: 0.
+- Invalid/truncated URL rows removed: 0.
+- Split counts after canonical deduplication: 25,185 train; 4,452 validation; 6,624 test.
+- Registrable-domain intersections among all three splits: 0.
 
-- Dataset source: project-normalized PhishVN-compatible CSV, prepared from the user-provided 5,000-row labeled URL set
-- Training path: `scripts/prepare_phishvn_dataset.py` and `scripts/train_phishvn_model.py`
-- Model artifact: `model/random_forest.joblib`
-- Browser parity check: `scripts/export_browser_model.py` and `scripts/compare_browser_model.py`
-- Safety rule: no URLs are visited, opened, or fetched; all processing is string-based and deterministic
-- Evaluation rule: the model is measured with a domain-disjoint split to reduce leakage risk
+The release includes `collected_at` and `scraped_at`; collection time is retained as provenance, while scrape time is not used as an event timestamp. The original archive is never modified. Generated clean CSV is in ignored `data/processed/`.
 
-## Dataset audit
+## Feature schema
 
-The prepared dataset contains exactly 5,000 rows:
+The model consumes 52 numeric columns: 30 SafeWeb URL/keyword features plus 21 pre-extracted CompPhish-aligned features and the PhishVN suspicious-TLD flag. The source includes the same 21 CompPhish values in a companion table. After URL and host normalization, all 797,742 retained-row feature values matched the upstream values within `1e-8`; host-specific PhishVN profiles retain the release's domain/TLD boundaries where its PSL differs from the bundled parser.
 
-- 2,500 benign / 2,500 phishing
-- 0 exact duplicates
-- 0 near duplicates after normalization
-- 1 overlapping domain in the audit summary
-- 87 overlapping hostname-family entries in the broader structure audit
-- 498 HTTPS URLs
-- 0 IP-host URLs
-- 6 punycode/IDN URLs
-- 315 suspicious-keyword URLs
-- 2,498 short phishing URLs
+## Model
 
-The dataset was normalized in a way that preserves the project’s binary-label contract while accepting the upstream schema variants used by the PhishVN-style source file.
+- Estimator: `RandomForestClassifier`
+- Trees: 100
+- Maximum depth: 16
+- Minimum samples per leaf: 3
+- Random seed: 42
+- Training rows: 29,637 (train plus validation)
+- Test rows: 6,624, never used to fit the estimator
+- Class weighting: `balanced_subsample`
 
-## Model comparison
+## Held-out results
 
-The project compared the main model candidates under the same feature pipeline and leakage-aware split.
+| Metric | Phishing class | Overall |
+| --- | ---: | ---: |
+| Accuracy | — | 0.8752 |
+| Precision | 0.8231 | — |
+| Recall | 0.8975 | — |
+| F1 | 0.8587 | — |
 
-### Domain-disjoint split result
-
-| Model | Accuracy | Precision | Recall | F1 |
-| --- | ---: | ---: | ---: | ---: |
-| Random Forest | 0.751 | 0.765 | 0.769 | 0.767 |
-| Gradient Boosting | lower than Random Forest |  |  |  |
-
-The Random Forest was selected as the active model because it produced the strongest balanced performance while preserving the project’s deterministic tree-based behavior and browser export compatibility.
-
-## Browser parity and deployment status
-
-The browser export was validated against the Python model using fixed sample URLs.
-
-Verified result:
-
-- 10 valid URLs and 6 invalid URLs tested
-- max feature delta: 8.88e-16
-- max probability delta: 0.0
-- parity status: passed
-
-This confirms the exported browser model remains functionally identical to the Python pipeline for the same inputs.
-
-## Production status
-
-Current status is stable and aligned across Python and browser paths:
-
-- Python model artifact: `model/random_forest.joblib`
-- Browser bundle: `web/static/model-data.js`
-- Frontend inference: `web/static/browser-model.js`
-- Full test verification: `npm test` passed
-
-## Evidence summary
-
-The final project state was verified with:
-
-```bash
-cd /workspaces/safeweb && source .venv/bin/activate && python scripts/prepare_phishvn_dataset.py --source data/raw/urls_completed.csv --output data/raw/urls.csv
-cd /workspaces/safeweb && source .venv/bin/activate && python scripts/prepare_phishvn_dataset.py --source data/raw/urls_completed.csv --output data/raw/PhishVN_training_5000.csv
-cd /workspaces/safeweb && source .venv/bin/activate && python scripts/export_browser_model.py --model model/random_forest.joblib --output web/static/model-data.js
-cd /workspaces/safeweb && source .venv/bin/activate && python scripts/compare_browser_model.py
-cd /workspaces/safeweb && npm test
-```
-
-The final verification command passed with:
+Confusion matrix in `[benign, phishing]` label order:
 
 ```text
-48 passed in 12.83s
+[[3285, 540],
+ [ 287, 2512]]
 ```
 
-## Conclusion
+Test support is 3,825 benign and 2,799 phishing. These scores are dataset/split-specific and are not calibrated confidence or estimates of deployment-wide performance.
 
-This project now has a clean, validated dataset integration path, a leakage-aware evaluation setup, and a browser-exported model that matches the Python implementation. The Random Forest remains the active production model because it was the best-performing candidate under the project’s safe evaluation protocol.
+## Reference database versus ML
 
-The project remains a URL-risk prototype, not a calibrated real-world detector, and its conclusions should be interpreted with that scope in mind.
+The browser/backend reference index is built from the cleaned PhishVN records: 19,909 known phishing URL keys, 19,859 exclusive phishing hosts, and 4,461 feature signatures that do not collide with a benign label. Database hits are shown as provenance and can override the user-facing verdict; they are not included in the held-out ML metrics above.
+
+## Reproduction
+
+```bash
+source .venv/bin/activate
+python scripts/prepare_phishvn_dataset.py
+python scripts/train_phishvn_model.py
+python scripts/export_browser_model.py
+python scripts/compare_browser_model.py
+```
+
+The Python artifact is written locally to `model/random_forest.joblib` (ignored by Git); the deployable compact model/index bundle is `web/static/model-data.js`.

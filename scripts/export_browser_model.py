@@ -13,7 +13,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.feature_extractor import _DOMAIN_PARSER
-from src.predict import DEFAULT_MODEL_PATH, load_model
+from src.predict import DEFAULT_DATABASE_PATH, DEFAULT_MODEL_PATH, load_model, load_phishvn_database
 
 
 DEFAULT_OUTPUT = PROJECT_ROOT / "web" / "static" / "model-data.js"
@@ -63,6 +63,7 @@ def export_browser_model(model_path: Path, output_path: Path) -> int:
         "classes": classes,
         "trees": trees,
         "publicSuffixRules": suffix_rules,
+        "phishvnDatabase": load_phishvn_database(str(DEFAULT_DATABASE_PATH)),
     }
     javascript = "globalThis.safewebModel = " + json.dumps(
         payload, separators=(",", ":"), ensure_ascii=True, allow_nan=False

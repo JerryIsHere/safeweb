@@ -1,0 +1,22 @@
+{
+  "dataset_source": "PhishVN v3.1.0 open archive",
+  "accuracy": 0.8751509661835749,
+  "precision": 0.8230668414154653,
+  "recall": 0.8974633797784923,
+  "f1_score": 0.858656639890617,
+  "confusion_matrix_labels": [
+    "benign",
+    "phishing"
+  ],
+  "confusion_matrix": [
+    [
+      3285,
+      540
+    ],
+    [
+      287,
+      2512
+    ]
+  ],
+  "test_rows": 6624
+}
