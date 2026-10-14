@@ -76,7 +76,7 @@ test("known PhishVN hosts are attributed and still pass through model verificati
   assert.equal(result.database_match.matched, true);
   assert.equal(result.database_match.type, "exact_url");
   assert.equal(result.direct_database_verdict.label, "Phishing");
-  assert.equal(result.database_match.provenance, "Matched in PhishVN Database");
+  assert.equal(result.database_match.provenance, "Matched in reference database");
   assert.equal(result.prediction, "phishing");
   assert.equal(result.risk_level, "VERY HIGH");
   assert.equal(result.verification_stages.machine_learning, "evaluated");

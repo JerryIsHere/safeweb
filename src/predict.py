@@ -63,7 +63,7 @@ def _database_match(url: str, features: dict[str, int | float], database: dict[s
     return {
         "matched": True,
         "type": match_type,
-        "provenance": "Matched in PhishVN Database",
+        "provenance": "Matched in reference database",
     }
 
 

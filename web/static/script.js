@@ -139,7 +139,7 @@ function translateExplanation(explanation, language) {
     "The URL contains many non-alphanumeric characters.": "signalSpecial",
     "The URL has relatively high character entropy.": "signalEntropy",
     "No configured URL signals stood out; this is not proof of safety.": "signalNone",
-    "Matched in PhishVN Database.": "databaseMatchReason",
+    "Matched in reference database.": "databaseMatchReason",
   };
 
   if (typeof explanation === "string") {
@@ -501,7 +501,7 @@ async function loadDatabaseRecords() {
   if (!databaseRecordsPromise) {
     databaseRecordsPromise = fetch(new URL("static/database-records.json", document.baseURI))
       .then((response) => {
-        if (!response.ok) throw new Error("PhishVN records are unavailable.");
+        if (!response.ok) throw new Error("Database records are unavailable.");
         return response.json();
       })
       .then((payload) => {
@@ -595,7 +595,7 @@ function renderDatabaseExplorer() {
     const empty = document.createElement("tr");
     const cell = document.createElement("td");
     cell.colSpan = 7;
-    cell.textContent = "No matching PhishVN records.";
+    cell.textContent = "No matching database records.";
     empty.append(cell);
     tableBody.append(empty);
   }
@@ -646,7 +646,7 @@ async function showDatabaseExplorer() {
     await loadDatabaseRecords();
     renderDatabaseExplorer();
   } catch {
-    document.querySelector("#database-rows").textContent = "PhishVN records could not be loaded.";
+    document.querySelector("#database-rows").textContent = "Database records could not be loaded.";
   }
 }
 

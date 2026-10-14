@@ -37,11 +37,11 @@
       <section class="intro" aria-labelledby="page-title">
         <div class="eyebrow"><span data-i18n="researchLabel">RESEARCH PROTOTYPE</span><span class="eyebrow-rule" aria-hidden="true"></span><span data-i18n="reviewLabel">01 / URL REVIEW</span></div>
         <h1 id="page-title"><span data-i18n="headlineOne">Read the signals.</span><br><em data-i18n="headlineTwo">Keep the context.</em></h1>
-        <p class="intro-copy" data-i18n="introCopy">Assess URL characteristics with the PhishVN database and a locally trained model. Live checks are optional.</p>
+        <p class="intro-copy" data-i18n="introCopy">Assess URL characteristics with a reference database and locally trained models. Live checks are optional.</p>
       </section>
 
       <nav class="workspace-nav" aria-label="SafeWeb tools">
-        <button class="database-open-button" id="database-toggle" type="button">Kho Dữ Liệu PhishVN / Database Explorer</button>
+        <button class="database-open-button" id="database-toggle" type="button">Cơ sở dữ liệu URL / URL Database</button>
       </nav>
       <section class="analysis-grid" aria-label="URL analysis" data-i18n-attr="aria-label:analysisLabel">
         <form class="analysis-form" id="analysis-form" novalidate>
@@ -54,7 +54,7 @@
           <p class="normalized-note" id="normalized-note" hidden></p>
           <details class="contract-panel">
             <summary data-i18n="contractTitle">Verification contract</summary>
-            <p data-i18n="contractLocal">Local mode: URL structure, PhishVN database, and Random Forest model. No external request.</p>
+            <p data-i18n="contractLocal">Local mode: URL structure, the reference database, and four models. No external request.</p>
             <label class="contract-toggle"><input id="live-inspection-toggle" type="checkbox"><span data-i18n="contractLive">Enable live DNS, redirect, metadata, and screenshot checks (shares the URL with lookup services).</span></label>
           </details>
           <button class="analyze-button" type="submit">
@@ -62,7 +62,7 @@
           </button>
           <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
           <ol class="scan-progress" id="scan-progress" hidden aria-live="polite">
-            <li data-step="database" data-i18n="scanDatabase">Normalize URL and compare PhishVN records</li>
+            <li data-step="database" data-i18n="scanDatabase">Normalize URL and check the reference database</li>
             <li data-step="live" data-i18n="scanLive">Check DNS and inspect redirects</li>
             <li data-step="model" data-i18n="scanModel">Evaluate the four-model consensus and retrieve page preview</li>
           </ol>
@@ -115,7 +115,7 @@
           </article>
           <article class="counterexample-card" id="counterexample-card" hidden>
             <h3>Cảnh giác: Các trang giả mạo / lừa đảo thực tế trong Cơ sở dữ liệu để đối chiếu</h3>
-            <p>Real phishing URLs from PhishVN, shown as text for safe comparison.</p>
+            <p>Real phishing URLs from the cited dataset, shown as text for safe comparison.</p>
             <div class="counterexample-list" id="counterexample-list"></div>
           </article>
           <div class="result-divider"></div>
@@ -166,7 +166,7 @@
       </section>
       <section class="database-explorer" id="database-explorer" hidden aria-labelledby="database-title">
         <div class="explorer-heading">
-          <div><span class="section-kicker">PHISHVN V3.1.0</span><h2 id="database-title">Kho Dữ Liệu PhishVN / Database Explorer</h2></div>
+          <div><span class="section-kicker">URL REFERENCE INDEX</span><h2 id="database-title">Cơ sở dữ liệu URL / URL Database</h2></div>
           <button class="explorer-close" id="database-close" type="button" aria-label="Close database explorer">×</button>
         </div>
         <p class="explorer-attribution">Thai Nguyen Vu, PhishVN v3.1.0 (2026) · <a href="https://doi.org/10.17632/b97hxbxtpd.4" rel="noreferrer">DOI 10.17632/b97hxbxtpd.4</a> · CC BY 4.0</p>
@@ -180,7 +180,7 @@
         <div class="database-table-wrap">
           <table class="database-table">
             <thead><tr><th>URL</th><th>Label</th><th>Date detected</th><th>Tier</th><th>Category / brand</th><th>Key features</th><th>Action</th></tr></thead>
-            <tbody id="database-rows"><tr><td colspan="7">Open the explorer to load PhishVN records.</td></tr></tbody>
+            <tbody id="database-rows"><tr><td colspan="7">Open the explorer to load database records.</td></tr></tbody>
           </table>
         </div>
         <div class="database-pagination"><span id="database-page-status" aria-live="polite"></span><div><button id="database-previous" type="button" disabled>Previous</button><button id="database-next" type="button" disabled>Next</button></div></div>

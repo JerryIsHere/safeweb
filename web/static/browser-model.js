@@ -458,7 +458,7 @@
       return {
         matched: true,
         type: "exact_url",
-        provenance: "Matched in PhishVN Database",
+        provenance: "Matched in reference database",
         record,
       };
     }
@@ -466,7 +466,7 @@
       return {
         matched: true,
         type: "exact_url",
-        provenance: "Matched in PhishVN Database",
+        provenance: "Matched in reference database",
         record: recordsByUrl.get(key) || recordsByHost.get(hostname) || null,
       };
     }
@@ -474,7 +474,7 @@
       return {
         matched: true,
         type: "known_phishing_host",
-        provenance: "Matched in PhishVN Database",
+        provenance: "Matched in reference database",
         record: recordsByHost.get(hostname) || null,
       };
     }
@@ -483,7 +483,7 @@
       .map((name) => Number(features[name] ?? features[`phishvn_${name}`] ?? 0).toFixed(5))
       .join(",");
     if (database.knownPhishingFeatureSignatures?.includes(signature)) {
-      return { matched: true, type: "feature_signature", provenance: "Matched in PhishVN Database" };
+      return { matched: true, type: "feature_signature", provenance: "Matched in reference database" };
     }
     return { matched: false, type: null, provenance: null };
   }
@@ -506,7 +506,7 @@
     const score = clamp(Math.round((numericProbability * 100 * 0.6) + heuristicScore), 0, 100);
     const level = riskLevelForProbability(numericProbability);
     const reasons = buildReasons(features);
-    if (sourceMatch.matched) reasons.unshift("Matched in PhishVN Database.");
+    if (sourceMatch.matched) reasons.unshift("Matched in reference database.");
     const recommendations = buildRecommendations(level);
     const verdicts = {
       LOW: "No strong URL-only warning was detected.",
@@ -623,15 +623,15 @@
       riskAssessment.risk_level = "VERY HIGH";
       riskAssessment.risk_theme = "danger";
       riskAssessment.risk_score = 100;
-      riskAssessment.verdict = "Direct PhishVN database result: confirmed phishing host or signature.";
+      riskAssessment.verdict = "Direct database result: confirmed phishing host or signature.";
     }
     if (sourceMatch.record) {
       riskAssessment.risk_level = sourceMatch.record.label === "Benign" ? "LOW" : "VERY HIGH";
       riskAssessment.risk_theme = sourceMatch.record.label === "Benign" ? "safe" : "danger";
       riskAssessment.risk_score = sourceMatch.record.label === "Benign" ? 0 : 100;
       riskAssessment.verdict = sourceMatch.record.label === "Benign"
-        ? "Direct PhishVN database result: verified benign URL."
-        : "Direct PhishVN database result: confirmed phishing URL.";
+        ? "Direct database result: verified benign URL."
+        : "Direct database result: confirmed phishing URL.";
     }
     const ownSite = isSafeWebUrl(url);
     if (ownSite) {

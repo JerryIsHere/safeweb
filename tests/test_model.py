@@ -48,7 +48,7 @@ def test_prediction_reports_phishvn_match_and_ml_stage() -> None:
     assert result["database_match"] == {
         "matched": True,
         "type": "exact_url",
-        "provenance": "Matched in PhishVN Database",
+        "provenance": "Matched in reference database",
     }
     assert result["prediction"] == "phishing"
     assert result["verification_stages"] == {
