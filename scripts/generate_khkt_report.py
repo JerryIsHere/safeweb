@@ -128,7 +128,7 @@ def add_paragraph(document, text: str, *, style=None, align=None, first_line=Tru
     paragraph.paragraph_format.space_after = Pt(after)
     paragraph.paragraph_format.keep_together = True
     run = paragraph.add_run(text)
-    set_run_font(run)
+    set_run_font(run, size=12)
     return paragraph
 
 
@@ -148,7 +148,7 @@ def add_bullets(document, items, *, numbered=False):
         paragraph.paragraph_format.first_line_indent = Cm(-0.35)
         paragraph.paragraph_format.space_after = Pt(3)
         paragraph.paragraph_format.keep_together = True
-        set_run_font(paragraph.add_run(item), size=10.5)
+        set_run_font(paragraph.add_run(item), size=11)
 
 
 def add_caption(document, text: str):
@@ -337,7 +337,7 @@ def write_document(metrics, evaluation, output_path: Path):
     normal = styles["Normal"]
     normal.font.name = "Times New Roman"
     normal._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
-    normal.font.size = Pt(11)
+    normal.font.size = Pt(12)
     normal.font.color.rgb = RGBColor.from_string(INK)
     normal.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
     normal.paragraph_format.line_spacing = 1.15
