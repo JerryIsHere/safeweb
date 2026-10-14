@@ -59,7 +59,7 @@ python scripts/export_browser_model.py
 python scripts/compare_browser_model.py
 ```
 
-The parity checker compares 10 valid and 6 invalid inputs across Python and browser inference, including the expanded PhishVN features. Final parity result is recorded after the release verification run.
+The parity checker passed on 10 valid and 6 invalid inputs. Maximum feature delta was `1.33e-15`; maximum probability delta was `3.33e-16`.
 
 ## Application behavior
 
@@ -83,4 +83,12 @@ npm run build: passed
 _site artifact checks: all required assets present, v2.1.0 URLs, relative paths
 ```
 
-Deployment commit and GitHub Actions run will be appended after the final push and workflow result are available.
+## GitHub Pages deployment
+
+- Application release commit: `f87ca5f984cad0aea6bbf13f0cb8148af870598b`.
+- Pages artifact-gate fix: `cd12b5fe9c44f1a8a15422df53be67973b076884`.
+- Pages workflow run: [38552567213](https://github.com/JerryIsHere/safeweb/actions/runs/38552567213), conclusion **success** (build and deploy jobs completed).
+- Deployed site: [https://jerryishere.github.io/safeweb/](https://jerryishere.github.io/safeweb/).
+- GitHub repository default branch: `main`.
+
+The Pages artifact check excludes only `model-data.js` from backend-route string scanning because it contains arbitrary source URL paths; executable page assets remain scanned.
