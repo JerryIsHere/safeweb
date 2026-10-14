@@ -45,9 +45,10 @@ jobs:
           test -s _site/static/browser-model.js
           test -s _site/static/web-inspection.js
           test -s _site/static/model-data.js
+          test -s _site/static/database-records.json
           grep -Fq 'static/model-data.js' _site/index.html
-          grep -Fq '?v=2.1.0' _site/index.html
-          if grep -R -E 'SAFEWEB_API_URL|SAFEWEB_ALLOWED_ORIGIN|safeweb-api-url|apiBaseUrl|/predict|render\.com' _site --exclude=model-data.js; then
+          grep -Fq '?v=2.3.0' _site/index.html
+          if grep -R -E 'SAFEWEB_API_URL|SAFEWEB_ALLOWED_ORIGIN|safeweb-api-url|apiBaseUrl|/predict|render\.com' _site --exclude=model-data.js --exclude=database-records.json; then
             echo "Backend or host-specific reference found in Pages artifact."
             exit 1
           fi

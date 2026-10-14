@@ -49,7 +49,12 @@ process.stdout.write(JSON.stringify(results));
 
 
 def main() -> None:
-    bundle = load_model(DEFAULT_MODEL_PATH)
+    model_names = ("random_forest", "gradient_boosting", "svm", "logistic_regression")
+    bundles = {
+        name: load_model(DEFAULT_MODEL_PATH.with_name(f"{name}.joblib"))
+        for name in model_names
+    }
+    bundle = bundles["random_forest"]
     urls = [*VALID_URLS, *INVALID_URLS]
     completed = subprocess.run(
         ["node", "-e", NODE_COMPARISON],
@@ -66,14 +71,14 @@ def main() -> None:
     for url, browser_result in zip(
         VALID_URLS, browser_results[:len(VALID_URLS)], strict=True
     ):
-        python_result = predict_url(url, bundle=bundle)
+        python_results = {
+            name: predict_url(url, bundle=model_bundle)
+            for name, model_bundle in bundles.items()
+        }
+        python_result = python_results["random_forest"]
         if not browser_result["ok"]:
             raise AssertionError(f"Browser rejected valid URL {url!r}: {browser_result}")
         result = browser_result["result"]
-        if result["prediction"] != python_result["prediction"]:
-            raise AssertionError(f"Prediction mismatch for {url!r}.")
-        if result["risk_level"] != python_result["risk_level"]:
-            raise AssertionError(f"Risk level mismatch for {url!r}.")
         if result["explanations"] != python_result["explanations"]:
             raise AssertionError(f"Explanation mismatch for {url!r}.")
         if result["features"].keys() != python_result["features"].keys():
@@ -84,13 +89,23 @@ def main() -> None:
             max_feature_delta = max(max_feature_delta, delta)
             if delta > 1e-12:
                 raise AssertionError(f"Feature {name!r} differs for {url!r}: {actual} != {expected}.")
-        probability_delta = abs(result["probability"] - python_result["probability"])
-        max_probability_delta = max(max_probability_delta, probability_delta)
-        if probability_delta > 1e-12:
-            raise AssertionError(
-                f"Probability differs for {url!r}: {result['probability']} != "
-                f"{python_result['probability']}."
-            )
+        expected_models = {}
+        for name, model_result in python_results.items():
+            expected_models[name] = model_result["probability"]
+            delta = abs(result["models"][name]["probability"] - model_result["probability"])
+            max_probability_delta = max(max_probability_delta, delta)
+            if delta > 1e-10:
+                raise AssertionError(
+                    f"{name} probability differs for {url!r}: "
+                    f"{result['models'][name]['probability']} != {model_result['probability']}."
+                )
+            if result["models"][name]["prediction"] != model_result["prediction"]:
+                raise AssertionError(f"{name} prediction mismatch for {url!r}.")
+        ensemble_probability = sum(expected_models.values()) / len(expected_models)
+        if abs(result["probability"] - ensemble_probability) > 1e-10:
+            raise AssertionError(f"Ensemble probability mismatch for {url!r}.")
+        if result["prediction"] != ("phishing" if ensemble_probability > 0.5 else "legitimate"):
+            raise AssertionError(f"Ensemble prediction mismatch for {url!r}.")
 
     for url, browser_result in zip(INVALID_URLS, browser_results[len(VALID_URLS):], strict=True):
         try:

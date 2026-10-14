@@ -1,8 +1,8 @@
-# SafeWeb v2.1.0 Poster Content
+# SafeWeb v2.3.0 Poster Content
 
 ## Research Question
 
-Can a Random Forest distinguish phishing from benign URLs in PhishVN's grouped temporal test set using SafeWeb URL features and the dataset's pre-extracted lexical/host features?
+How do four URL classifiers compare on PhishVN's domain-disjoint test set using SafeWeb URL features and the dataset's pre-extracted lexical/host features?
 
 ## Dataset and Method
 
@@ -10,20 +10,23 @@ Can a Random Forest distinguish phishing from benign URLs in PhishVN's grouped t
 - Canonicalization and `www`/apex deduplication: 36,261 retained URLs; 16,855 aliases removed.
 - Official grouped partitions have zero registrable-domain overlap.
 - Train plus validation: 29,637 rows. Untouched test: 6,624 rows.
-- Random Forest: 100 trees, depth limit 16, minimum leaf size 3; 52 features.
+- Four classifiers share the same 52 features and domain-disjoint split: Random Forest, Gradient Boosting, calibrated linear SVM, and Logistic Regression.
 - Feature parity checked for 797,742 dataset feature values.
 
 ## Test Results
 
-| Accuracy | Precision | Recall | F1 |
-| ---: | ---: | ---: | ---: |
-| 0.8752 | 0.8231 | 0.8975 | 0.8587 |
+| Model | Accuracy | Precision | Recall | F1 | ROC-AUC |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Random Forest | 0.8752 | 0.8231 | 0.8975 | 0.8587 | 0.9466 |
+| Gradient Boosting | 0.8798 | 0.8008 | 0.9525 | 0.8701 | 0.9495 |
+| Calibrated SVM | 0.8798 | 0.8054 | 0.9436 | 0.8690 | 0.9456 |
+| Logistic Regression | 0.8631 | 0.8326 | 0.8460 | 0.8393 | 0.9440 |
 
 Confusion matrix (`benign`, `phishing`): `[[3285, 540], [287, 2512]]`.
 
 ## Product Flow
 
-SafeWeb first checks a PhishVN URL/host/signature index, then always evaluates the Random Forest. Optional live checks are consent-gated and can report DNS, embedded redirect destinations, page metadata, and a screenshot preview. The default path remains local-only.
+SafeWeb checks the PhishVN URL/host/signature index and evaluates all four models, showing source metadata and model scores separately. Optional live checks are consent-gated; database exploration and local inference need no network services.
 
 ## Interpretation and Limitations
 

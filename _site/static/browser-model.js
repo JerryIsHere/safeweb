@@ -2,6 +2,9 @@
   "use strict";
 
   const model = root.safewebModel;
+  let phishvnRecords = [];
+  let recordsByUrl = new Map();
+  let recordsByHost = new Map();
   const keywords = ["login", "signin", "verify", "account", "password", "bank", "payment", "confirm"];
   const rules = new Set(model?.publicSuffixRules || []);
   const lettersOrNumbers = /^[\p{L}\p{N}]$/u;
@@ -15,6 +18,33 @@
     "phishvn_dash_cnt", "phishvn_under_cnt", "phishvn_letter_ratio", "phishvn_digit_ratio",
     "phishvn_spec_ratio", "phishvn_slash_cnt", "phishvn_entropy", "phishvn_path_len",
     "phishvn_query_len", "phishvn_suspicious_tld",
+  ];
+  const providers = [
+    ["github.io", "GitHub Pages"], ["appspot.com", "Google App Engine"],
+    ["weebly.com", "Weebly"], ["blogspot.com", "Blogger / Blogspot"],
+    ["wordpress.com", "WordPress.com"], ["wixsite.com", "Wix"],
+    ["netlify.app", "Netlify"], ["vercel.app", "Vercel"],
+    ["pages.dev", "Cloudflare Pages"], ["workers.dev", "Cloudflare Workers"],
+    ["web.app", "Firebase Hosting"],
+  ];
+  const brandRules = [
+    ["vietcombank", "Vietcombank"], ["vietinbank", "VietinBank"], ["bidv", "BIDV"],
+    ["vpbank", "VPBank"], ["sacombank", "Sacombank"], ["techcombank", "Techcombank"],
+    ["agribank", "Agribank"], ["mbbank", "MB Bank"], ["tpbank", "TPBank"], ["acb", "ACB"],
+    ["paypal", "PayPal"], ["microsoft", "Microsoft"], ["facebook", "Facebook"],
+    ["instagram", "Instagram"], ["whatsapp", "WhatsApp"], ["shopee", "Shopee"],
+    ["lazada", "Lazada"], ["tiki", "Tiki"], ["amazon", "Amazon"], ["steam", "Steam"],
+  ];
+  const categoryRules = [
+    ["gambling", "Cá cược / Cờ bạc / Gambling & Betting", ["casino", "gambling", "betting", "lottery", "slot", "kubet", "789bet", "bong88", "xoso", "lode"]],
+    ["gaming", "Trò chơi trực tuyến / Online Gaming", ["muonline", "volam", "volamtruyenky", "gunny", "sro", "game", "gaming", "steam"]],
+    ["crypto_wallet", "Ví điện tử & Tiền mã hóa / Crypto & E-Wallet", ["crypto", "bitcoin", "ethereum", "wallet", "metamask", "binance", "coinbase", "momo", "zalopay", "vnpay"]],
+    ["banking_finance", "Ngân hàng & Tài chính / Banking & Finance", ["bank", "banking", "vietcombank", "vietinbank", "bidv", "vpbank", "sacombank", "techcombank", "agribank", "mbbank", "tpbank", "acb", "paypal"]],
+    ["social_messaging", "Mạng xã hội & Nhắn tin / Social & Messaging", ["facebook", "instagram", "whatsapp", "zalo", "messenger", "tiktok", "telegram", "social"]],
+    ["e_commerce", "Thương mại điện tử / E-Commerce", ["shopee", "lazada", "tiki", "amazon", "ecommerce", "shopping", "checkout", "cart"]],
+    ["cloud_hosting", "Dịch vụ Đám mây & Lưu trữ / Cloud & Hosting", ["github", "appspot", "weebly", "blogspot", "wordpress", "netlify", "vercel", "cloudflare", "hosting", "drive", "dropbox"]],
+    ["news_media", "Tin tức & Giải trí / News & Media", ["news", "media", "youtube", "netflix", "spotify", "movie", "stream"]],
+    ["url_shortener", "Công cụ Rút gọn Link / URL Shortener", ["bit.ly", "tinyurl", "t.co", "shorturl", "url-short"]],
   ];
 
   function clamp(value, minimum, maximum) {
@@ -110,6 +140,53 @@
     const port = parsed.port ? `:${parsed.port}` : "";
     const path = parts.path.replace(/\/+$/u, "");
     return `${parsed.protocol.toLowerCase()}//${credentials}${authorityHost}${port}${path}${parsed.search}${parsed.hash}`;
+  }
+
+  function classifyUrl(value, impersonatedBrand = "") {
+    const parts = parseParts(value);
+    const hostname = parts.hostname.toLowerCase();
+    const searchable = `${hostname} ${parts.path} ${parts.query}`.toLowerCase();
+    const match = categoryRules.find(([, , terms]) => terms.some((term) => searchable.includes(term)));
+    const category = match || ["general", "Trang Web Tổng hợp / General Website"];
+    const provider = providers.find(([suffix]) => hostname === suffix || hostname.endsWith(`.${suffix}`));
+    const brand = (impersonatedBrand && impersonatedBrand !== "No known brand signature")
+      || brandRules.find(([token]) => hostname.includes(token))?.[1]
+      || "No known brand signature";
+    return {
+      category_id: category[0],
+      category: category[1],
+      provider: provider?.[1] || "Custom domain",
+      brand,
+    };
+  }
+
+  function setDatabaseRecords(records) {
+    phishvnRecords = Array.isArray(records) ? records : [];
+    recordsByUrl = new Map(phishvnRecords.map((record) => [record.url_key, record]));
+    recordsByHost = new Map();
+    phishvnRecords.forEach((record) => {
+      const host = record.url_key.split(/[/?]/u, 1)[0];
+      if (!recordsByHost.has(host) || record.label === "Phishing") recordsByHost.set(host, record);
+    });
+  }
+
+  function getPhishingExamples(categoryId, brand, limit = 5) {
+    const phishing = phishvnRecords.filter((record) => record.label === "Phishing");
+    const sameBrand = phishing.filter((record) => brand && record.brand === brand && record.brand !== "No known brand signature");
+    const sameCategory = phishing.filter((record) => record.category_id === categoryId);
+    const ordered = [...sameBrand, ...sameCategory, ...phishing];
+    const seen = new Set();
+    return ordered.filter((record) => {
+      if (seen.has(record.url_key)) return false;
+      seen.add(record.url_key);
+      return true;
+    }).slice(0, limit);
+  }
+
+  function isSafeWebUrl(value) {
+    const parts = parseParts(value);
+    return parts.hostname.toLowerCase() === "jerryishere.github.io"
+      && parts.path.replace(/\/+$/u, "").toLowerCase() === "/safeweb";
   }
 
   function isIp(hostname) {
@@ -368,11 +445,30 @@
     if (hostname.startsWith("www.")) hostname = hostname.slice(4);
     const path = parts.path.replace(/\/+$/u, "");
     const key = `${hostname}${path}?${parts.query}`.replace(/\?$/u, "");
+    const record = recordsByUrl.get(key);
+    if (record) {
+      return {
+        matched: true,
+        type: "exact_url",
+        provenance: "Matched in PhishVN Database",
+        record,
+      };
+    }
     if (database.knownPhishingUrlKeys?.includes(key)) {
-      return { matched: true, type: "exact_url", provenance: "Matched in PhishVN Database" };
+      return {
+        matched: true,
+        type: "exact_url",
+        provenance: "Matched in PhishVN Database",
+        record: recordsByUrl.get(key) || recordsByHost.get(hostname) || null,
+      };
     }
     if (database.knownPhishingHosts?.includes(parts.hostname.toLowerCase())) {
-      return { matched: true, type: "known_phishing_host", provenance: "Matched in PhishVN Database" };
+      return {
+        matched: true,
+        type: "known_phishing_host",
+        provenance: "Matched in PhishVN Database",
+        record: recordsByHost.get(hostname) || null,
+      };
     }
     const signatureNames = database.signatureFeatureNames || [];
     const signature = signatureNames
@@ -423,23 +519,61 @@
     };
   }
 
-  function predict(features, thresholds = defaultThresholds) {
-    if (!model || !Array.isArray(model.trees) || !Array.isArray(model.features)) {
+  function treeOutput(tree, features) {
+    let total = 0;
+    tree.forEach((entry) => {
+      let node = 0;
+      while (entry.left[node] !== -1) {
+        const feature = model.features[entry.feature[node]];
+        node = features[feature] <= entry.threshold[node] ? entry.left[node] : entry.right[node];
+      }
+      total += entry.output[node];
+    });
+    return total;
+  }
+
+  function scaledDecision(features, classifier) {
+    return classifier.coefficients.reduce(
+      (score, coefficient, index) => score
+        + ((features[model.features[index]] - classifier.mean[index]) / classifier.scale[index]) * coefficient,
+      classifier.intercept,
+    );
+  }
+
+  function sigmoid(value) {
+    return 1 / (1 + Math.exp(-value));
+  }
+
+  function modelProbabilities(features) {
+    if (!model || !Array.isArray(model.features) || !model.models) {
       throw new Error("The browser model is unavailable.");
     }
-    let probability = 0;
-    model.trees.forEach((tree) => {
-      let node = 0;
-      while (tree.left[node] !== -1) {
-        const feature = model.features[tree.feature[node]];
-        node = features[feature] <= tree.threshold[node] ? tree.left[node] : tree.right[node];
-      }
-      probability += tree.positiveProbability[node];
-    });
-    probability /= model.trees.length;
+    const forest = model.models.random_forest.trees;
+    const boosting = model.models.gradient_boosting;
+    const svm = model.models.svm;
+    const logistic = model.models.logistic_regression;
+    const probabilities = {
+      random_forest: treeOutput(forest, features) / forest.length,
+      gradient_boosting: sigmoid(
+        boosting.initialRawScore + boosting.learningRate * treeOutput(boosting.trees, features),
+      ),
+      svm: sigmoid(-(svm.calibrationA * scaledDecision(features, svm) + svm.calibrationB)),
+      logistic_regression: sigmoid(scaledDecision(features, logistic)),
+    };
+    return probabilities;
+  }
+
+  function predict(features, thresholds = defaultThresholds) {
+    const models = modelProbabilities(features);
+    const probability = Object.values(models).reduce((sum, value) => sum + value, 0) / 4;
     const prediction = probability > 0.5 ? "phishing" : "legitimate";
     const riskLevel = riskLevelForProbability(probability, thresholds);
-    return { prediction, probability, risk_level: riskLevel };
+    const assessments = Object.fromEntries(Object.entries(models).map(([name, score]) => [name, {
+      prediction: score > 0.5 ? "phishing" : "legitimate",
+      probability: score,
+      risk_level: riskLevelForProbability(score, thresholds),
+    }]));
+    return { prediction, probability, risk_level: riskLevel, models: assessments };
   }
 
   function explainFeatures(features) {
@@ -464,15 +598,44 @@
     const includeExperimental = Boolean(options.includeExperimental);
     const features = extractFeatures(url, includeExperimental);
     const modelAssessment = predict(features, thresholds || defaultThresholds);
+    const modelEnsemble = {
+      prediction: modelAssessment.prediction,
+      probability: modelAssessment.probability,
+      risk_level: modelAssessment.risk_level,
+    };
     const sourceMatch = databaseMatch(url, features);
+    const urlCategory = classifyUrl(url, sourceMatch.record?.brand || "");
     if (sourceMatch.matched) {
-      modelAssessment.prediction = "phishing";
-      modelAssessment.probability = Math.max(modelAssessment.probability, 0.99);
-      modelAssessment.risk_level = "VERY HIGH";
+      const recordLabel = sourceMatch.record?.label;
+      modelAssessment.prediction = recordLabel === "Benign" ? "legitimate" : "phishing";
+      modelAssessment.risk_level = recordLabel === "Benign" ? "LOW" : "VERY HIGH";
     }
     const riskAssessment = buildRiskAssessment(features, modelAssessment.probability, sourceMatch);
+    if (sourceMatch.matched && !sourceMatch.record) {
+      riskAssessment.risk_level = "VERY HIGH";
+      riskAssessment.risk_theme = "danger";
+      riskAssessment.risk_score = 100;
+      riskAssessment.verdict = "Direct PhishVN database result: confirmed phishing host or signature.";
+    }
+    if (sourceMatch.record) {
+      riskAssessment.risk_level = sourceMatch.record.label === "Benign" ? "LOW" : "VERY HIGH";
+      riskAssessment.risk_theme = sourceMatch.record.label === "Benign" ? "safe" : "danger";
+      riskAssessment.risk_score = sourceMatch.record.label === "Benign" ? 0 : 100;
+      riskAssessment.verdict = sourceMatch.record.label === "Benign"
+        ? "Direct PhishVN database result: verified benign URL."
+        : "Direct PhishVN database result: confirmed phishing URL.";
+    }
+    const ownSite = isSafeWebUrl(url);
+    if (ownSite) {
+      modelAssessment.prediction = "legitimate";
+      modelAssessment.risk_level = "LOW";
+      riskAssessment.risk_level = "LOW";
+      riskAssessment.risk_theme = "safe";
+      riskAssessment.risk_score = 0;
+    }
 
     return {
+      url,
       ...modelAssessment,
       risk_score: riskAssessment.risk_score,
       risk_level: riskAssessment.risk_level,
@@ -482,6 +645,13 @@
       recommendations: riskAssessment.recommendations,
       available_signals: riskAssessment.available_signals,
       database_match: sourceMatch,
+      url_category: urlCategory,
+      direct_database_verdict: sourceMatch.matched ? {
+        label: sourceMatch.record?.label || "Phishing",
+        record: sourceMatch.record,
+      } : null,
+      model_ensemble: modelEnsemble,
+      easter_egg: ownSite,
       verification_stages: {
         database: sourceMatch.matched ? "matched" : "checked_no_match",
         machine_learning: "evaluated",
@@ -492,7 +662,16 @@
     };
   }
 
-  const api = { assessUrl, extractFeatures, predict, validateUrl };
+  const api = {
+    assessUrl,
+    classifyUrl,
+    extractFeatures,
+    getPhishingExamples,
+    isSafeWebUrl,
+    predict,
+    setDatabaseRecords,
+    validateUrl,
+  };
   root.SafewebBrowserModel = api;
   if (typeof module !== "undefined" && module.exports) module.exports = api;
 })(globalThis);

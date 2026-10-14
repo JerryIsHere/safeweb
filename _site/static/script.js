@@ -1,5 +1,11 @@
 const translations = window.safewebTranslations || { en: {} };
-const { assessUrl, validateUrl } = window.SafewebBrowserModel || {};
+const {
+  assessUrl,
+  classifyUrl,
+  getPhishingExamples,
+  setDatabaseRecords,
+  validateUrl,
+} = window.SafewebBrowserModel || {};
 const supportedLanguages = ["vi", "en", "fr", "de"];
 const storageKey = "safeweb.language";
 const form = document.querySelector("#analysis-form");
@@ -19,6 +25,10 @@ let latestResult = null;
 let latestEnteredUrl = null;
 let latestNormalizedUrl = null;
 let currentMessageKey = null;
+let databaseRecords = [];
+let databaseRecordsPromise = null;
+let databasePage = 0;
+const databasePageSize = 25;
 
 function translation(key, language = currentLanguage) {
   const parts = key.split(".");
@@ -57,10 +67,10 @@ function applyLanguage(language) {
       : `${translation("normalizedUrl", locale)} ${latestNormalizedUrl}`;
   }
   const themeNextKey = {
-    "cyber-dark": "themeContrast",
-    contrast: "themeLight",
+    dark: "themeContrast",
+    "high-contrast": "themeLight",
     light: "themeDark",
-  }[document.body.dataset.theme || "cyber-dark"];
+  }[document.body.dataset.theme || "dark"];
   const themeButton = document.querySelector("#theme-switcher");
   if (themeButton) {
     themeButton.textContent = translation(themeNextKey, locale);
@@ -208,26 +218,55 @@ function translateBackendText(text, language = currentLanguage) {
 function renderResult(result, language = currentLanguage) {
   const level = result.risk_level || "LOW";
   document.body.dataset.riskState = riskTheme(level);
+  const verdictState = result.easter_egg
+    ? "verdict-easter-egg"
+    : result.direct_database_verdict?.label === "Phishing" || level === "VERY HIGH"
+      ? "verdict-danger"
+      : result.direct_database_verdict?.label === "Benign" || level === "LOW"
+        ? "verdict-safe"
+        : "verdict-warning";
+  document.body.dataset.verdictState = verdictState;
+  document.querySelector("#reset-result").hidden = false;
 
   const predictionKey = result.prediction === "phishing"
     ? "predictionSuspicious"
     : "predictionLegitimate";
-  const verdictKey = result.live_inspection?.domainExists === false
+  const directLabel = result.direct_database_verdict?.label;
+  const directTitle = directLabel === "Phishing"
+    ? translation("directPhishingTitle", language)
+    : directLabel === "Benign"
+      ? translation("directBenignTitle", language)
+      : null;
+  const verdictKey = result.easter_egg
+    ? "easterEggHeadline"
+    : directTitle
+      ? null
+      : result.live_inspection?.domainExists === false
     ? "verdictDomainMissing"
     : predictionKey;
   const translatedVerdict = result.live_inspection?.domainExists === false
     ? translation(verdictKey, language)
-    : translateBackendText(result.verdict || translation(verdictKey, language), language);
+    : result.easter_egg
+      ? translation("easterEggHeadline", language)
+      : directTitle || translateBackendText(result.verdict || translation(verdictKey, language), language);
   document.querySelector("#result-title").textContent = translatedVerdict;
 
   const badge = document.querySelector("#risk-badge");
-  badge.textContent = riskLabel(level, language);
-  badge.className = `risk-badge risk-${riskClass(level)}`;
+  badge.textContent = result.easter_egg
+    ? translation("easterEggBadge", language)
+    : riskLabel(level, language);
+  badge.className = `risk-badge risk-${result.easter_egg ? "easter" : riskClass(level)}`;
 
   const levelLabel = document.querySelector("#risk-level-label");
-  levelLabel.textContent = riskLabel(level, language);
+  levelLabel.textContent = result.easter_egg
+    ? translation("easterEggBadge", language)
+    : directLabel === "Phishing"
+      ? translation("directPhishingShort", language)
+      : directLabel === "Benign"
+        ? translation("directBenignShort", language)
+        : riskLabel(level, language);
   const verdict = document.querySelector("#risk-verdict");
-  verdict.textContent = translatedVerdict;
+  verdict.textContent = result.easter_egg ? translation("easterEggHeadline", language) : translatedVerdict;
   document.querySelector("#verdict-icon").textContent = ({
     LOW: "✓", CAUTION: "!", HIGH: "!", "VERY HIGH": "×",
   })[level] || "?";
@@ -252,12 +291,24 @@ function renderResult(result, language = currentLanguage) {
     badge.textContent = translation(key, language);
     sources.append(badge);
   });
+  Object.entries(result.models || {}).forEach(([name, assessment]) => {
+    const pill = document.createElement("span");
+    pill.className = "source-pill model-source";
+    pill.textContent = `${name.replaceAll("_", " ")}: ${Math.round(assessment.probability * 100)}%`;
+    sources.append(pill);
+  });
   if (result.live_inspection) {
     const badge = document.createElement("span");
     badge.className = "source-pill live";
     badge.textContent = translation("liveChecked", language);
     sources.append(badge);
   }
+
+  renderModelConsensus(result, language);
+  renderDirectVerdict(result, language);
+  renderUrlIntelligence(result, language);
+  renderEasterEgg(result, language);
+  renderCounterexamples(result, language);
 
   const reasons = Array.isArray(result.reasons) && result.reasons.length
     ? result.reasons
@@ -340,6 +391,259 @@ function renderResult(result, language = currentLanguage) {
   });
   document.querySelector("#result-disclaimer").textContent = translation("disclaimer", language);
   renderLiveInspection(result.live_inspection, language);
+}
+
+function renderModelConsensus(result, language) {
+  const modelNames = {
+    random_forest: language === "vi" ? "Random Forest" : "Random Forest",
+    gradient_boosting: language === "vi" ? "Gradient Boosting" : "Gradient Boosting",
+    svm: "SVM",
+    logistic_regression: language === "vi" ? "Hồi quy Logistic" : "Logistic Regression",
+  };
+  const panel = document.querySelector("#model-consensus");
+  panel.replaceChildren();
+  Object.entries(result.models || {}).forEach(([name, assessment]) => {
+    const card = document.createElement("div");
+    card.className = `model-score model-score-${assessment.prediction === "phishing" ? "danger" : "safe"}`;
+    const title = document.createElement("h4");
+    const verdict = document.createElement("strong");
+    const score = document.createElement("span");
+    title.textContent = modelNames[name] || name;
+    verdict.textContent = assessment.prediction === "phishing"
+      ? translation("predictionSuspicious", language)
+      : translation("predictionLegitimate", language);
+    score.textContent = `${Math.round(assessment.probability * 100)}% ${translation("phishingRisk", language)}`;
+    card.append(title, verdict, score);
+    panel.append(card);
+  });
+  const ensemble = result.model_ensemble || result;
+  const ensembleText = `${translation(ensemble.prediction === "phishing" ? "ensemblePhishing" : "ensembleBenign", language)} · ${Math.round(ensemble.probability * 100)}%`;
+  const directLabel = result.direct_database_verdict?.label;
+  document.querySelector("#ensemble-summary").textContent = result.easter_egg
+    ? translation("easterEggBadge", language)
+    : directLabel
+      ? `${directLabel === "Phishing" ? translation("directPhishingShort", language) : translation("directBenignShort", language)} · ${ensembleText}`
+      : ensembleText;
+}
+
+function renderDirectVerdict(result, language) {
+  const panel = document.querySelector("#database-verdict");
+  const record = result.direct_database_verdict?.record;
+  const directLabel = result.direct_database_verdict?.label;
+  panel.hidden = !directLabel;
+  if (!directLabel) return;
+  const phishing = directLabel === "Phishing";
+  document.querySelector("#database-verdict-title").textContent = translation(
+    phishing ? "directPhishingTitle" : "directBenignTitle",
+    language,
+  );
+  document.querySelector("#database-verdict-note").textContent = `${translation("directDatabaseModelNote", language)}${record ? "" : ` ${translation("directMetadataUnavailable", language)}`}`;
+  const labels = [
+    ["Detected date", record?.detected_at || "Not recorded"],
+    ["Tier", record?.tier || "Not recorded"],
+    ["Category", record?.category || "Not recorded"],
+    ["Target brand", record?.brand || "Not recorded"],
+    ["Provider", record?.provider || "Not recorded"],
+  ];
+  const details = document.querySelector("#database-meta");
+  details.replaceChildren();
+  labels.forEach(([name, value]) => {
+    const term = document.createElement("dt");
+    const description = document.createElement("dd");
+    term.textContent = name;
+    description.textContent = value;
+    details.append(term, description);
+  });
+}
+
+function renderUrlIntelligence(result) {
+  const panel = document.querySelector("#url-intelligence");
+  const category = result.url_category
+    || (typeof classifyUrl === "function" && result.url ? classifyUrl(result.url) : null);
+  panel.hidden = !category;
+  if (!category) return;
+  document.querySelector("#category-pill").textContent = `Loại URL / Category: ${category.category}`;
+  document.querySelector("#provider-pill").textContent = `Nhà cung cấp / Provider: ${category.provider}`;
+  document.querySelector("#brand-pill").textContent = `Thương hiệu / Brand: ${category.brand}`;
+}
+
+function renderEasterEgg(result, language) {
+  const panel = document.querySelector("#easter-egg-card");
+  panel.hidden = !result.easter_egg;
+  if (!result.easter_egg) return;
+  document.querySelector("#easter-egg-message").textContent = translation("easterEggHeadline", language);
+  document.querySelector("#easter-egg-detail").textContent = translation("easterEggDetail", language);
+}
+
+function renderCounterexamples(result, language) {
+  const panel = document.querySelector("#counterexample-card");
+  const safe = result.prediction === "legitimate";
+  const examples = safe ? getPhishingExamples(result.url_category?.category_id, result.url_category?.brand, 5) : [];
+  panel.hidden = examples.length === 0;
+  if (!examples.length) return;
+  const list = document.querySelector("#counterexample-list");
+  list.replaceChildren();
+  examples.forEach((example) => {
+    const badge = document.createElement("code");
+    badge.className = "counterexample-url";
+    badge.textContent = example.url;
+    badge.title = `${example.category} · ${example.brand}`;
+    list.append(badge);
+  });
+  panel.querySelector("p").textContent = translation("counterexampleNote", language);
+}
+
+async function loadDatabaseRecords() {
+  if (!databaseRecordsPromise) {
+    databaseRecordsPromise = fetch(new URL("static/database-records.json", document.baseURI))
+      .then((response) => {
+        if (!response.ok) throw new Error("PhishVN records are unavailable.");
+        return response.json();
+      })
+      .then((payload) => {
+        databaseRecords = (Array.isArray(payload.records) ? payload.records : []).map((row) => {
+          const [url, label, detectedAt, tier, categoryId, provider, brand, urlLength, subdomains, ipHost, suspiciousTld, entropy] = row;
+          const parts = new URL(url);
+          let hostname = parts.hostname.toLowerCase().replace(/\.+$/u, "");
+          if (hostname.startsWith("www.")) hostname = hostname.slice(4);
+          const path = parts.pathname.replace(/\/+$/u, "");
+          const urlKey = `${hostname}${path}?${parts.search.slice(1)}`.replace(/\?$/u, "");
+          return {
+            url,
+            url_key: urlKey,
+            label: label === 1 ? "Phishing" : "Benign",
+            detected_at: detectedAt,
+            tier: tier ? tier[0].toUpperCase() + tier.slice(1) : "",
+            category_id: categoryId,
+            category: payload.categories?.[categoryId] || categoryId,
+            provider,
+            brand,
+            key_features: {
+              url_length: urlLength,
+              subdomains,
+              ip_host: Boolean(ipHost),
+              suspicious_tld: Boolean(suspiciousTld),
+              entropy,
+            },
+          };
+        });
+        setDatabaseRecords(databaseRecords);
+        return databaseRecords;
+      })
+      .catch((error) => {
+        databaseRecordsPromise = null;
+        throw error;
+      });
+  }
+  return databaseRecordsPromise;
+}
+
+function populateDatabaseCategories() {
+  const select = document.querySelector("#database-category-filter");
+  const currentValue = select.value;
+  const categories = [...new Map(databaseRecords.map((record) => [record.category_id, record.category])).entries()]
+    .sort((left, right) => left[1].localeCompare(right[1]));
+  select.replaceChildren(new Option("All categories", "all"));
+  categories.forEach(([id, name]) => select.add(new Option(name, id)));
+  if (categories.some(([id]) => id === currentValue)) select.value = currentValue;
+}
+
+function renderDatabaseExplorer() {
+  const counts = databaseRecords.reduce((summary, record) => {
+    summary[record.label] = (summary[record.label] || 0) + 1;
+    return summary;
+  }, {});
+  const categories = new Set(databaseRecords.map((record) => record.category_id));
+  const brands = new Set(databaseRecords.map((record) => record.brand).filter((brand) => brand !== "No known brand signature"));
+  document.querySelector("#database-stats").replaceChildren(...[
+    ["Total URLs", databaseRecords.length],
+    ["Phishing", counts.Phishing || 0],
+    ["Benign", counts.Benign || 0],
+    ["Categories", categories.size],
+    ["Brands", brands.size],
+  ].map(([label, value]) => {
+    const item = document.createElement("div");
+    const amount = document.createElement("strong");
+    const caption = document.createElement("span");
+    amount.textContent = Number(value).toLocaleString();
+    caption.textContent = label;
+    item.append(amount, caption);
+    return item;
+  }));
+  populateDatabaseCategories();
+
+  const query = document.querySelector("#database-search").value.trim().toLowerCase();
+  const labelFilter = document.querySelector("#database-label-filter").value;
+  const categoryFilter = document.querySelector("#database-category-filter").value;
+  const tierFilter = document.querySelector("#database-tier-filter").value;
+  const filtered = databaseRecords.filter((record) => (
+    (!query || record.url.toLowerCase().includes(query))
+    && (labelFilter === "all" || record.label === labelFilter)
+    && (categoryFilter === "all" || record.category_id === categoryFilter)
+    && (tierFilter === "all" || record.tier.toLowerCase() === tierFilter.toLowerCase())
+  ));
+  const pages = Math.max(1, Math.ceil(filtered.length / databasePageSize));
+  databasePage = Math.min(databasePage, pages - 1);
+  const pageRows = filtered.slice(databasePage * databasePageSize, (databasePage + 1) * databasePageSize);
+  const tableBody = document.querySelector("#database-rows");
+  tableBody.replaceChildren();
+  if (!pageRows.length) {
+    const empty = document.createElement("tr");
+    const cell = document.createElement("td");
+    cell.colSpan = 7;
+    cell.textContent = "No matching PhishVN records.";
+    empty.append(cell);
+    tableBody.append(empty);
+  }
+  pageRows.forEach((record) => {
+    const row = document.createElement("tr");
+    const values = [
+      ["url", record.url],
+      ["label", record.label],
+      ["date", record.detected_at || "—"],
+      ["tier", record.tier || "—"],
+      ["category", `${record.category} · ${record.brand}`],
+      ["features", `len ${record.key_features.url_length} · subdomains ${record.key_features.subdomains} · ${record.key_features.ip_host ? "IP host" : "domain host"}`],
+    ];
+    values.forEach(([kind, value]) => {
+      const cell = document.createElement("td");
+      if (kind === "url") {
+        const code = document.createElement("code");
+        code.textContent = value;
+        cell.append(code);
+      } else cell.textContent = value;
+      if (kind === "label") cell.className = record.label === "Phishing" ? "database-label phishing" : "database-label benign";
+      row.append(cell);
+    });
+    const actionCell = document.createElement("td");
+    const analyzeButton = document.createElement("button");
+    analyzeButton.type = "button";
+    analyzeButton.className = "database-analyze";
+    analyzeButton.textContent = "Analyze URL";
+    analyzeButton.addEventListener("click", () => {
+      input.value = record.url;
+      document.querySelector("#database-explorer").hidden = true;
+      form.requestSubmit();
+      input.focus({ preventScroll: true });
+    });
+    actionCell.append(analyzeButton);
+    row.append(actionCell);
+    tableBody.append(row);
+  });
+  document.querySelector("#database-page-status").textContent = `${filtered.length.toLocaleString()} records · Page ${databasePage + 1} of ${pages}`;
+  document.querySelector("#database-previous").disabled = databasePage === 0;
+  document.querySelector("#database-next").disabled = databasePage >= pages - 1;
+}
+
+async function showDatabaseExplorer() {
+  const explorer = document.querySelector("#database-explorer");
+  explorer.hidden = false;
+  try {
+    await loadDatabaseRecords();
+    renderDatabaseExplorer();
+  } catch {
+    document.querySelector("#database-rows").textContent = "PhishVN records could not be loaded.";
+  }
 }
 
 function renderLiveInspection(inspection, language = currentLanguage) {
@@ -504,21 +808,89 @@ async function showScanStep(step, state) {
 }
 
 function setTheme(theme) {
+  const normalizedTheme = ({ "cyber-dark": "dark", contrast: "high-contrast" })[theme] || theme;
+  theme = ["dark", "light", "high-contrast"].includes(normalizedTheme) ? normalizedTheme : "dark";
+  if (document.documentElement.dataset) document.documentElement.dataset.theme = theme;
   document.body.dataset.theme = theme;
   try { localStorage.setItem("safeweb.theme", theme); } catch {}
-  const nextThemeKey = { "cyber-dark": "themeContrast", contrast: "themeLight", light: "themeDark" }[theme];
+  const nextThemeKey = { dark: "themeContrast", "high-contrast": "themeLight", light: "themeDark" }[theme];
   const themeButton = document.querySelector("#theme-switcher");
   themeButton.textContent = translation(nextThemeKey);
   themeButton.setAttribute("aria-label", `${translation("themeControl")}: ${translation(nextThemeKey)}`);
 }
 
 function cycleTheme() {
-  const nextTheme = { "cyber-dark": "contrast", contrast: "light", light: "cyber-dark" };
-  setTheme(nextTheme[document.body.dataset.theme || "cyber-dark"] || "cyber-dark");
+  const nextTheme = { dark: "high-contrast", "high-contrast": "light", light: "dark" };
+  setTheme(nextTheme[document.body.dataset.theme || "dark"] || "dark");
+}
+
+function resetResult() {
+  latestResult = null;
+  latestEnteredUrl = null;
+  latestNormalizedUrl = null;
+  input.value = "";
+  document.body.removeAttribute("data-verdict-state");
+  document.body.removeAttribute("data-risk-state");
+  document.querySelector("#reset-result").hidden = true;
+  document.querySelector("#result-title").textContent = translation("awaitingUrl");
+  document.querySelector("#risk-badge").textContent = translation("noResult");
+  document.querySelector("#risk-badge").className = "risk-badge risk-idle";
+  document.querySelector("#risk-level-label").textContent = translation("riskLevelUnknown");
+  document.querySelector("#risk-verdict").textContent = translation("awaitingUrl");
+  document.querySelector("#verdict-icon").textContent = "?";
+  const meter = document.querySelector("#signal-meter");
+  meter.replaceChildren();
+  meter.setAttribute("aria-label", translation("riskLevelUnknown"));
+  document.querySelector("#verification-sources").replaceChildren();
+  document.querySelector("#reason-list").replaceChildren();
+  const emptyReason = document.createElement("li");
+  emptyReason.className = "empty-signal";
+  emptyReason.textContent = translation("emptySignals");
+  document.querySelector("#reason-list").append(emptyReason);
+  document.querySelector("#signal-summary").replaceChildren();
+  document.querySelector("#recommendation-list").replaceChildren();
+  const emptyObserved = document.createElement("li");
+  emptyObserved.className = "empty-signal";
+  emptyObserved.textContent = translation("emptySignals");
+  document.querySelector("#signal-list").replaceChildren(emptyObserved);
+  document.querySelector("#feature-list").replaceChildren();
+  document.querySelector("#model-consensus").replaceChildren();
+  document.querySelector("#ensemble-summary").textContent = "Awaiting analysis";
+  document.querySelector("#signal-count").textContent = "0";
+  document.querySelector("#database-verdict").hidden = true;
+  document.querySelector("#url-intelligence").hidden = true;
+  document.querySelector("#easter-egg-card").hidden = true;
+  document.querySelector("#counterexample-card").hidden = true;
+  document.querySelector("#live-results").hidden = true;
+  document.querySelector("#normalized-note").hidden = true;
+  setMessage(null);
 }
 
 languageSwitcher.addEventListener("click", () => openLanguageDialog(languageSwitcher));
 document.querySelector("#theme-switcher").addEventListener("click", cycleTheme);
+document.querySelector("#reset-result").addEventListener("click", resetResult);
+document.querySelector("#database-toggle").addEventListener("click", showDatabaseExplorer);
+document.querySelector("#database-close").addEventListener("click", () => {
+  document.querySelector("#database-explorer").hidden = true;
+});
+document.querySelector("#database-search").addEventListener("input", () => {
+  databasePage = 0;
+  if (databaseRecords.length) renderDatabaseExplorer();
+});
+["#database-label-filter", "#database-category-filter", "#database-tier-filter"].forEach((selector) => {
+  document.querySelector(selector).addEventListener("change", () => {
+    databasePage = 0;
+    if (databaseRecords.length) renderDatabaseExplorer();
+  });
+});
+document.querySelector("#database-previous").addEventListener("click", () => {
+  databasePage = Math.max(0, databasePage - 1);
+  renderDatabaseExplorer();
+});
+document.querySelector("#database-next").addEventListener("click", () => {
+  databasePage += 1;
+  renderDatabaseExplorer();
+});
 document.querySelector("#screenshot-toggle").addEventListener("change", (event) => {
   const visible = event.target.checked;
   const image = document.querySelector("#site-screenshot");
@@ -629,6 +1001,7 @@ form.addEventListener("submit", async (event) => {
   submitButton.querySelector(".button-label").textContent = translation("analyzing");
   try {
     await showScanStep("database", "active");
+    await loadDatabaseRecords();
     latestResult = assessUrl(url);
     await showScanStep("database", "complete");
     renderResult(latestResult);
@@ -675,9 +1048,9 @@ if (preference.exists) {
   document.documentElement.classList.remove("language-pending");
 }
 
-  let savedTheme = "cyber-dark";
+  let savedTheme = "dark";
   try {
     const storedTheme = localStorage.getItem("safeweb.theme");
-    if (["cyber-dark", "contrast", "light"].includes(storedTheme)) savedTheme = storedTheme;
+    if (["dark", "light", "high-contrast", "cyber-dark", "contrast"].includes(storedTheme)) savedTheme = storedTheme;
   } catch {}
   setTheme(savedTheme);

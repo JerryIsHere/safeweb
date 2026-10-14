@@ -7,8 +7,13 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.calibration import CalibratedClassifierCV
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import LinearSVC
 
 from src.data_loader import class_distribution, load_dataset
 from src.feature_extractor import extract_features
@@ -19,6 +24,44 @@ TEST_SIZE = 0.20
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_DATASET_PATH = PROJECT_ROOT / "data" / "raw" / "urls.csv"
 DEFAULT_MODEL_PATH = PROJECT_ROOT / "model" / "random_forest.joblib"
+
+
+def model_suite(random_state: int = RANDOM_STATE) -> dict[str, object]:
+    """Create the four estimators supported by the Python and browser pipelines."""
+    scaled_svm = make_pipeline(
+        StandardScaler(),
+        LinearSVC(random_state=random_state, max_iter=10000),
+    )
+    return {
+        "random_forest": RandomForestClassifier(
+            n_estimators=100,
+            random_state=random_state,
+            n_jobs=-1,
+            class_weight="balanced_subsample",
+            max_depth=16,
+            min_samples_leaf=3,
+        ),
+        "gradient_boosting": GradientBoostingClassifier(
+            n_estimators=100,
+            learning_rate=0.1,
+            max_depth=3,
+            random_state=random_state,
+        ),
+        "svm": CalibratedClassifierCV(
+            estimator=scaled_svm,
+            method="sigmoid",
+            cv=3,
+            ensemble=False,
+        ),
+        "logistic_regression": make_pipeline(
+            StandardScaler(),
+            LogisticRegression(
+                max_iter=2000,
+                class_weight="balanced",
+                random_state=random_state,
+            ),
+        ),
+    }
 
 
 def feature_frame(urls: pd.Series) -> pd.DataFrame:

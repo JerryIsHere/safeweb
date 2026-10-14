@@ -8,6 +8,7 @@ __pycache__/
 htmlcov/
 .env
 _site/
+!_site/static/database-records.json
 
 model/*.joblib
 model/*.pkl

@@ -19,12 +19,52 @@ from sklearn.metrics import (
     f1_score,
     precision_score,
     recall_score,
+    roc_auc_score,
 )
 from sklearn.model_selection import train_test_split
 
 from src.data_loader import load_dataset
 from src.predict import DEFAULT_MODEL_PATH, load_model
 from src.train import RANDOM_STATE, TEST_SIZE, feature_frame
+
+
+def measure_classifier(
+    model,
+    features: pd.DataFrame,
+    labels: pd.Series,
+    training_rows: int | None = None,
+) -> dict[str, object]:
+    """Return comparable phishing-class metrics for a fixed held-out set."""
+    predictions = model.predict(features)
+    matrix = confusion_matrix(labels, predictions, labels=[0, 1])
+    probabilities = model.predict_proba(features)[:, list(model.classes_).index(1)]
+    result: dict[str, object] = {
+        "accuracy": float(accuracy_score(labels, predictions)),
+        "precision": float(precision_score(labels, predictions, zero_division=0)),
+        "recall": float(recall_score(labels, predictions, zero_division=0)),
+        "f1_score": float(f1_score(labels, predictions, zero_division=0)),
+        "roc_auc": float(roc_auc_score(labels, probabilities)),
+        "confusion_matrix_labels": ["benign", "phishing"],
+        "confusion_matrix": matrix.tolist(),
+        "confusion_counts": {
+            "tn": int(matrix[0, 0]),
+            "fp": int(matrix[0, 1]),
+            "fn": int(matrix[1, 0]),
+            "tp": int(matrix[1, 1]),
+        },
+        "class_report": classification_report(
+            labels,
+            predictions,
+            labels=[0, 1],
+            target_names=["benign", "phishing"],
+            output_dict=True,
+            zero_division=0,
+        ),
+        "test_rows": int(len(labels)),
+    }
+    if training_rows is not None:
+        result["training_rows"] = int(training_rows)
+    return result
 
 
 def evaluate_model(
@@ -47,12 +87,8 @@ def evaluate_model(
     predictions = model.predict(test_features)
     matrix = confusion_matrix(test_labels, predictions, labels=[0, 1])
     metrics: dict[str, object] = {
-        "accuracy": float(accuracy_score(test_labels, predictions)),
-        "precision": float(precision_score(test_labels, predictions, zero_division=0)),
-        "recall": float(recall_score(test_labels, predictions, zero_division=0)),
-        "f1_score": float(f1_score(test_labels, predictions, zero_division=0)),
+        **measure_classifier(model, test_features, test_labels),
         "confusion_matrix_labels": ["legitimate", "phishing"],
-        "confusion_matrix": matrix.tolist(),
         "classification_report": classification_report(
             test_labels,
             predictions,
@@ -61,7 +97,6 @@ def evaluate_model(
             output_dict=True,
             zero_division=0,
         ),
-        "test_rows": int(len(test_labels)),
     }
     output = Path(report_dir)
     output.mkdir(parents=True, exist_ok=True)

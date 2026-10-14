@@ -65,10 +65,70 @@ test("known PhishVN hosts are attributed and still pass through model verificati
 
   assert.equal(result.database_match.matched, true);
   assert.equal(result.database_match.type, "exact_url");
+  assert.equal(result.direct_database_verdict.label, "Phishing");
   assert.equal(result.database_match.provenance, "Matched in PhishVN Database");
   assert.equal(result.prediction, "phishing");
   assert.equal(result.risk_level, "VERY HIGH");
   assert.equal(result.verification_stages.machine_learning, "evaluated");
+});
+
+test("exact PhishVN benign records decide the verdict without changing model scores", () => {
+  browserModel.setDatabaseRecords([{
+    url: "https://verified.example/account",
+    url_key: "verified.example/account",
+    label: "Benign",
+    detected_at: "2025-01-02",
+    tier: "Gold",
+    category_id: "banking_finance",
+    category: "Banking & Finance",
+    provider: "Custom domain",
+    brand: "Example Bank",
+    key_features: {},
+  }]);
+
+  const result = browserModel.assessUrl("https://verified.example/account");
+
+  assert.equal(result.database_match.type, "exact_url");
+  assert.equal(result.direct_database_verdict.label, "Benign");
+  assert.equal(result.prediction, "legitimate");
+  assert.equal(result.risk_level, "LOW");
+  assert.equal(result.model_ensemble.prediction, "phishing");
+  assert.ok(result.model_ensemble.probability > 0.5);
+  assert.equal(Object.keys(result.models).length, 4);
+  assert.equal(result.models.random_forest.probability >= 0, true);
+});
+
+  test("known phishing host matches attach their PhishVN source record", () => {
+    browserModel.setDatabaseRecords([{
+      url: "http://tiktokshopseller-vn.com/login",
+      url_key: "tiktokshopseller-vn.com/login",
+      label: "Phishing",
+      detected_at: "2025-04-03",
+      tier: "Silver",
+      category_id: "social_messaging",
+      category: "Social Media",
+      provider: "Custom domain",
+      brand: "TikTok",
+      key_features: {},
+    }]);
+    const result = browserModel.assessUrl("http://tiktokshopseller-vn.com");
+
+    assert.equal(result.database_match.type, "exact_url");
+    assert.equal(result.direct_database_verdict.record.tier, "Silver");
+  });
+
+test("SafeWeb URL variants trigger the easter egg and URL intelligence", () => {
+  for (const url of [
+    "https://jerryishere.github.io/safeweb",
+    "http://JERRYISHERE.github.io/safeweb/?ref=check",
+    "jerryishere.github.io/safeweb/",
+  ]) {
+    assert.equal(browserModel.isSafeWebUrl(browserModel.validateUrl(url)), true);
+  }
+  const identity = browserModel.classifyUrl("https://vietcombank-login.github.io/verify");
+  assert.equal(identity.category_id, "banking_finance");
+  assert.equal(identity.provider, "GitHub Pages");
+  assert.equal(identity.brand, "Vietcombank");
 });
 
 test("browser validation rejects empty, malformed, and non-HTTP URLs", () => {

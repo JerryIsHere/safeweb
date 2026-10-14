@@ -1,8 +1,8 @@
-# SafeWeb v2.1.0 ML Experiment Report
+# SafeWeb v2.3.0 ML Experiment Report
 
 ## Objective and protocol
 
-The experiment tests whether a Random Forest can distinguish the labels in the PhishVN v3.1.0 open URL dataset using URL-derived features. The released train/validation/test partitions are already grouped and temporally organized by registrable domain. SafeWeb trains on train plus validation and holds the official test partition out of fitting.
+The experiment compares Random Forest, Gradient Boosting, calibrated linear SVM, and Logistic Regression on the PhishVN v3.1.0 open URL dataset. All four use the same URL-derived feature matrix and the same official train/validation/test partitions grouped by registrable domain. Fit uses train plus validation; the official test partition remains untouched.
 
 ## Source data and preparation
 
@@ -22,31 +22,27 @@ The release includes `collected_at` and `scraped_at`; collection time is retaine
 
 The model consumes 52 numeric columns: 30 SafeWeb URL/keyword features plus 21 pre-extracted CompPhish-aligned features and the PhishVN suspicious-TLD flag. The source includes the same 21 CompPhish values in a companion table. After URL and host normalization, all 797,742 retained-row feature values matched the upstream values within `1e-8`; host-specific PhishVN profiles retain the release's domain/TLD boundaries where its PSL differs from the bundled parser.
 
-## Model
+## Models
 
-- Estimator: `RandomForestClassifier`
-- Trees: 100
-- Maximum depth: 16
-- Minimum samples per leaf: 3
-- Random seed: 42
-- Training rows: 29,637 (train plus validation)
-- Test rows: 6,624, never used to fit the estimator
-- Class weighting: `balanced_subsample`
+- Random Forest: 100 trees, maximum depth 16, minimum leaf 3, balanced-subsample weighting.
+- Gradient Boosting: 100 trees, learning rate 0.1, depth 3.
+- SVM: `StandardScaler` + `LinearSVC`, sigmoid calibration with 3-fold cross-validation.
+- Logistic Regression: `StandardScaler` + balanced `LogisticRegression`.
+- Random seed: 42. All models fit on 29,637 rows and tested on the same 6,624 rows.
 
 ## Held-out results
 
-| Metric | Phishing class | Overall |
-| --- | ---: | ---: |
-| Accuracy | — | 0.8752 |
-| Precision | 0.8231 | — |
-| Recall | 0.8975 | — |
-| F1 | 0.8587 | — |
+| Model | Accuracy | Precision | Recall | F1 | ROC-AUC | TN / FP / FN / TP |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| Random Forest | 0.8752 | 0.8231 | 0.8975 | 0.8587 | 0.9466 | 3285 / 540 / 287 / 2512 |
+| Gradient Boosting | 0.8798 | 0.8008 | 0.9525 | 0.8701 | 0.9495 | 3162 / 663 / 133 / 2666 |
+| Calibrated SVM | 0.8798 | 0.8054 | 0.9436 | 0.8690 | 0.9456 | 3187 / 638 / 158 / 2641 |
+| Logistic Regression | 0.8631 | 0.8326 | 0.8460 | 0.8393 | 0.9440 | 3349 / 476 / 431 / 2368 |
 
-Confusion matrix in `[benign, phishing]` label order:
+Confusion matrices use `[benign, phishing]` label order:
 
 ```text
-[[3285, 540],
- [ 287, 2512]]
+RF `[[3285, 540], [287, 2512]]`; GB `[[3162, 663], [133, 2666]]`; SVM `[[3187, 638], [158, 2641]]`; LR `[[3349, 476], [431, 2368]]`.
 ```
 
 Test support is 3,825 benign and 2,799 phishing. These scores are dataset/split-specific and are not calibrated confidence or estimates of deployment-wide performance.

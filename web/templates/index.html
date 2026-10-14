@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f1f2ec">
     <title data-i18n="pageTitle">SafeWeb | URL analysis</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.1.0">
-    <script src="{{ url_for('static', filename='translations.js') }}?v=2.1.0" defer></script>
-    <script src="{{ url_for('static', filename='model-data.js') }}?v=2.1.0" defer></script>
-    <script src="{{ url_for('static', filename='browser-model.js') }}?v=2.1.0" defer></script>
-    <script src="{{ url_for('static', filename='web-inspection.js') }}?v=2.1.0" defer></script>
-    <script src="{{ url_for('static', filename='script.js') }}?v=2.1.0" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.3.0">
+    <script src="{{ url_for('static', filename='translations.js') }}?v=2.3.0" defer></script>
+    <script src="{{ url_for('static', filename='model-data.js') }}?v=2.3.0" defer></script>
+    <script src="{{ url_for('static', filename='browser-model.js') }}?v=2.3.0" defer></script>
+    <script src="{{ url_for('static', filename='web-inspection.js') }}?v=2.3.0" defer></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=2.3.0" defer></script>
   </head>
   <body>
     <header class="topbar">
       <a class="brand" href="{{ home_url }}" aria-label="SafeWeb home" data-i18n-attr="aria-label:homeLabel">
         <span class="brand-mark" aria-hidden="true">S</span>
-          <span>SafeWeb <small class="version-tag">v2.1.0</small></span>
+          <span>SafeWeb <small class="version-tag">v2.3.0</small></span>
       </a>
       <div class="header-actions">
         <div class="topbar-meta">
@@ -40,6 +40,9 @@
         <p class="intro-copy" data-i18n="introCopy">Assess URL characteristics with the PhishVN database and a locally trained model. Live checks are optional.</p>
       </section>
 
+      <nav class="workspace-nav" aria-label="SafeWeb tools">
+        <button class="database-open-button" id="database-toggle" type="button">Kho Dữ Liệu PhishVN / Database Explorer</button>
+      </nav>
       <section class="analysis-grid" aria-label="URL analysis" data-i18n-attr="aria-label:analysisLabel">
         <form class="analysis-form" id="analysis-form" novalidate>
           <label for="url-input" data-i18n="inputLabel">URL to assess</label>
@@ -61,7 +64,7 @@
           <ol class="scan-progress" id="scan-progress" hidden aria-live="polite">
             <li data-step="database" data-i18n="scanDatabase">Normalize URL and compare PhishVN records</li>
             <li data-step="live" data-i18n="scanLive">Check DNS and inspect redirects</li>
-            <li data-step="model" data-i18n="scanModel">Evaluate Random Forest and retrieve page preview</li>
+            <li data-step="model" data-i18n="scanModel">Evaluate the four-model consensus and retrieve page preview</li>
           </ol>
           <div class="method-note">
             <span class="note-index" data-i18n="scopeLabel">SCOPE</span>
@@ -75,7 +78,10 @@
               <div class="section-kicker" data-i18n="resultKicker">TWO-STAGE VERIFICATION</div>
               <h2 id="result-title" data-i18n="awaitingUrl">Awaiting a URL</h2>
             </div>
-            <span class="risk-badge risk-idle" id="risk-badge" data-i18n="noResult">NO RESULT</span>
+            <div class="result-heading-actions">
+              <button class="reset-button" id="reset-result" type="button" hidden aria-label="Reset / Xóa kết quả">× <span>Xóa kết quả</span></button>
+              <span class="risk-badge risk-idle" id="risk-badge" data-i18n="noResult">NO RESULT</span>
+            </div>
           </div>
           <div class="risk-summary">
             <div class="verdict-icon" id="verdict-icon" aria-hidden="true">?</div>
@@ -86,6 +92,32 @@
           </div>
           <div class="signal-meter" id="signal-meter" role="img" aria-label="No risk level"></div>
           <div class="verification-sources" id="verification-sources"></div>
+          <section class="easter-egg-card" id="easter-egg-card" hidden>
+            <p class="easter-egg-message" id="easter-egg-message"></p>
+            <p class="easter-egg-detail" id="easter-egg-detail"></p>
+          </section>
+          <article class="database-verdict" id="database-verdict" hidden>
+            <h3 id="database-verdict-title"></h3>
+            <p id="database-verdict-note"></p>
+            <dl class="database-meta" id="database-meta"></dl>
+          </article>
+          <section class="url-intelligence" id="url-intelligence" hidden aria-label="URL category and provider">
+            <span class="intelligence-pill" id="category-pill"></span>
+            <span class="intelligence-pill" id="provider-pill"></span>
+            <span class="intelligence-pill" id="brand-pill"></span>
+          </section>
+          <article class="consensus-card">
+            <div class="consensus-heading">
+              <div><span class="section-kicker">MODEL CONSENSUS</span><h3>Đồng thuận Đa Mô hình AI / Multi-Model AI Consensus</h3></div>
+              <strong id="ensemble-summary">Awaiting analysis</strong>
+            </div>
+            <div class="model-consensus-grid" id="model-consensus"></div>
+          </article>
+          <article class="counterexample-card" id="counterexample-card" hidden>
+            <h3>Cảnh giác: Các trang giả mạo / lừa đảo thực tế trong Cơ sở dữ liệu để đối chiếu</h3>
+            <p>Real phishing URLs from PhishVN, shown as text for safe comparison.</p>
+            <div class="counterexample-list" id="counterexample-list"></div>
+          </article>
           <div class="result-divider"></div>
           <div class="detail-grid">
             <article class="insight-card">
@@ -132,7 +164,28 @@
           <p class="result-disclaimer" id="result-disclaimer" data-i18n="disclaimer">Risk level is a model warning, not a determination that a URL is safe or malicious.</p>
         </section>
       </section>
-      <footer class="page-footer"><span data-i18n="footerResearch">SAFEWEB · EDUCATIONAL RESEARCH</span><span>SafeWeb v2.1.0</span><span data-i18n="footerNetwork">LOCAL CHECKS · LIVE CHECKS OPTIONAL</span></footer>
+      <section class="database-explorer" id="database-explorer" hidden aria-labelledby="database-title">
+        <div class="explorer-heading">
+          <div><span class="section-kicker">PHISHVN V3.1.0</span><h2 id="database-title">Kho Dữ Liệu PhishVN / Database Explorer</h2></div>
+          <button class="explorer-close" id="database-close" type="button" aria-label="Close database explorer">×</button>
+        </div>
+        <p class="explorer-attribution">Thai Nguyen Vu, PhishVN v3.1.0 (2026) · <a href="https://doi.org/10.17632/b97hxbxtpd.4" rel="noreferrer">DOI 10.17632/b97hxbxtpd.4</a> · CC BY 4.0</p>
+        <div class="database-stats" id="database-stats" aria-live="polite"></div>
+        <div class="database-filters">
+          <label>Search URL or domain<input id="database-search" type="search" autocomplete="off" placeholder="domain.example"></label>
+          <label>Label<select id="database-label-filter"><option value="all">Tất cả / All</option><option value="Phishing">Lừa đảo / Phishing</option><option value="Benign">Hợp lệ / Benign</option></select></label>
+          <label>Category<select id="database-category-filter"><option value="all">All categories</option></select></label>
+          <label>Tier<select id="database-tier-filter"><option value="all">All tiers</option><option>Gold</option><option>Silver</option><option>Bronze</option></select></label>
+        </div>
+        <div class="database-table-wrap">
+          <table class="database-table">
+            <thead><tr><th>URL</th><th>Label</th><th>Date detected</th><th>Tier</th><th>Category / brand</th><th>Key features</th><th>Action</th></tr></thead>
+            <tbody id="database-rows"><tr><td colspan="7">Open the explorer to load PhishVN records.</td></tr></tbody>
+          </table>
+        </div>
+        <div class="database-pagination"><span id="database-page-status" aria-live="polite"></span><div><button id="database-previous" type="button" disabled>Previous</button><button id="database-next" type="button" disabled>Next</button></div></div>
+      </section>
+      <footer class="page-footer"><span data-i18n="footerResearch">SAFEWEB · EDUCATIONAL RESEARCH</span><span>SafeWeb v2.3.0</span><span data-i18n="footerNetwork">LOCAL CHECKS · LIVE CHECKS OPTIONAL</span></footer>
     </main>
 
     <dialog class="language-dialog" id="language-dialog" open aria-labelledby="language-title" aria-describedby="language-subtitle">

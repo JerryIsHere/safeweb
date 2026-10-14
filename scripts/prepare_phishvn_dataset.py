@@ -20,6 +20,9 @@ from src.url_validation import normalize_url, validate_url
 
 
 DEFAULT_SOURCE = PROJECT_ROOT / "PhishVN A Time-Stamped Vietnamese URL Phishing Dat.zip"
+RELOCATED_SOURCE = PROJECT_ROOT / "data" / "raw" / DEFAULT_SOURCE.name
+if not DEFAULT_SOURCE.is_file() and RELOCATED_SOURCE.is_file():
+    DEFAULT_SOURCE = RELOCATED_SOURCE
 DEFAULT_OUTPUT = PROJECT_ROOT / "data" / "processed" / "phishvn_clean.csv"
 DEFAULT_INDEX = PROJECT_ROOT / "data" / "phishvn_database.json"
 INNER_ARCHIVE = "PhishVN A Time-Stamped Vietnamese URL Phishing Dat/PhishVN_v3.1.0_open.zip"
