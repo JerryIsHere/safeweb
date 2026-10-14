@@ -12,6 +12,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyArrowPatch, FancyBboxPatch
+from PIL import Image
 from docx import Document
 from docx.enum.section import WD_SECTION_START
 from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT, WD_TABLE_ALIGNMENT
@@ -25,6 +26,7 @@ ROOT = Path(__file__).resolve().parents[1]
 METRICS_PATH = ROOT / "reports" / "metrics.json"
 EVALUATION_PATH = ROOT / "reports" / "phishvn_domain_eval.json"
 OUTPUT_PATH = ROOT / "Bao_cao_SafeWeb_KHKT_THPT.docx"
+SCREENSHOTS_PATH = ROOT / "reports" / "screenshots"
 
 NAVY = "17324D"
 TEAL = "167C80"
@@ -109,8 +111,11 @@ def set_page_number_format(section, fmt: str, start: int) -> None:
 
 
 def set_page_footer(section, color=NAVY):
+    section.footer.is_linked_to_previous = False
+    section.different_first_page_header_footer = False
     section.footer_distance = Cm(1.15)
     paragraph = section.footer.paragraphs[0]
+    paragraph.clear()
     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
     paragraph.paragraph_format.space_before = Pt(0)
     paragraph.paragraph_format.space_after = Pt(0)
@@ -311,6 +316,42 @@ def make_confusion_figure(path: Path, evaluations):
     plt.close(figure)
 
 
+def make_test_evidence_figure(path: Path):
+    figure, axis = plt.subplots(figsize=(10.5, 4.1))
+    axis.set_xlim(0, 10.5)
+    axis.set_ylim(0, 4.1)
+    axis.axis("off")
+    axis.text(0.3, 3.76, "XÁC MINH CỤC BỘ · SAFEWEB v2.3.0", fontsize=12, weight="bold", color=f"#{NAVY}")
+    cards = [
+        (0.3, 2.05, "PYTHON / DATA", "59 passed", "pytest · pipeline, model, app", TEAL),
+        (5.35, 2.05, "BROWSER", "15 passed", "URL logic · model · consent", "#C08B3E"),
+        (0.3, 0.45, "PYTHON ↔ JAVASCRIPT", "10 valid · 6 invalid", "max feature Δ 1.33e-15 · max probability Δ 7.77e-16", "#547A9A"),
+        (5.35, 0.45, "STATIC BUILD", "passed", "npm run build · Pages artifact", "#58806C"),
+    ]
+    for x, y, label, value, detail, color in cards:
+        display_color = color if color.startswith("#") else f"#{color}"
+        box = FancyBboxPatch(
+            (x, y), 4.8, 1.25,
+            boxstyle="round,pad=0.08,rounding_size=0.08",
+            linewidth=1.0,
+            edgecolor=display_color,
+            facecolor="#F5F8F8",
+        )
+        axis.add_patch(box)
+        axis.text(x + 0.2, y + 0.96, label, fontsize=8, weight="bold", color=display_color)
+        axis.text(x + 0.2, y + 0.59, value, fontsize=13, weight="bold", color=f"#{NAVY}")
+        axis.text(x + 0.2, y + 0.22, detail, fontsize=7, color=f"#{MUTED}")
+    figure.savefig(path, dpi=190, bbox_inches="tight", facecolor="white")
+    plt.close(figure)
+
+
+def crop_browser_screenshot(source: Path, destination: Path):
+    with Image.open(source) as screenshot:
+        width = min(screenshot.width, round(screenshot.width * 0.77))
+        height = min(screenshot.height, round(screenshot.height * 0.77))
+        screenshot.crop((0, 0, width, height)).save(destination)
+
+
 def add_contents(document):
     add_heading(document, "MỤC LỤC", 1)
     add_paragraph(
@@ -454,6 +495,16 @@ def write_document(metrics, evaluation, output_path: Path):
     ], widths=[3.6, 6.3, 6.0], font_size=8.4)
     add_heading(document, "1.4. Phạm vi, giả định và giới hạn", 2)
     add_paragraph(document, "Đối tượng nghiên cứu là chuỗi URL và các bản ghi nhãn đã công bố trong PhishVN/PhiUSIIL. Luồng suy luận không tải HTML của website và không chạy mã trang đích. Không có xác thực chứng thư TLS, đánh giá tuổi tên miền, uy tín WHOIS, danh tiếng IP, phân tích nội dung DOM hoặc sandbox. DNS chỉ được truy vấn khi bật live inspection. Dự án là nguyên mẫu nghiên cứu, chưa có đánh giá người dùng, kiểm định độc lập theo thời gian thực hoặc chứng nhận an toàn thông tin.")
+    add_heading(document, "1.5. Giá trị và định hướng giáo dục", 2)
+    add_paragraph(document, "SafeWeb được thiết kế như một học cụ về an toàn số và tư duy dữ liệu, không chỉ là công cụ đưa ra nhãn URL. Giá trị giáo dục dự kiến nằm ở khả năng quan sát các bước phân tích, so sánh nguồn bằng chứng và thảo luận giới hạn của tự động hóa. Dự án chưa tiến hành nghiên cứu có người tham gia, đo kiến thức trước/sau hoặc đánh giá hiệu quả sư phạm; vì vậy các nội dung dưới đây là mục tiêu học tập và kịch bản sử dụng đề xuất, không phải kết quả thực nghiệm về học sinh.")
+    add_table(document, ["Năng lực hướng tới", "Hoạt động học tập có thể quan sát", "Giới hạn cần nêu"], [
+        ("Hiểu cấu trúc URL", "Tách scheme, hostname, subdomain, path và query; chỉ ra phần nào chứa tín hiệu được trích xuất.", "Một dấu hiệu như từ khóa ngân hàng, IP hay HTTPS không tự chứng minh URL độc hại hoặc an toàn."),
+        ("Tư duy phản biện về AI", "So sánh match PhishVN với xác suất từng mô hình; đọc precision, recall, F1 và false positive/false negative.", "Kết quả phụ thuộc corpus và threshold; SVM hiện có recall phishing rất thấp dù ROC-AUC cao."),
+        ("Quyền riêng tư và công dân số", "Phân biệt phân tích local-only với live inspection; cân nhắc trước khi chia sẻ URL cho dịch vụ ngoài.", "Không nhập URL riêng tư, token hoặc thông tin đăng nhập; HTTPS không xác thực danh tính website."),
+        ("Tư duy kỹ thuật và tái lập", "Theo dõi pipeline dữ liệu → đặc trưng → mô hình → giao diện; đối chiếu Python–JavaScript.", "Parity xác minh hai hiện thực nhất quán trên bộ ca đã chọn, không chứng minh độ chính xác phổ quát."),
+    ], widths=[3.3, 6.4, 6.2], font_size=8.2)
+    add_paragraph(document, "Kịch bản lớp học an toàn có thể bắt đầu bằng URL mẫu vô hại hoặc địa chỉ IP dành riêng cho kiểm thử, yêu cầu học sinh đánh dấu thành phần URL trước khi xem dự đoán, rồi giải thích vì sao kết luận của mô hình không phải chứng nhận. Giáo viên có thể cho học sinh đối chiếu một lỗi bỏ sót và một cảnh báo nhầm trong ma trận nhầm lẫn, thảo luận vì sao không nhấp vào URL phishing mẫu và yêu cầu đề xuất cách xác minh qua kênh chính thức. Mọi bài tập nên dùng chuỗi công khai/giả lập, tắt live inspection và không mở đích URL.")
+    add_paragraph(document, "Nếu triển khai thành hoạt động nghiên cứu giáo dục, cần có kế hoạch riêng: bài kiểm tra khái niệm trước/sau, rubric chấm khả năng phân tích hostname và diễn giải chỉ số, kiểm tra lựa chọn hành vi an toàn, cùng quy trình đồng thuận và bảo vệ dữ liệu người học. Các phép đo này chưa thuộc phạm vi kết quả của phiên bản báo cáo hiện tại.")
 
     # Chapter 2
     add_heading(document, "CHƯƠNG 2. PHÂN TÍCH GIẢI PHÁP VÀ CƠ SỞ LÝ THUYẾT", 1)
@@ -568,9 +619,13 @@ def write_document(metrics, evaluation, output_path: Path):
         pipeline_path = temporary_path / "pipeline.png"
         metrics_path = temporary_path / "metrics.png"
         confusion_path = temporary_path / "confusion.png"
+        test_evidence_path = temporary_path / "test-evidence.png"
+        homepage_path = temporary_path / "homepage.png"
         make_pipeline_figure(pipeline_path)
         make_metrics_figure(metrics_path, metrics["evaluations"])
         make_confusion_figure(confusion_path, metrics["evaluations"])
+        make_test_evidence_figure(test_evidence_path)
+        crop_browser_screenshot(SCREENSHOTS_PATH / "homepage.png", homepage_path)
 
         add_heading(document, "3.11. Lưu đồ vận hành", 2)
         add_paragraph(document, "Quy trình dưới đây thể hiện đường đi chính của một lần phân tích. Bước live inspection nằm sau consent gate; luồng local-only dừng ở suy luận và render kết quả.")
@@ -624,25 +679,16 @@ def write_document(metrics, evaluation, output_path: Path):
             ("Build tĩnh", "`npm run build` passed; artifact `_site` có asset/URL tương đối", "Xác minh đường build GitHub Pages tại evidence hiện hành."),
         ], widths=[3.6, 5.0, 7.9], font_size=8.5)
         add_paragraph(document, "Các con số trên lấy từ tài liệu evidence của release hiện hành; chúng được tái chạy trong quy trình hoàn tất báo cáo nếu môi trường có đủ dữ liệu và công cụ. Một test pass xác nhận assertion tương ứng, không thay thế kiểm thử bảo mật độc lập.")
-        add_heading(document, "4.6. Mô tả các màn hình giao diện đã quan sát", 2)
-        add_paragraph(document, "Các mô tả dưới đây được đối chiếu trực tiếp với DOM/accessible snapshot của ứng dụng Flask cục bộ tại `http://127.0.0.1:5000/`. Công cụ chụp màn hình của phiên làm việc không cung cấp tệp ảnh có thể nhúng vào DOCX; vì vậy đây là mô tả giao diện thực tế, không phải ảnh chụp và không giả lập kết quả phân tích.", first_line=False)
-        screen_descriptions = [
-            ("Hình 4.3. Giao diện trang chủ SafeWeb v2.3.0.", "Thanh đầu trang hiển thị SafeWeb, trạng thái model ready, lựa chọn ngôn ngữ và tương phản. Phần nhập URL đi cùng lưu ý không dán token/mật khẩu, verification contract, nút Analyze URL và tiến độ ba bước. Khu kết quả bắt đầu ở trạng thái Awaiting a URL; trang có điều hướng mở Database Explorer."),
-            ("Hình 4.4. Khung kết quả phân tích và đổi theme theo mức rủi ro.", "Khung kết quả có badge mức, kết luận, thanh tín hiệu, nguồn database/model, lý do, tín hiệu sẵn có, khuyến nghị, giới hạn và các feature được trích xuất. Trạng thái/theme phụ thuộc tier và nhánh override database; mô tả này không hàm ý mọi loại anomaly đều được định vị chính xác."),
-            ("Hình 4.5. Thẻ đồng thuận bốn mô hình.", "Thẻ `Multi-Model AI Consensus` hiển thị kết quả trung bình cùng lưới từng mô hình. Đọc xác suất riêng là cần thiết vì SVM ở test hiện tại có recall gần 0,007 và có thể bất đồng với các mô hình còn lại."),
-            ("Hình 4.6. Kho dữ liệu PhishVN tương tác.", "Explorer có thanh search, bộ lọc label/category/tier, thống kê, bảng URL/nhãn/ngày/tier/category/brand/key features, thao tác gửi bản ghi sang máy quét và phân trang. Attribution PhishVN v3.1.0, DOI và CC BY 4.0 được trình bày trong giao diện."),
-        ]
-        for caption, description in screen_descriptions:
-            add_caption(document, caption)
-            note = document.add_table(rows=1, cols=1)
-            note.style = "Table Grid"
-            cell = note.cell(0, 0)
-            cell.text = description
-            set_cell_shading(cell, PALE_TEAL)
-            set_cell_margins(cell, top=125, start=150, bottom=125, end=150)
-            for run in cell.paragraphs[0].runs:
-                set_run_font(run, size=9.2, color=INK)
-            document.add_paragraph().paragraph_format.space_after = Pt(1)
+        add_figure(document, test_evidence_path, "Hình 4.3. Tổng hợp bằng chứng kiểm thử thực thi cục bộ; không phải ảnh chụp terminal.", width=15.0)
+        add_heading(document, "4.6. Hướng dẫn thao tác và giao diện thực tế", 2)
+        add_paragraph(document, "Các bước dưới đây mô tả luồng thao tác an toàn trên backend Flask tại `http://127.0.0.1:5000/`. Ảnh trang chủ được chụp từ ứng dụng đang chạy; URL ví dụ không chứa thông tin đăng nhập.", first_line=False)
+        add_bullets(document, [
+            "Nhập URL cần kiểm tra; xem dòng URL đã chuẩn hóa trước khi phân tích. Không dán URL riêng tư, token hoặc mật khẩu.",
+            "Mặc định SafeWeb chỉ phân tích cục bộ. Chỉ bật kiểm tra trực tuyến nếu chấp nhận gửi URL tới các dịch vụ DNS/preview được nêu trong giao diện.",
+            "Chọn Phân tích URL; đọc riêng kết quả tra cứu PhishVN, xác suất từng mô hình, mức rủi ro, tín hiệu và khuyến nghị. Mức rủi ro thấp không chứng nhận trang an toàn.",
+            "Mở Kho Dữ liệu PhishVN để tìm/lọc bản ghi; URL trong kho được hiển thị để tham khảo, không cần mở trang đích.",
+        ], numbered=True)
+        add_figure(document, homepage_path, "Hình 4.4. Giao diện trang chủ SafeWeb v2.3.0 trên backend Flask.", width=15.0)
         add_heading(document, "4.7. Tính năng bổ sung và ranh giới tin cậy", 2)
         add_paragraph(document, "DNS resolve không đồng nghĩa domain đáng tin; metadata/ảnh preview là dữ liệu do dịch vụ bên thứ ba trả về; redirect chỉ đầy đủ trong giới hạn trình duyệt và CORS; phân loại brand/provider là luật nhận diện chuỗi chứ không kiểm tra quyền sở hữu. Mẫu phishing đối ứng chỉ mang tính giáo dục. Easter egg của URL dự án là nhánh demo. Các nguồn này phải được trình bày độc lập với xác suất ML để tránh tạo cảm giác một phép kiểm tra đơn lẻ đã “chứng nhận” website.")
 
