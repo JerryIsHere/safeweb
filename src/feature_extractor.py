@@ -100,6 +100,16 @@ def _percent_encoding_count(url: str) -> int:
     return len(re.findall(r"%[0-9A-Fa-f]{2}", url))
 
 
+def _phiusiil_obfuscation_features(url: str) -> dict[str, int | float]:
+    """Compute PhiUSIIL's URL-only percent-encoding obfuscation signals."""
+    encoded_character_count = 3 * _percent_encoding_count(url)
+    return {
+        "phiusiil_has_obfuscation": int(encoded_character_count > 0),
+        "phiusiil_obfuscated_char_count": encoded_character_count,
+        "phiusiil_obfuscation_ratio": encoded_character_count / len(url) if url else 0.0,
+    }
+
+
 def _username_password_count(url: str) -> int:
     parsed = _split_url(url)
     if not parsed.netloc or "@" not in parsed.netloc:
@@ -265,6 +275,7 @@ def extract_features(
     features = _base_features(url, parts, hostname)
     features.update({f"keyword_{keyword}": int(keyword in lowered) for keyword in _KEYWORDS})
     features.update(_phishvn_features(url, parts, hostname, domain_profile, suspicious_tlds))
+    features.update(_phiusiil_obfuscation_features(url))
 
     if not include_experimental:
         return features

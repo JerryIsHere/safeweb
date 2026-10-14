@@ -2,7 +2,7 @@
 
 ## Research Question
 
-How do four URL classifiers compare on PhishVN's domain-disjoint test set using SafeWeb URL features and the dataset's pre-extracted lexical/host features?
+How do four URL classifiers trained on PhishVN plus PhiUSIIL compare on the untouched PhishVN domain-disjoint test set?
 
 ## Dataset and Method
 
@@ -10,19 +10,20 @@ How do four URL classifiers compare on PhishVN's domain-disjoint test set using 
 - Canonicalization and `www`/apex deduplication: 36,261 retained URLs; 16,855 aliases removed.
 - Official grouped partitions have zero registrable-domain overlap.
 - Train plus validation: 29,637 rows. Untouched test: 6,624 rows.
-- Four classifiers share the same 52 features and domain-disjoint split: Random Forest, Gradient Boosting, calibrated linear SVM, and Logistic Regression.
+- Added 231,662 cleaned PhiUSIIL fit rows; removed 86 conflicting labels, 3,586 duplicate URLs, and 461 PhishVN test-domain overlaps.
+- Four classifiers share 55 URL-only features; sources receive equal total fit weight.
 - Feature parity checked for 797,742 dataset feature values.
 
 ## Test Results
 
 | Model | Accuracy | Precision | Recall | F1 | ROC-AUC |
 | --- | ---: | ---: | ---: | ---: | ---: |
-| Random Forest | 0.8752 | 0.8231 | 0.8975 | 0.8587 | 0.9466 |
-| Gradient Boosting | 0.8798 | 0.8008 | 0.9525 | 0.8701 | 0.9495 |
-| Calibrated SVM | 0.8798 | 0.8054 | 0.9436 | 0.8690 | 0.9456 |
-| Logistic Regression | 0.8631 | 0.8326 | 0.8460 | 0.8393 | 0.9440 |
+| Random Forest | 0.8745 | 0.8075 | 0.9232 | 0.8615 | 0.9426 |
+| Gradient Boosting | 0.8789 | 0.7976 | 0.9561 | 0.8697 | 0.9436 |
+| Calibrated SVM | 0.5805 | 1.0000 | 0.0071 | 0.0142 | 0.9308 |
+| Logistic Regression | 0.8555 | 0.7996 | 0.8782 | 0.8371 | 0.9330 |
 
-Confusion matrix (`benign`, `phishing`): `[[3285, 540], [287, 2512]]`.
+Confusion matrices (`benign`, `phishing`): RF `[[3209,616],[215,2584]]`; GB `[[3146,679],[123,2676]]`; SVM `[[3825,0],[2779,20]]`; LR `[[3209,616],[341,2458]]`. The SVM's current threshold has unusably low phishing recall and needs recalibration.
 
 ## Product Flow
 

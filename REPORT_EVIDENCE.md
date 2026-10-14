@@ -42,14 +42,16 @@ source .venv/bin/activate
 python scripts/train_phishvn_model.py
 ```
 
-Four models use the same 52 features, fit rows (29,637), and untouched test rows (6,624). Random Forest uses 100 trees, maximum depth 16, minimum leaf size 3, and balanced-subsample weights. Gradient Boosting uses 100 depth-3 trees at learning rate 0.1. SVM uses StandardScaler + LinearSVC with sigmoid calibration. Logistic Regression uses StandardScaler and balanced class weights.
+Four models use the same 55 features. Fit rows: 261,299 (29,637 PhishVN train+validation and 231,662 cleaned PhiUSIIL); untouched domain-disjoint PhishVN test: 6,624. PhiUSIIL cleaning inverted labels, removed 86 conflicting rows, 3,586 normalized duplicates, and 461 rows on held-out PhishVN domains. Each source receives equal total sample weight with equal class weight within source. Random Forest uses 100 trees, depth 16, minimum leaf 3; Gradient Boosting uses 100 depth-3 trees at learning rate 0.1; SVM is scaled LinearSVC with sigmoid calibration; Logistic Regression is scaled.
 
 | Model | Accuracy | Precision | Recall | F1 | ROC-AUC | TN / FP / FN / TP |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Random Forest | 0.8752 | 0.8231 | 0.8975 | 0.8587 | 0.9466 | 3285 / 540 / 287 / 2512 |
-| Gradient Boosting | 0.8798 | 0.8008 | 0.9525 | 0.8701 | 0.9495 | 3162 / 663 / 133 / 2666 |
-| Calibrated SVM | 0.8798 | 0.8054 | 0.9436 | 0.8690 | 0.9456 | 3187 / 638 / 158 / 2641 |
-| Logistic Regression | 0.8631 | 0.8326 | 0.8460 | 0.8393 | 0.9440 | 3349 / 476 / 431 / 2368 |
+| Random Forest | 0.8745 | 0.8075 | 0.9232 | 0.8615 | 0.9426 | 3209 / 616 / 215 / 2584 |
+| Gradient Boosting | 0.8789 | 0.7976 | 0.9561 | 0.8697 | 0.9436 | 3146 / 679 / 123 / 2676 |
+| Calibrated SVM | 0.5805 | 1.0000 | 0.0071 | 0.0142 | 0.9308 | 3825 / 0 / 2779 / 20 |
+| Logistic Regression | 0.8555 | 0.7996 | 0.8782 | 0.8371 | 0.9330 | 3209 / 616 / 341 / 2458 |
+
+SVM recall is currently unusable at the default threshold: only 20 of 2,799 phishing URLs were detected. Do not rely on its individual verdict pending calibration/threshold work.
 
 Confusion matrices use `[benign, phishing]` order and are recorded per model in `reports/phishvn_domain_eval.json` and `reports/metrics.json`.
 
@@ -62,7 +64,7 @@ python scripts/export_browser_model.py
 python scripts/compare_browser_model.py
 ```
 
-The parity checker passed on 10 valid and 6 invalid inputs. Maximum feature delta was `1.33e-15`; maximum probability delta was `3.33e-16`.
+The parity checker passed on 10 valid and 6 invalid inputs. Maximum feature delta was `1.33e-15`; maximum probability delta was `7.49e-16`.
 
 ## Application behavior
 
@@ -77,11 +79,11 @@ The parity checker passed on 10 valid and 6 invalid inputs. Maximum feature delt
 Fresh local release verification:
 
 ```text
-python -m pytest -q: 56 passed
-npm run test:browser: 14 passed, 0 failed
+python -m pytest -q: 59 passed
+npm run test:browser: 15 passed, 0 failed
 python scripts/compare_browser_model.py: parity passed for 10 valid and 6 invalid inputs
 	maximum feature delta: 1.33e-15
-	maximum probability delta: 3.33e-16
+	maximum probability delta: 7.49e-16
 npm run build: passed
 _site artifact checks: all required assets present, v2.3.0 URLs, relative paths
 ```

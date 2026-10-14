@@ -9,6 +9,7 @@ import joblib
 import pandas as pd
 from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
+from sklearn import set_config
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import make_pipeline
@@ -28,9 +29,10 @@ DEFAULT_MODEL_PATH = PROJECT_ROOT / "model" / "random_forest.joblib"
 
 def model_suite(random_state: int = RANDOM_STATE) -> dict[str, object]:
     """Create the four estimators supported by the Python and browser pipelines."""
+    set_config(enable_metadata_routing=True)
     scaled_svm = make_pipeline(
-        StandardScaler(),
-        LinearSVC(random_state=random_state, max_iter=10000),
+        StandardScaler().set_fit_request(sample_weight=True),
+        LinearSVC(random_state=random_state, max_iter=10000).set_fit_request(sample_weight=True),
     )
     return {
         "random_forest": RandomForestClassifier(
@@ -54,12 +56,12 @@ def model_suite(random_state: int = RANDOM_STATE) -> dict[str, object]:
             ensemble=False,
         ),
         "logistic_regression": make_pipeline(
-            StandardScaler(),
+            StandardScaler().set_fit_request(sample_weight=True),
             LogisticRegression(
                 max_iter=2000,
                 class_weight="balanced",
                 random_state=random_state,
-            ),
+            ).set_fit_request(sample_weight=True),
         ),
     }
 

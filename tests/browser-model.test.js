@@ -39,11 +39,20 @@ test("experimental browser features are opt-in and preserve the default schema",
     true,
   );
 
-  assert.equal(Object.keys(defaultFeatures).length, 52);
-  assert.equal(Object.keys(experimentalFeatures).length, 64);
+  assert.equal(Object.keys(defaultFeatures).length, 55);
+  assert.equal(Object.keys(experimentalFeatures).length, 67);
   assert.equal(experimentalFeatures.query_parameter_count, 1);
   assert.equal(experimentalFeatures.hostname_depth, 2);
   assert.equal(experimentalFeatures.has_unusual_port, 0);
+});
+
+test("browser PhiUSIIL obfuscation features match Python percent-encoding semantics", () => {
+  const features = browserModel.extractFeatures("https://example.com/%2F%41");
+
+  assert.equal(features.phiusiil_has_obfuscation, 1);
+  assert.equal(features.phiusiil_obfuscated_char_count, 6);
+  assert.equal(features.phiusiil_obfuscation_ratio, 6 / "https://example.com/%2F%41".length);
+  assert.equal(features.phiusiil_has_obfuscation, 1);
 });
 
 test("browser model returns a four-tier risk score and transparent signal status", () => {
@@ -56,7 +65,8 @@ test("browser model returns a four-tier risk score and transparent signal status
   assert.ok(result.risk_score >= 0 && result.risk_score <= 100);
   assert.ok(Array.isArray(result.reasons));
   assert.equal(result.available_signals.dns_resolution, "Not checked");
-  assert.equal(Object.keys(result.features).length, 52);
+  assert.equal(Object.keys(result.features).length, 55);
+  assert.equal(result.available_signals.url_obfuscation, "Checked");
   assert.equal(result.verification_stages.machine_learning, "evaluated");
 });
 

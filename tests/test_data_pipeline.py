@@ -4,12 +4,39 @@ import pandas as pd
 import pytest
 
 from scripts.prepare_phishvn_dataset import DEFAULT_SOURCE, PROJECT_ROOT, prepare_dataset
+from scripts.train_phishvn_model import prepare_phiusiil_training_rows
 from src.data_loader import load_dataset
 from src.url_validation import validate_url
 
 
 def test_phishvn_default_source_prefers_data_raw_archive() -> None:
     assert DEFAULT_SOURCE == PROJECT_ROOT / "data" / "raw" / "PhishVN A Time-Stamped Vietnamese URL Phishing Dat.zip"
+
+
+def test_phiusiil_cleaning_flips_labels_and_excludes_held_out_domains() -> None:
+    source = pd.DataFrame(
+        {
+            "URL": [
+                "https://safe.example/about",
+                "http://phish.example/login",
+                "https://safe.example/about/",
+                "https://conflict.example/path",
+                "http://conflict.example/path/",
+                "https://heldout.com/home",
+            ],
+            "label": [1, 0, 1, 1, 0, 1],
+        }
+    )
+
+    prepared, summary = prepare_phiusiil_training_rows(source, {"heldout.com"})
+
+    assert prepared.to_dict("records") == [
+        {"url": "https://safe.example/about", "label": 0},
+        {"url": "http://phish.example/login", "label": 1},
+    ]
+    assert summary["conflicting_url_rows_removed"] == 2
+    assert summary["duplicate_url_rows_removed"] == 1
+    assert summary["test_domain_rows_removed"] == 1
 
 
 def test_load_dataset_validates_and_removes_exact_duplicates(tmp_path) -> None:

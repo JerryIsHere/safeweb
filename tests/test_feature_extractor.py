@@ -63,5 +63,15 @@ def test_keyword_detection_is_case_insensitive() -> None:
     assert extract_features("https://example.com/LoGiN")["keyword_login"] == 1
 
 
+def test_phiusiil_obfuscation_features_count_percent_encoded_bytes() -> None:
+    url = "https://example.com/%2F%41"
+    features = extract_features(url)
+
+    assert features["phiusiil_has_obfuscation"] == 1
+    assert features["phiusiil_obfuscated_char_count"] == 6
+    assert features["phiusiil_obfuscation_ratio"] == pytest.approx(6 / len(url))
+    assert extract_features("https://example.com/path")["phiusiil_has_obfuscation"] == 0
+
+
 def test_entropy_of_repeated_characters_is_zero() -> None:
     assert extract_features("aaaa")["url_entropy"] == 0

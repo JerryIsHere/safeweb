@@ -325,6 +325,10 @@
     phishvnFeatureNames.forEach((name) => {
       features[name] = profile[name] ?? sourceFeatureValues[name];
     });
+    const encodedCharacterCount = 3 * (value.match(/%[0-9A-Fa-f]{2}/g) || []).length;
+    features.phiusiil_has_obfuscation = Number(encodedCharacterCount > 0);
+    features.phiusiil_obfuscated_char_count = encodedCharacterCount;
+    features.phiusiil_obfuscation_ratio = encodedCharacterCount / Math.max(1, characters.length);
 
     if (!includeExperimental) return features;
 
@@ -378,6 +382,9 @@
     if (features.has_percent) {
       reasons.push("URL includes percent-encoded content.");
     }
+    if (features.phiusiil_has_obfuscation) {
+      reasons.push(`PhiUSIIL obfuscation signal: ${features.phiusiil_obfuscated_char_count} encoded characters.`);
+    }
     if (features.url_entropy >= 4.5) {
       reasons.push(`URL entropy is ${features.url_entropy.toFixed(2)}, indicating a complex string.`);
     }
@@ -428,6 +435,7 @@
       hostname_checks: hostWarning ? "Warning" : "Checked",
       keyword_scan: hasKeyword ? "Warning" : "Checked",
       phishvn_database: databaseMatch.matched ? "Database match" : "Checked",
+      url_obfuscation: features.phiusiil_has_obfuscation ? "Warning" : "Checked",
       machine_learning: probability >= 0.5 ? "Warning" : "Checked",
       https_status: features.has_https ? "HTTPS detected" : "HTTP detected",
       dns_resolution: "Not checked",

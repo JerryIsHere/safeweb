@@ -14,16 +14,20 @@ The reproducible preparation keeps 36,261 canonical URL records after removing 1
 
 ## Features and Model
 
-The model has 52 ordered numeric features: SafeWeb URL/lexical features and 22 PhishVN-derived values, including the 21 CompPhish-aligned features and the suspicious-TLD flag. The supplied feature values were compared against local extraction for every retained row; all 797,742 values matched within floating-point tolerance after matching the upstream definition and domain profile.
+The model has 55 ordered numeric features: 30 SafeWeb URL/lexical features, 22 PhishVN-derived values, and three reproducible PhiUSIIL URL obfuscation features (flag, encoded-character count, and ratio). The 21 supplied CompPhish values matched local extraction across 36,261 retained PhishVN rows.
 
-Random Forest, Gradient Boosting, sigmoid-calibrated linear SVM, and scaled Logistic Regression use the same 52-feature schema. Each is fit on train plus validation (29,637 rows) and evaluated on the untouched domain-disjoint test set (6,624 rows). Precision, recall, and F1 refer to the phishing class; confusion counts are TN/FP/FN/TP.
+Random Forest, Gradient Boosting, sigmoid-calibrated linear SVM, and scaled Logistic Regression use the same 55-feature schema. Fit uses 29,637 PhishVN train+validation rows plus 231,662 cleaned PhiUSIIL rows (261,299 total); PhiUSIIL rows sharing any held-out PhishVN test domain are excluded. Each source receives equal total sample weight, balanced between benign/phishing within source. Evaluation remains on the untouched, domain-disjoint 6,624-row PhishVN test set. Precision, recall, and F1 refer to phishing; confusion counts are TN/FP/FN/TP.
 
 | Model | Accuracy | Precision | Recall | F1 | ROC-AUC | TN / FP / FN / TP |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Random Forest | 0.8752 | 0.8231 | 0.8975 | 0.8587 | 0.9466 | 3285 / 540 / 287 / 2512 |
-| Gradient Boosting | 0.8798 | 0.8008 | 0.9525 | 0.8701 | 0.9495 | 3162 / 663 / 133 / 2666 |
-| Linear SVM (calibrated) | 0.8798 | 0.8054 | 0.9436 | 0.8690 | 0.9456 | 3187 / 638 / 158 / 2641 |
-| Logistic Regression | 0.8631 | 0.8326 | 0.8460 | 0.8393 | 0.9440 | 3349 / 476 / 431 / 2368 |
+| Random Forest | 0.8745 | 0.8075 | 0.9232 | 0.8615 | 0.9426 | 3209 / 616 / 215 / 2584 |
+| Gradient Boosting | 0.8789 | 0.7976 | 0.9561 | 0.8697 | 0.9436 | 3146 / 679 / 123 / 2676 |
+| Linear SVM (calibrated) | 0.5805 | 1.0000 | 0.0071 | 0.0142 | 0.9308 | 3825 / 0 / 2779 / 20 |
+| Logistic Regression | 0.8555 | 0.7996 | 0.8782 | 0.8371 | 0.9330 | 3209 / 616 / 341 / 2458 |
+
+The SVM's current threshold detects only 20 of 2,799 phishing test URLs (recall 0.0071) despite ROC-AUC 0.9308; its individual verdict is not useful until calibration or thresholding is improved.
+
+The current SVM decision threshold is not useful for phishing recall despite its ROC-AUC: it detects only 20 of 2,799 phishing test URLs. Its calibration/threshold needs further work before relying on its individual verdict.
 
 Confusion matrices are recorded per model in `reports/phishvn_domain_eval.json`; their counts are in `[benign, phishing]` order. Database hits are a separate verification stage and are not included in these ML metrics.
 

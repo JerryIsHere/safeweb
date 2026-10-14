@@ -149,6 +149,10 @@ function translateExplanation(explanation, language) {
     if (explanation.startsWith("Hostname uses an IP address")) return translation("signalIp", language);
     if (explanation.startsWith("URL contains") && explanation.includes("special characters")) return translation("signalSpecial", language);
     if (explanation.startsWith("URL entropy is")) return translation("signalEntropy", language);
+    if (explanation.startsWith("PhiUSIIL obfuscation signal:")) {
+      const count = explanation.match(/(\d+) encoded characters?\./)?.[1] || "0";
+      return translation("signalObfuscation", language).replace("{count}", count);
+    }
     if (explanation.startsWith("Suspicious keywords detected")) {
       const keywordSuffix = explanation.replace(/^Suspicious keywords detected:\s*/, "").replace(/\.$/, "");
       return translation("signalKeywords", language).replace("{keywords}", keywordSuffix);
