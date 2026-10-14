@@ -22,7 +22,7 @@ HTTPS chỉ phản ánh giao thức trong URL; SafeWeb không xác thực chứn
 
 ## Dữ liệu PhishVN
 
-Nguồn chuẩn là archive `PhishVN A Time-Stamped Vietnamese URL Phishing Dat.zip`, bên trong chứa PhishVN v3.1.0 open release. Bộ dữ liệu có 53.116 dòng URL, nhãn phishing/benign, nguồn, mức tin cậy, ngày ghi nhận, thời điểm thu thập, phân vùng và bảng CompPhish 21 đặc trưng. Các phân vùng train/validation/test chính thức đã được nhóm theo tên miền đăng ký và có 0 giao nhau giữa các phân vùng.
+Nguồn huấn luyện chuẩn là `data/raw/PhishVN A Time-Stamped Vietnamese URL Phishing Dat.zip`, bên trong chứa PhishVN v3.1.0 open release. Chạy `python scripts/prepare_phishvn_dataset.py` để tạo dữ liệu sạch; `scripts/train_phishvn_model.py` huấn luyện bốn mô hình từ các phân vùng đã chuẩn hóa này. Archive PhiUSIIL riêng biệt không thuộc pipeline SafeWeb. Bộ dữ liệu PhishVN có 53.116 dòng URL, nhãn phishing/benign, nguồn, mức tin cậy, ngày ghi nhận, thời điểm thu thập, phân vùng và bảng CompPhish 21 đặc trưng. Các phân vùng train/validation/test chính thức đã được nhóm theo tên miền đăng ký và có 0 giao nhau giữa các phân vùng.
 
 Quy trình chuẩn hóa hiện tạo 36.261 URL duy nhất: loại 16.855 biến thể trùng `www`/apex, không ghi nhận nhóm URL mâu thuẫn nhãn hoặc URL lỗi/truncated. Kết quả giữ lại 25.185 dòng train, 4.452 validation và 6.624 test; nhãn gồm 19.909 phishing và 16.352 benign. Các đặc trưng nguồn được kiểm tra khớp trên toàn bộ mẫu đã làm sạch. `scraped_at` và `collected_at` được giữ lại để truy xuất nguồn gốc; không dùng thời điểm scrape làm nhãn.
 

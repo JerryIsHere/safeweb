@@ -3,9 +3,13 @@ import json
 import pandas as pd
 import pytest
 
-from scripts.prepare_phishvn_dataset import DEFAULT_SOURCE, prepare_dataset
+from scripts.prepare_phishvn_dataset import DEFAULT_SOURCE, PROJECT_ROOT, prepare_dataset
 from src.data_loader import load_dataset
 from src.url_validation import validate_url
+
+
+def test_phishvn_default_source_prefers_data_raw_archive() -> None:
+    assert DEFAULT_SOURCE == PROJECT_ROOT / "data" / "raw" / "PhishVN A Time-Stamped Vietnamese URL Phishing Dat.zip"
 
 
 def test_load_dataset_validates_and_removes_exact_duplicates(tmp_path) -> None:
