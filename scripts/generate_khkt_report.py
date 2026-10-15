@@ -492,25 +492,25 @@ def write_document(metrics, evaluation, output_path: Path):
     add_heading(document, "1.4. Phạm vi, giả định và giới hạn", 2)
     add_paragraph(document, "Phạm vi gồm chuỗi URL và nhãn trong các tập dữ liệu đã công bố. SafeWeb không tải/chạy HTML, không xác thực chứng thư TLS, tuổi tên miền, WHOIS, reputation hay hành vi trang; DNS chỉ kiểm tra khi bật live inspection. Nguyên mẫu chưa được đánh giá người dùng hoặc kiểm định bảo mật độc lập.")
     add_heading(document, "1.5. Giá trị và định hướng giáo dục", 2)
-    add_paragraph(document, "SafeWeb hướng tới dạy an toàn số và tư duy dữ liệu qua việc quan sát pipeline, so sánh bằng chứng và thảo luận giới hạn tự động hóa. Chưa có nghiên cứu học sinh, đo trước/sau hay đánh giá hiệu quả sư phạm; các nội dung sau là mục tiêu đề xuất, không phải kết quả thực nghiệm.")
+    add_paragraph(document, "SafeWeb hướng tới dạy an toàn số và tư duy dữ liệu: quan sát pipeline, so sánh bằng chứng, nhận diện giới hạn AI. Chưa có nghiên cứu học sinh hay đo hiệu quả sư phạm; đây là mục tiêu đề xuất, không phải kết quả thực nghiệm.")
     add_table(document, ["Năng lực hướng tới", "Hoạt động học tập có thể quan sát", "Giới hạn cần nêu"], [
-        ("Hiểu cấu trúc URL", "Tách scheme, hostname, subdomain, path và query; chỉ ra phần nào chứa tín hiệu được trích xuất.", "Một dấu hiệu như từ khóa ngân hàng, IP hay HTTPS không tự chứng minh URL độc hại hoặc an toàn."),
-        ("Tư duy phản biện về AI", "So sánh kết quả tra cứu cơ sở dữ liệu với xác suất từng mô hình; đọc precision, recall, F1 và false positive/false negative.", "Kết quả phụ thuộc corpus và threshold; SVM hiện có recall phishing rất thấp dù ROC-AUC cao."),
-        ("Quyền riêng tư và công dân số", "Phân biệt phân tích local-only với live inspection; cân nhắc trước khi chia sẻ URL cho dịch vụ ngoài.", "Không nhập URL riêng tư, token hoặc thông tin đăng nhập; HTTPS không xác thực danh tính website."),
-        ("Tư duy kỹ thuật và tái lập", "Theo dõi pipeline dữ liệu → đặc trưng → mô hình → giao diện; đối chiếu Python–JavaScript.", "Parity xác minh hai hiện thực nhất quán trên bộ ca đã chọn, không chứng minh độ chính xác phổ quát."),
+        ("Hiểu URL", "Tách scheme, hostname, subdomain, path, query và xác định tín hiệu.", "Từ khóa, IP hay HTTPS không tự chứng minh an toàn/độc hại."),
+        ("Phản biện AI", "So sánh tra cứu, xác suất model, precision/recall/F1 và lỗi FP/FN.", "Kết quả phụ thuộc dữ liệu/ngưỡng; SVM có recall rất thấp."),
+        ("Quyền riêng tư", "Phân biệt local-only với live inspection trước khi chia sẻ URL.", "Không nhập token/URL riêng tư; HTTPS không xác thực danh tính."),
+        ("Tái lập kỹ thuật", "Theo dõi pipeline và đối chiếu Python–JavaScript.", "Parity chỉ xác nhận các ca đã chọn."),
     ], widths=[3.3, 6.4, 6.2], font_size=8.2)
-    add_paragraph(document, "Kịch bản lớp học có thể dùng URL giả lập: học sinh phân tích hostname trước khi xem dự đoán, giải thích một false negative/false positive và đề xuất cách xác minh qua kênh chính thức. Tắt live checks, không mở URL mẫu. Nghiên cứu sư phạm tương lai cần bài kiểm tra trước/sau, rubric và quy trình đồng thuận/bảo vệ dữ liệu; các phép đo này chưa được thực hiện.")
+    add_paragraph(document, "Kịch bản lớp học dùng URL giả lập: phân tích hostname trước khi xem dự đoán, giải thích một FP/FN và đề xuất cách xác minh chính thức. Tắt live checks, không mở URL. Đánh giá sư phạm tương lai cần pre/post test, rubric, đồng thuận và bảo vệ dữ liệu; hiện chưa đo các kết quả này.")
 
     # Chapter 2
     add_heading(document, "CHƯƠNG 2. PHÂN TÍCH GIẢI PHÁP VÀ CƠ SỞ LÝ THUYẾT", 1)
     add_heading(document, "2.1. Phân biệt dự án khoa học và dự án kỹ thuật", 2)
-    add_paragraph(document, "SafeWeb thuộc dự án kỹ thuật: đầu ra là nguyên mẫu phần mềm; tiêu chí gồm khả năng hoạt động, tái lập, nhất quán triển khai và giới hạn vận hành. Thí nghiệm học máy đánh giá thiết kế, không nghiên cứu nhân quả hành vi người dùng.")
+    add_paragraph(document, "SafeWeb là dự án kỹ thuật với đầu ra nguyên mẫu phần mềm; đánh giá dựa trên hoạt động, tái lập và giới hạn vận hành, không nghiên cứu nhân quả hành vi người dùng.")
     add_heading(document, "2.2. Phân tích các phương án thiết kế", 2)
     add_table(document, ["Phương án", "Ưu điểm", "Đánh đổi / lý do lựa chọn"], [
-        ("Chỉ heuristic URL", "Nhanh, dễ giải thích, không cần huấn luyện.", "Khó biểu diễn tương tác phi tuyến; giữ như lớp giải thích, không dùng làm nguồn kết luận duy nhất."),
-        ("Chỉ tra cứu danh sách", "Khi khớp bản ghi có nguồn gốc và nhãn rõ.", "Không nhận diện biến thể URL chưa có trong kho; dùng làm tầng xác minh độc lập."),
-        ("Chỉ backend inference", "Dễ cập nhật mô hình và tập trung tài nguyên.", "URL phải gửi tới server; không phù hợp mục tiêu phân tích cục bộ mặc định."),
-        ("Mô hình trong trình duyệt + tra cứu + live opt-in", "Có thể chạy phân tích cục bộ, trình bày nhiều nguồn, bổ sung kiểm tra mạng có đồng ý.", "Bundle lớn hơn; phải duy trì parity và thừa nhận giới hạn CORS/nguồn dữ liệu."),
+        ("Heuristic URL", "Nhanh, giải thích được, không cần fit.", "Hạn chế tương tác phi tuyến; không dùng riêng làm verdict."),
+        ("Chỉ tra cứu", "Match có record/provenance.", "Không bao phủ URL mới; giữ như tầng riêng."),
+        ("Chỉ backend", "Dễ cập nhật/tập trung tài nguyên.", "Phải gửi URL lên server."),
+        ("Trình duyệt + tra cứu + live opt-in", "Local inference và kiểm tra mạng theo consent.", "Bundle lớn; cần parity, có giới hạn CORS."),
     ], widths=[3.5, 5.1, 7.3], font_size=8.4)
     add_heading(document, "2.3. Cơ sở lý thuyết của bốn bộ phân loại", 2)
     add_paragraph(document, "Random Forest tổng hợp xác suất từ các cây quyết định lấy mẫu ngẫu nhiên, phù hợp quan hệ phi tuyến và có thể export cây sang JavaScript (Breiman, 2001). Cấu hình: 100 cây, depth 16, leaf 3, balanced-subsample.")
@@ -521,11 +521,11 @@ def write_document(metrics, evaluation, output_path: Path):
     add_paragraph(document, "Hệ thống lấy trung bình số học bốn xác suất, dùng ngưỡng 0,5 cho nhãn và vẫn hiển thị điểm riêng; đây không phải bỏ phiếu đa số hay bảo đảm lỗi độc lập. Vì SVM có recall 0,0071 ở ngưỡng hiện tại, cần hiệu chỉnh trước khi dựa vào đồng thuận.")
     add_heading(document, "2.5. Điểm mới trong phạm vi nguyên mẫu", 2)
     add_bullets(document, [
-        "Ghép cơ sở dữ liệu tham chiếu có provenance với suy luận bốn mô hình trong một trải nghiệm phía trình duyệt.",
-        "Tách kết quả khớp dữ liệu trực tiếp khỏi điểm số học máy để người dùng phân biệt provenance và generalization.",
-        "Đóng gói tham số mô hình, cây, scaler, calibration và quy tắc public suffix để suy luận offline mà không gửi URL ở chế độ mặc định.",
-        "Có consent gate trước DNS, redirect, metadata và preview; thể hiện trực tiếp đánh đổi giữa thông tin bổ sung và quyền riêng tư.",
-        "Kiểm tra khả năng tái hiện giữa Python và JavaScript bằng vector đặc trưng và xác suất thay vì chỉ kiểm thử giao diện.",
+        "Kết hợp tra cứu tham chiếu và bốn model trong trình duyệt.",
+        "Tách database match khỏi xác suất ML để phân biệt record và dự đoán.",
+        "Đóng gói cây, scaler, calibration và suffix rules cho suy luận offline.",
+        "Live checks có consent gate trước khi chia sẻ URL.",
+        "Đối chiếu feature/probability giữa Python và JavaScript.",
     ])
     add_paragraph(document, "Các điểm trên là đóng góp kỹ thuật của nguyên mẫu, không phải khẳng định thuật toán mới hoặc ưu thế vượt trội so với dịch vụ thương mại.")
 
@@ -540,8 +540,8 @@ def write_document(metrics, evaluation, output_path: Path):
         ("Kiểm thử", "pytest, Node.js built-in test runner, script đối chiếu parity và build GitHub Pages."),
     ], widths=[4.0, 11.9], font_size=8.8)
     add_heading(document, "3.2. Kiểm toán và chuẩn bị dữ liệu", 2)
-    add_paragraph(document, "PhishVN v3.1.0 cung cấp 53.116 dòng nguồn, nhãn, metadata provenance và phân vùng train/validation/test theo nhóm (Thai Nguyen Vu, 2026). Pipeline canonicalize URL, gộp alias apex/`www`, rà soát nhãn xung đột và giữ phân vùng chính thức. Sau xử lý còn 36.261 URL: 19.909 phishing và 16.352 benign; 16.855 dòng bí danh trùng bị loại, không có nhóm nhãn xung đột hoặc URL lỗi/truncated bị loại. Phân vùng gồm train 25.185, validation 4.452 và test 6.624; giao nhau domain đăng ký giữa các phân vùng bằng 0.")
-    add_paragraph(document, "PhiUSIIL Phishing URL Dataset có 235.795 dòng nguồn (PhiUSIIL Phishing URL Dataset, n.d.). Bước làm sạch loại 86 dòng URL xung đột nhãn, 3.586 URL canonical trùng và 461 dòng thuộc 4.260 domain của test PhishVN; không có URL lỗi bị loại ở thống kê hiện hành. Còn 231.662 dòng dùng huấn luyện. Nhãn nguồn được đảo để khớp quy ước SafeWeb. Train bao gồm 29.637 mẫu PhishVN train+validation và 231.662 mẫu PhiUSIIL; test vẫn là 6.624 dòng PhishVN không được đưa vào fit.")
+    add_paragraph(document, "PhishVN v3.1.0 có 53.116 dòng; sau chuẩn hóa/gộp `www`-apex còn 36.261 URL (19.909 phishing, 16.352 benign), loại 16.855 alias, không có conflict. Split chính thức: train 25.185, validation 4.452, test 6.624; các split không giao domain (Thai Nguyen Vu, 2026).")
+    add_paragraph(document, "PhiUSIIL có 235.795 dòng; loại 86 URL conflict, 3.586 bản canonical trùng và 461 URL thuộc 4.260 domain test, còn 231.662 mẫu (97.003 phishing, 134.659 benign) để fit. Nhãn được đảo về `1=phishing`. Tổng train: 29.637 PhishVN + 231.662 PhiUSIIL = 261.299; test 6.624 giữ riêng (PhiUSIIL Phishing URL Dataset, n.d.).")
     add_table(document, ["Tập / bước", "Hợp lệ", "Phishing", "Benign", "Ghi chú"], [
         ("PhishVN sau canonicalization", "36.261", "19.909", "16.352", "16.855 alias trùng loại bỏ; split domain-disjoint."),
         ("PhishVN train + validation", "29.637", "17.110", "12.527", "Hai phân vùng chính thức dùng fit."),
@@ -549,9 +549,9 @@ def write_document(metrics, evaluation, output_path: Path):
         ("Tổng mẫu huấn luyện", "261.299", "114.113", "147.186", "Cân bằng tổng trọng số theo nguồn và lớp."),
         ("PhishVN test giữ riêng", "6.624", "2.799", "3.825", "Không dùng trong fit; domain tách biệt."),
     ], widths=[3.6, 2.0, 2.0, 2.0, 6.3], font_size=8.2)
-    add_paragraph(document, "Đặc trưng CompPhish có sẵn trên PhishVN được đối chiếu với phép trích xuất cục bộ: 797.742 giá trị trên 36.261 bản ghi khớp với bảng phát hành trong sai số dung sai của pipeline. Timestamp thu thập/scrape chỉ là provenance, không được dùng như thời điểm sự kiện hoặc nhãn.")
+    add_paragraph(document, "Đối chiếu 797.742 giá trị CompPhish trên 36.261 URL khớp bảng phát hành trong dung sai; timestamp chỉ là provenance, không dùng làm nhãn.")
     add_heading(document, "3.3. Lược đồ 55 đặc trưng", 2)
-    add_paragraph(document, "Đầu vào mô hình là một vector số có thứ tự cố định. Các biến trùng khái niệm giữa SafeWeb và PhishVN được giữ riêng vì chúng theo định nghĩa nguồn khác nhau. Một số giá trị về TLD lấy từ hồ sơ host PhishVN khi có; các URL không có hồ sơ dùng phép tính cục bộ và danh sách suspicious TLD đóng gói.")
+    add_paragraph(document, "Mô hình dùng vector có thứ tự cố định; feature cùng tên được giữ riêng theo định nghĩa nguồn. Hồ sơ host cung cấp một số giá trị TLD; nếu thiếu, dùng phép tính cục bộ và suffix list đóng gói.")
     feature_rows = [
         ("01–10", "URL tổng quát", "url_length; domain_length; path_length; query_length; num_dots; num_slashes; num_hyphens; num_underscores; num_digits; num_letters", "Độ dài chuỗi/thành phần và tần suất dấu, chữ, số."),
         ("11–20", "Cấu trúc URL", "num_special_chars; has_https; has_ip; num_subdomains; has_at; has_question_mark; has_equals; has_percent; has_double_slash; has_query", "Cờ cấu trúc, kiểu hostname và thành phần truy vấn."),
@@ -563,7 +563,7 @@ def write_document(metrics, evaluation, output_path: Path):
     ]
     add_table(document, ["Chỉ số", "Nhóm", "Tên đặc trưng", "Diễn giải"], feature_rows, widths=[1.4, 3.1, 7.6, 4.0], font_size=7.6)
     add_heading(document, "3.4. Nhóm từ khóa và cách diễn giải", 2)
-    add_paragraph(document, "Các nhóm ngữ nghĩa dưới đây giúp mô tả bề mặt đe dọa, nhưng không đồng nghĩa tất cả từ trong danh sách đều là feature model. Mô hình đang dùng đúng tám cờ từ khóa ở bảng 3.2; việc một từ xuất hiện không chứng minh phishing vì trang hợp lệ cũng có thể chứa những từ này.")
+    add_paragraph(document, "Các nhóm dưới đây mô tả ngữ nghĩa; model chỉ dùng tám keyword ở bảng, và sự xuất hiện của từ không chứng minh phishing.")
     add_table(document, ["Nhóm ngữ nghĩa", "Ví dụ theo yêu cầu", "Trạng thái trong phiên bản hiện tại"], [
         ("Tài chính / ngân hàng", "vietcombank, bidv, techcombank, acb, mbbank, wallet, pay, credit, card", "Cờ học máy chỉ có `bank`, `payment`; tên thương hiệu được nhận diện theo luật để gợi ý category/brand, không phải chín feature riêng."),
         ("Xác minh / xác thực", "login, signin, verify, update, secure, account, auth, confirm", "login, signin, verify, account, confirm là 5/8 từ khóa model; update, secure, auth chưa có cờ model."),
@@ -573,17 +573,16 @@ def write_document(metrics, evaluation, output_path: Path):
     ], widths=[3.0, 5.4, 7.7], font_size=8.1)
     add_heading(document, "3.5. Quy trình huấn luyện có thể tái lập", 2)
     add_bullets(document, [
-        "Đọc phân vùng chính thức PhishVN; lấy train và validation làm phần PhishVN dùng fit, giữ test ngoài huấn luyện.",
-        "Đọc URL/label từ archive PhiUSIIL, chuẩn hóa URL, đổi quy ước nhãn, loại xung đột, bản ghi trùng và domain thuộc test.",
-        "Tạo cùng một thứ tự 55 đặc trưng cho hai nguồn; dùng 21 cột CompPhish đã phát hành cùng cờ suspicious-TLD và ba feature obfuscation.",
-        "Tạo sample weight bảo đảm mỗi nguồn có tổng trọng số bằng nhau, và hai lớp benign/phishing cân bằng trong từng nguồn.",
-        "Fit bốn estimator với random seed 42; đánh giá đồng nhất trên 6.624 URL test PhishVN; ghi accuracy, precision/recall/F1 phishing, ROC-AUC và confusion matrix.",
+        "Dùng train/validation chính thức; giữ nguyên test PhishVN domain-disjoint.",
+        "Chuẩn hóa PhiUSIIL, đảo nhãn về 1=phishing; loại conflict, duplicate và domain giao test.",
+        "Tạo schema 55 feature chung, gồm CompPhish và ba feature obfuscation.",
+        "Cân bằng trọng số theo nguồn/lớp; fit bốn model với seed 42.",
+        "Đánh giá cùng 6.624 URL test bằng accuracy, precision, recall, F1, ROC-AUC và confusion matrix.",
     ], numbered=True)
     add_heading(document, "3.6. Kiến trúc suy luận trình duyệt", 2)
-    add_paragraph(document, "`scripts/export_browser_model.py` tuần tự hóa danh sách feature và biểu diễn có thể thực thi: mỗi cây Random Forest/Gradient Boosting thành mảng left/right child, feature index, threshold và output; Logistic Regression/SVM mang mean, scale, coefficient, intercept; SVM kèm tham số sigmoid calibration. Bundle cũng chứa public suffix rules và cơ sở dữ liệu tham chiếu. `browser-model.js` tính feature trên chuỗi, đi qua cây, chuẩn hóa linear score và áp sigmoid; đây là thực thi tham số đã fit, không gọi Python hay backend.")
-    add_paragraph(document, "Tính riêng tư cần diễn đạt có điều kiện: luồng local-only không gửi URL ra ngoài, nhưng dữ liệu mô hình và kho tham chiếu được tải cùng ứng dụng; khi bật live inspection, URL được gửi đến Google DNS-over-HTTPS và dịch vụ metadata/preview. Do đó sản phẩm không bảo đảm “tuyệt đối riêng tư” trong mọi chế độ; người dùng phải tránh đưa token, thông tin đăng nhập hoặc URL bí mật vào công cụ.")
+    add_paragraph(document, "Exporter đóng gói cây và tham số scaler/linear/SVM calibration cùng feature order, suffix rules và cơ sở dữ liệu. `browser-model.js` thực thi suy luận JavaScript, không gọi backend. Local-only không gửi URL; live inspection gửi URL tới DNS/preview providers sau consent, nên không nhập token hay URL riêng tư.")
     add_heading(document, "3.7. Tra cứu cơ sở dữ liệu tham chiếu và thứ tự kết luận", 2)
-    add_paragraph(document, "Cơ sở dữ liệu tham chiếu so khớp URL chuẩn hóa, hostname đã biết hoặc chữ ký đặc trưng không va chạm nhãn benign. Chỉ mục triển khai được tạo từ tập dữ liệu PhishVN đã trích dẫn: 19.909 khóa URL phishing, 19.859 hostname phishing độc quyền và 4.461 chữ ký đặc trưng riêng biệt. Kết quả khớp được trình bày riêng với metric held-out; các điểm số bốn mô hình vẫn hiển thị để phân biệt tra cứu trực tiếp với dự đoán. Không tìm thấy trong cơ sở dữ liệu chỉ có nghĩa là không có bản ghi khớp, không phải bằng chứng URL an toàn.")
+    add_paragraph(document, "Tra cứu theo URL chuẩn hóa → hostname → chữ ký feature độc quyền. Chỉ mục nguồn đã trích dẫn có 19.909 URL keys, 19.859 host keys và 4.461 signatures. Match được tách khỏi metric ML; không có match chỉ nghĩa là không có bản ghi, không chứng minh URL an toàn.")
     add_heading(document, "3.8. Chuẩn hóa URL và các chức năng chính", 2)
     add_table(document, ["Tính năng", "Cơ chế đã kiểm tra", "Giới hạn / cách diễn giải"], [
         ("Smart URL auto-healing", "Thêm `https://` khi thiếu scheme; từ đơn không có dấu chấm được thử bằng cách thêm `.com`; chuẩn hóa scheme/host, cổng mặc định và slash cuối.", "Đây là suy đoán đầu vào tiện lợi, không chứng minh hostname tồn tại; URL chuẩn hóa được hiển thị để người dùng kiểm tra."),
@@ -624,7 +623,7 @@ def write_document(metrics, evaluation, output_path: Path):
         # Chapter 4
         add_heading(document, "CHƯƠNG 4. KẾT QUẢ THỬ NGHIỆM VÀ THẢO LUẬN", 1)
         add_heading(document, "4.1. Giao thức đánh giá và định nghĩa chỉ số", 2)
-        add_paragraph(document, "Mỗi bộ phân loại được fit trên cùng 261.299 mẫu với cùng 55 cột đặc trưng và đánh giá trên cùng 6.624 mẫu PhishVN test chưa tham gia huấn luyện. Test gồm 3.825 benign và 2.799 phishing. Precision = TP/(TP+FP), recall = TP/(TP+FN), F1 = 2 × precision × recall/(precision+recall); các chỉ số này trong bảng dành cho lớp phishing. Ma trận nhầm lẫn trình bày theo thứ tự TN/FP/FN/TP. Accuracy là tỷ lệ dự đoán đúng trên toàn tập; ROC-AUC đo khả năng xếp hạng qua nhiều ngưỡng, không thay thế đánh giá ngưỡng quyết định. Số liệu được đọc từ artefact metric và báo cáo đánh giá trong repository (SafeWeb project, 2026).")
+        add_paragraph(document, "Bốn model dùng cùng 261.299 mẫu, 55 feature và test giữ riêng 6.624 URL (3.825 benign, 2.799 phishing). Precision/recall/F1 tính cho lớp phishing; confusion order là TN/FP/FN/TP. ROC-AUC đo ranking qua nhiều ngưỡng, không thay thế metric tại threshold. Số liệu lấy từ artefact đánh giá SafeWeb (2026).")
         add_heading(document, "4.2. Kết quả định lượng bốn mô hình", 2)
         model_names = {
             "random_forest": "Random Forest",
@@ -647,10 +646,10 @@ def write_document(metrics, evaluation, output_path: Path):
                 f"{result['training_rows']:,} / {result['test_rows']:,}",
             ))
         add_table(document, ["Mô hình", "Accuracy", "Precision", "Recall", "F1", "ROC-AUC", "TN / FP / FN / TP", "Train / Test"], result_rows, widths=[2.9, 1.3, 1.35, 1.2, 1.0, 1.2, 3.4, 2.5], font_size=7.7)
-        add_paragraph(document, "Gradient Boosting có accuracy 0,8789 và F1 phishing 0,8697; recall 0,9561 tương ứng 2.676/2.799 phishing phát hiện đúng, song false positive là 679. Random Forest đạt recall 0,9232, F1 0,8615 và ít false negative hơn một số baseline tuyến tính. Logistic Regression có F1 0,8371. SVM giữ 3.825 benign đúng và không có false positive ở ngưỡng phân loại hiện tại, nhưng bỏ sót 2.779/2.799 phishing; accuracy 0,5805 và F1 phishing 0,0142 khiến nhãn SVM hiện tại không thể xem là hữu ích. ROC-AUC SVM 0,9308 gợi ý khả năng xếp hạng khác với ngưỡng hoạt động, nhưng cần khảo sát calibration/threshold trên validation trước khi thay đổi.")
+        add_paragraph(document, "Gradient Boosting đạt accuracy 0,8789, F1 0,8697, recall 0,9561 (2.676/2.799 TP) và 679 FP. Random Forest: recall 0,9232, F1 0,8615; Logistic Regression: F1 0,8371. SVM chỉ phát hiện 20 phishing, bỏ sót 2.779, dù ROC-AUC 0,9308; cần hiệu chỉnh threshold trên validation.")
         add_heading(document, "4.3. Phân tích sai số và độ tin cậy", 2)
-        add_paragraph(document, "False negative là URL phishing bị gán benign; đây là loại sai số có thể làm người dùng mất cảnh giác. False positive làm URL hợp lệ bị cảnh báo, có thể gây mệt mỏi cảnh báo. Gradient Boosting giảm FN xuống 123 nhưng có 679 FP; Logistic Regression có 341 FN và 616 FP. SVM ưu tiên precision 1,0 trên 20 dự đoán phishing nhưng chỉ phát hiện 20 trường hợp, vì vậy precision cao ở đây không đại diện cho khả năng phát hiện tổng quát.")
-        add_paragraph(document, "Các chỉ số là hiệu năng trên một corpus có quy trình gán nhãn và phân vùng cụ thể. Chúng không đo calibration xác suất, không phản ánh phân phối URL triển khai, không đo khả năng chống né tránh/adversarial và không chứng minh quan hệ nhân quả giữa từng đặc trưng với phishing. Phân vùng domain-disjoint làm giảm rò rỉ cùng tên miền nhưng không loại bỏ mọi dạng trùng chiến dịch, nguồn feed hoặc drift theo thời gian.")
+        add_paragraph(document, "False negative bỏ sót phishing; false positive cảnh báo URL hợp lệ. Gradient Boosting có 123 FN/679 FP; Logistic Regression 341/616. SVM precision 1,0 chỉ trên 20 phát hiện, không đại diện cho recall.")
+        add_paragraph(document, "Metric chỉ mô tả corpus/split này; không đo calibration, deployment drift, chống né tránh hay quan hệ nhân quả. Tách domain giảm leakage nhưng không loại hết trùng chiến dịch/nguồn.")
         add_heading(document, "4.4. Đối chiếu Python–JavaScript", 2)
         add_table(document, ["Hạng mục", "Kết quả ghi nhận", "Phạm vi kết luận"], [
             ("Ca hợp lệ", "10 URL", "Đối chiếu feature vector, xác suất và verdict."),
@@ -658,7 +657,7 @@ def write_document(metrics, evaluation, output_path: Path):
             ("Feature delta cực đại", "1,33 × 10⁻¹⁵", "Sai khác dấu phẩy động rất nhỏ trong tập ca định trước."),
             ("Probability delta cực đại", "7,77 × 10⁻¹⁶", "Không bằng 0 tuyệt đối; khác biệt ở độ chính xác máy."),
         ], widths=[4.0, 3.6, 8.9], font_size=8.6)
-        add_paragraph(document, "Parity là xác minh kỹ thuật hai hiện thực đang dùng cùng công thức/parameters với các ca đã chọn, không phải bằng chứng mô hình đúng về mặt bảo mật. Test suite mới chạy trên bộ ca được lưu trong repository; cần bổ sung URL IDN, IPv6, user-info, query lồng nhiều tầng, public suffix hiếm và URL adversarial trước khi coi độ bao phủ là rộng.")
+        add_paragraph(document, "Parity xác nhận hai runtime nhất quán trên ca đã chọn, không chứng minh hiệu quả bảo mật. Cần bổ sung IDN, IPv6, user-info, query lồng và URL adversarial.")
         add_heading(document, "4.5. Kiểm thử phần mềm và build", 2)
         add_table(document, ["Cổng kiểm tra", "Kết quả được ghi nhận", "Ý nghĩa"], [
             ("Python / data tests", "59 passed (`python -m pytest -q`)", "Lần chạy hiện hành; gồm pipeline dữ liệu, extractor, model, web app và thử nghiệm."),
@@ -683,28 +682,25 @@ def write_document(metrics, evaluation, output_path: Path):
     # Chapter 5
     add_heading(document, "CHƯƠNG 5. ĐÁNH GIÁ SẢN PHẨM, KẾT LUẬN VÀ KIẾN NGHỊ", 1)
     add_heading(document, "5.1. Mức độ đạt mục tiêu kỹ thuật", 2)
-    add_paragraph(document, "Nguyên mẫu hoàn thành luồng phân tích URL cục bộ, tra cứu cơ sở dữ liệu tham chiếu, trích xuất schema 55 feature, suy luận bốn mô hình trên trình duyệt, giao diện đa ngôn ngữ, explorer dữ liệu và nhánh kiểm tra DNS/redirect có đồng ý. Kiểm thử parity và build cung cấp bằng chứng triển khai nhất quán trên phạm vi đã định. Tuy vậy, kết quả SVM cho thấy ensemble hiện tại chưa đủ căn cứ để được mô tả là đồng thuận chất lượng đồng đều; cần ưu tiên sửa calibration hoặc ngưỡng dựa trên validation và báo cáo lại trên test độc lập sau khi khóa quy trình.")
+    add_paragraph(document, "Nguyên mẫu hoàn thành phân tích URL cục bộ, tra cứu tham chiếu, 55 feature, bốn model trên trình duyệt, explorer và live checks có consent. Parity/build xác nhận triển khai nhất quán trong phạm vi test. SVM có recall rất thấp; cần hiệu chỉnh trên validation trước khi tin cậy ensemble.")
     add_heading(document, "5.2. Kết luận", 2)
-    add_paragraph(document, "SafeWeb chứng minh tính khả thi của nguyên mẫu cảnh báo sớm dựa trên URL, xử lý cục bộ mặc định, cơ sở dữ liệu tham chiếu và bốn mô hình. Trên tập kiểm thử giữ riêng, Gradient Boosting đạt F1 phishing 0,8697 và recall 0,9561; SVM ở ngưỡng hiện tại gần như không phát hiện lớp phishing. Hệ thống phù hợp làm công cụ giáo dục và sàng lọc tham khảo, không phải bộ bảo vệ hoàn chỉnh hay chứng nhận tính an toàn của URL.")
+    add_paragraph(document, "SafeWeb khả thi như nguyên mẫu cảnh báo sớm URL, chạy cục bộ mặc định. Trên test giữ riêng, Gradient Boosting đạt F1 0,8697/recall 0,9561; SVM gần như bỏ sót phishing ở threshold hiện tại. Đây là công cụ giáo dục/sàng lọc, không phải bộ bảo vệ hay chứng nhận an toàn.")
     add_heading(document, "5.3. Hạn chế", 2)
     add_bullets(document, [
-        "SVM calibration/decision threshold cần được sửa theo validation; không lựa chọn threshold trên tập test rồi báo cùng test như đánh giá độc lập.",
-        "Cơ sở dữ liệu phụ thuộc coverage, thời điểm phát hiện và chất lượng nhãn của nguồn; không match không đồng nghĩa an toàn.",
-        "Đặc trưng chủ yếu dựa trên URL, không phân tích nội dung trang, chứng thư, tuổi domain, reputation feed hoặc hành vi script.",
-        "Tín hiệu từ khóa có thể tạo thiên lệch ngôn ngữ và false positive; danh sách hiện tại chỉ gồm tám substring.",
-        "Tách domain không loại hết rò rỉ chiến dịch/nguồn, và dữ liệu benchmark không đại diện mọi quốc gia, ngôn ngữ hay thời điểm.",
-        "Live inspection gửi URL tới dịch vụ ngoài sau đồng ý; CORS, rate limit, DNS cache và dịch vụ preview làm kết quả không ổn định.",
-        "Chưa có thử nghiệm usability có người tham gia, đánh giá accessibility độc lập hay đo thời gian/chi phí vận hành trên thiết bị yếu.",
+        "SVM cần hiệu chỉnh threshold trên validation; không chọn threshold bằng test.",
+        "Không match database không đồng nghĩa an toàn; coverage/nhãn thay đổi theo nguồn và thời gian.",
+        "Model chỉ phân tích URL, không đọc HTML, TLS, tuổi domain, reputation hay script; keyword có thể gây bias/false positive.",
+        "Domain-disjoint không loại hết campaign leakage hoặc dataset drift; benchmark không đại diện mọi môi trường.",
+        "Live checks phụ thuộc dịch vụ/CORS và chia sẻ URL sau consent; chưa có usability/accessibility study.",
     ])
     add_heading(document, "5.4. Hướng phát triển: tiện ích mở rộng quét liên kết trong viewport", 2)
-    add_paragraph(document, "Phiên bản tiếp theo có thể chuyển từ website phân tích theo yêu cầu sang tiện ích mở rộng trình duyệt. Một content script sẽ lấy các anchor đang hiện trong viewport, canonicalize URL, khử trùng, gửi chuỗi qua bộ suy luận cục bộ và gắn cảnh báo không chặn trang. Khi cuộn, IntersectionObserver có thể xử lý incremental; chỉ cache hash/feature cần thiết và giới hạn số URL mỗi nhịp để tránh làm chậm trang.")
-    add_paragraph(document, "Thiết kế phải mặc định không gửi URL ra ngoài, không đọc nội dung form hoặc trường mật khẩu, không thay đổi đích liên kết, không tự chặn click nếu chưa có cơ sở, và giải thích mức tin cậy bằng lý do cụ thể. Quyền extension cần giới hạn tối thiểu; người dùng cần bật rõ chế độ quét trang, có pause/allowlist, và biết URL của trang hiện tại có thể chứa dữ liệu nhạy cảm. Kiểm thử tương lai cần đo độ bao phủ viewport, latency, false positive, pin/CPU trên trang nhiều liên kết, tương thích SPA và khả năng khôi phục thao tác của người dùng.")
+    add_paragraph(document, "Hướng phát triển là extension quét anchor trong viewport, chuẩn hóa/khử trùng URL, suy luận cục bộ và cảnh báo không chặn. Bắt buộc opt-in, permission tối thiểu, không đọc form/credential, không gửi URL mặc định; đánh giá latency, FP và tương thích SPA trước phát hành.")
     add_heading(document, "5.5. Kế hoạch cải tiến theo giai đoạn", 2)
-    add_table(document, ["Giai đoạn", "Công việc", "Tiêu chí nghiệm thu đề xuất"], [
-        ("V2.4 — hiệu chỉnh mô hình", "Khảo sát calibration/threshold SVM chỉ trên validation; so sánh ensemble có/không SVM.", "Khóa metric/threshold trước đánh giá test mới; báo cáo recall, precision, calibration và confusion matrix."),
-        ("V2.5 — giải thích và dữ liệu", "Mở rộng feature-level explanations, đánh giá URL IDN/adversarial, lưu provenance/version.", "Mỗi lời giải thích ánh xạ tới phép đo thật; kiểm thử tiếng Việt và Unicode."),
-        ("V3 — browser extension thử nghiệm", "Quét viewport opt-in, batching, cache cục bộ và cảnh báo không chặn.", "Không gửi URL mặc định; permission audit; usability/performance test trước phát hành."),
-    ], widths=[3.0, 7.0, 6.2], font_size=8.3)
+    add_table(document, ["Giai đoạn", "Công việc", "Tiêu chí nghiệm thu"], [
+        ("V2.4", "Hiệu chỉnh SVM trên validation; so sánh ensemble.", "Khóa threshold trước test; báo recall, precision, calibration."),
+        ("V2.5", "Giải thích feature; thêm ca IDN/adversarial.", "Lý do truy về feature; test Unicode."),
+        ("V3", "Extension quét viewport opt-in.", "Không gửi URL mặc định; audit permission/usability/performance."),
+    ], widths=[2.2, 7.2, 6.8], font_size=7.8)
 
     add_heading(document, "TÀI LIỆU THAM KHẢO", 1)
     references = [
@@ -723,9 +719,9 @@ def write_document(metrics, evaluation, output_path: Path):
         paragraph = document.add_paragraph()
         paragraph.paragraph_format.left_indent = Cm(0.8)
         paragraph.paragraph_format.first_line_indent = Cm(-0.8)
-        paragraph.paragraph_format.space_after = Pt(5)
+        paragraph.paragraph_format.space_after = Pt(2)
         paragraph.paragraph_format.keep_together = True
-        set_run_font(paragraph.add_run(item), size=9.5)
+        set_run_font(paragraph.add_run(item), size=8.5)
 
     # Appendices
     document.add_page_break()
