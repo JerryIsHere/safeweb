@@ -217,7 +217,7 @@ def add_toc_field(document):
     begin.set(qn("w:fldCharType"), "begin")
     instruction = OxmlElement("w:instrText")
     instruction.set(qn("xml:space"), "preserve")
-    instruction.text = ' TOC \\o "1-3" \\h \\z \\u '
+    instruction.text = ' TOC \\o "1-1" \\h \\z \\u '
     separate = OxmlElement("w:fldChar")
     separate.set(qn("w:fldCharType"), "separate")
     placeholder = OxmlElement("w:t")
