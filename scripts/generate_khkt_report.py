@@ -112,7 +112,7 @@ def set_page_number_format(section, fmt: str, start: int) -> None:
 def set_page_footer(section, color=NAVY):
     section.footer.is_linked_to_previous = False
     section.different_first_page_header_footer = False
-    section.footer_distance = Cm(1.15)
+    section.footer_distance = Cm(0.75)
     paragraph = section.footer.paragraphs[0]
     paragraph.clear()
     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -132,15 +132,15 @@ def add_paragraph(document, text: str, *, style=None, align=None, first_line=Tru
     paragraph.paragraph_format.space_after = Pt(after)
     paragraph.paragraph_format.keep_together = True
     run = paragraph.add_run(text)
-    set_run_font(run, size=12)
+    set_run_font(run, size=9.5)
     return paragraph
 
 
 def add_heading(document, text: str, level=1):
     paragraph = document.add_heading(text, level=level)
     paragraph.paragraph_format.keep_with_next = True
-    paragraph.paragraph_format.space_before = Pt(12 if level == 1 else 8)
-    paragraph.paragraph_format.space_after = Pt(5)
+    paragraph.paragraph_format.space_before = Pt(6 if level == 1 else 4)
+    paragraph.paragraph_format.space_after = Pt(2)
     return paragraph
 
 
@@ -150,18 +150,18 @@ def add_bullets(document, items, *, numbered=False):
         paragraph = document.add_paragraph(style=style)
         paragraph.paragraph_format.left_indent = Cm(0.7)
         paragraph.paragraph_format.first_line_indent = Cm(-0.35)
-        paragraph.paragraph_format.space_after = Pt(3)
+        paragraph.paragraph_format.space_after = Pt(2)
         paragraph.paragraph_format.keep_together = True
-        set_run_font(paragraph.add_run(item), size=11)
+        set_run_font(paragraph.add_run(item), size=9.5)
 
 
 def add_caption(document, text: str):
     paragraph = document.add_paragraph()
     paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
     paragraph.paragraph_format.space_before = Pt(2)
-    paragraph.paragraph_format.space_after = Pt(8)
+    paragraph.paragraph_format.space_after = Pt(5)
     paragraph.paragraph_format.keep_with_next = False
-    set_run_font(paragraph.add_run(text), size=9.5, italic=True, color=MUTED)
+    set_run_font(paragraph.add_run(text), size=8.5, italic=True, color=MUTED)
 
 
 def add_table(document, headers, rows, widths=None, font_size=8.6):
@@ -186,7 +186,7 @@ def add_table(document, headers, rows, widths=None, font_size=8.6):
                 set_cell_shading(cells[index], "F4F7F8")
     for row_index, row in enumerate(table.rows):
         for column_index, cell in enumerate(row.cells):
-            set_cell_margins(cell)
+            set_cell_margins(cell, top=30, start=65, bottom=30, end=65)
             if widths and column_index < len(widths):
                 cell.width = Cm(widths[column_index])
             for paragraph in cell.paragraphs:
@@ -201,7 +201,10 @@ def add_table(document, headers, rows, widths=None, font_size=8.6):
                         bold=row_index == 0,
                         color=WHITE if row_index == 0 else INK,
                     )
-    document.add_paragraph().paragraph_format.space_after = Pt(1)
+    spacer = document.add_paragraph()
+    spacer.paragraph_format.space_before = Pt(0)
+    spacer.paragraph_format.space_after = Pt(0)
+    spacer.paragraph_format.line_spacing = Pt(2)
     return table
 
 
@@ -360,22 +363,22 @@ def write_document(metrics, evaluation, output_path: Path):
     section = document.sections[0]
     section.page_width = Cm(21.0)
     section.page_height = Cm(29.7)
-    section.top_margin = Cm(2.5)
-    section.bottom_margin = Cm(2.5)
-    section.left_margin = Cm(3.0)
-    section.right_margin = Cm(2.0)
+    section.top_margin = Cm(1.8)
+    section.bottom_margin = Cm(1.8)
+    section.left_margin = Cm(1.8)
+    section.right_margin = Cm(1.8)
     section.different_first_page_header_footer = True
 
     styles = document.styles
     normal = styles["Normal"]
     normal.font.name = "Times New Roman"
     normal._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
-    normal.font.size = Pt(12)
+    normal.font.size = Pt(9.5)
     normal.font.color.rgb = RGBColor.from_string(INK)
     normal.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    normal.paragraph_format.line_spacing = 1.15
-    normal.paragraph_format.space_after = Pt(5)
-    for name, size, color in (("Title", 25, NAVY), ("Heading 1", 16, NAVY), ("Heading 2", 13, TEAL), ("Heading 3", 11.5, NAVY)):
+    normal.paragraph_format.line_spacing = 1.0
+    normal.paragraph_format.space_after = Pt(1)
+    for name, size, color in (("Title", 18, NAVY), ("Heading 1", 12.5, NAVY), ("Heading 2", 10.5, TEAL), ("Heading 3", 9.5, NAVY)):
         style = styles[name]
         style.font.name = "Times New Roman"
         style._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
@@ -441,10 +444,10 @@ def write_document(metrics, evaluation, output_path: Path):
     toc_section = document.add_section(WD_SECTION_START.NEW_PAGE)
     toc_section.page_width = Cm(21.0)
     toc_section.page_height = Cm(29.7)
-    toc_section.top_margin = Cm(2.5)
-    toc_section.bottom_margin = Cm(2.5)
-    toc_section.left_margin = Cm(3.0)
-    toc_section.right_margin = Cm(2.0)
+    toc_section.top_margin = Cm(1.8)
+    toc_section.bottom_margin = Cm(1.8)
+    toc_section.left_margin = Cm(1.8)
+    toc_section.right_margin = Cm(1.8)
     set_page_number_format(toc_section, "lowerRoman", 1)
     set_page_footer(toc_section)
     add_contents(document)
@@ -463,21 +466,21 @@ def write_document(metrics, evaluation, output_path: Path):
     main_section = document.add_section(WD_SECTION_START.NEW_PAGE)
     main_section.page_width = Cm(21.0)
     main_section.page_height = Cm(29.7)
-    main_section.top_margin = Cm(2.5)
-    main_section.bottom_margin = Cm(2.5)
-    main_section.left_margin = Cm(3.0)
-    main_section.right_margin = Cm(2.0)
+    main_section.top_margin = Cm(1.8)
+    main_section.bottom_margin = Cm(1.8)
+    main_section.left_margin = Cm(1.8)
+    main_section.right_margin = Cm(1.8)
     set_page_number_format(main_section, "decimal", 1)
     set_page_footer(main_section)
 
     # Chapter 1
     add_heading(document, "CHƯƠNG 1. XÁC ĐỊNH NHU CẦU VÀ MỤC TIÊU KỸ THUẬT", 1)
     add_heading(document, "1.1. Bối cảnh và vấn đề thực tiễn", 2)
-    add_paragraph(document, "URL là định danh tài nguyên web có cấu trúc scheme, authority, path, query và fragment theo cú pháp URI (Berners-Lee et al., 2005); URL xuất hiện phổ biến trong email, tin nhắn, mạng xã hội và mã QR. Phishing thường lợi dụng tên miền gần giống thương hiệu, chuỗi đường dẫn dài, ký tự mã hóa hoặc lời mời đăng nhập để dẫn người dùng đến trang thu thập thông tin. Người dùng phổ thông khó phân biệt tên miền đăng ký thực với nhãn phụ trong hostname; biểu tượng ổ khóa HTTPS chỉ cho biết URL khai báo scheme HTTPS, không chứng minh chủ thể là tổ chức đáng tin cậy. Vì vậy, một công cụ giáo dục cần chỉ ra tín hiệu quan sát được, đồng thời tránh tuyên bố chắc chắn vượt quá dữ liệu đầu vào.")
-    add_paragraph(document, "Các dịch vụ kiểm tra trực tuyến có thể yêu cầu URL đi qua máy chủ hoặc nguồn dữ liệu bên thứ ba. URL riêng tư đôi khi chứa mã theo dõi, mã mời hoặc thông tin định danh. SafeWeb chọn kiến trúc ưu tiên xử lý cục bộ: chuẩn hóa và phân tích chuỗi, tra cứu chỉ mục đóng gói và chạy bộ phân loại trong trình duyệt. Chỉ các bước tùy chọn mới tạo yêu cầu tới Google DNS-over-HTTPS, Microlink hoặc dịch vụ ảnh xem trước WordPress.")
+    add_paragraph(document, "URL gồm scheme, authority, path, query và fragment theo cú pháp URI (Berners-Lee et al., 2005). Phishing thường dùng hostname giả mạo thương hiệu, đường dẫn dài, ký tự mã hóa hoặc lời mời đăng nhập. HTTPS chỉ mô tả giao thức kết nối, không xác minh chủ thể website. Vì vậy SafeWeb trình bày tín hiệu quan sát được thay vì khẳng định chắc chắn URL an toàn hay độc hại.")
+    add_paragraph(document, "URL có thể chứa mã theo dõi hoặc định danh riêng tư. SafeWeb ưu tiên chuẩn hóa, tra cứu và suy luận cục bộ; chỉ DNS, redirect, metadata và preview mới gửi yêu cầu ngoài sau khi người dùng đồng ý.")
     add_heading(document, "1.2. Nhu cầu kỹ thuật và câu hỏi nghiên cứu", 2)
-    add_paragraph(document, "Nhu cầu kỹ thuật là xây dựng nguyên mẫu web có thể nhận một URL, chuẩn hóa đầu vào, tra cứu dữ liệu tham chiếu, đánh giá đặc trưng URL, hiển thị lý do và mức cảnh báo, đồng thời cung cấp kiểm tra trực tuyến theo cơ chế đồng ý rõ ràng. Câu hỏi đánh giá chính: liệu một pipeline chỉ sử dụng URL và các mô hình được huấn luyện có thể cung cấp tín hiệu phishing nhất quán giữa Python và JavaScript trên tập kiểm thử định trước hay không?")
-    add_paragraph(document, "Giả thuyết kỹ thuật: nếu giữ cố định lược đồ đặc trưng, thứ tự đặc trưng, trọng số mô hình và phép biến đổi tiền xử lý khi xuất sang JavaScript, thì xác suất suy luận phía trình duyệt sẽ gần trùng khớp với Python trong sai số số học dấu phẩy động trên bộ URL kiểm thử. Giả thuyết này được kiểm tra bằng script đối chiếu parity; nó không khẳng định mô hình chính xác với mọi URL ngoài tập thử.")
+    add_paragraph(document, "Nhu cầu kỹ thuật là phân tích URL, tra cứu tham chiếu, hiển thị lý do/mức cảnh báo và chỉ kiểm tra mạng sau consent. Câu hỏi nghiên cứu: với cùng schema và tham số, suy luận JavaScript có khớp Python trên bộ ca kiểm thử định trước không?")
+    add_paragraph(document, "Giả thuyết: giữ cố định thứ tự 55 feature và phép tiền xử lý khi export sẽ làm xác suất trình duyệt gần trùng Python trong sai số dấu phẩy động. Script parity kiểm tra giả thuyết trên các ca chọn sẵn; kết quả không khái quát tới mọi URL.")
     add_heading(document, "1.3. Mục tiêu và tiêu chí thiết kế", 2)
     add_table(document, ["Mục tiêu", "Tiêu chí có thể kiểm chứng", "Bằng chứng hiện có"], [
         ("Phân tích nhiều tín hiệu", "Dùng cùng schema 55 đặc trưng cho bốn bộ phân loại.", "metrics.json ghi feature_count = 55."),
@@ -487,22 +490,21 @@ def write_document(metrics, evaluation, output_path: Path):
         ("Thông báo có giới hạn", "Không gọi kết quả là chứng nhận an toàn; nêu SVM và giới hạn CORS.", "UI disclaimer, kết quả held-out và kiểm tra mã nguồn."),
     ], widths=[3.6, 6.3, 6.0], font_size=8.4)
     add_heading(document, "1.4. Phạm vi, giả định và giới hạn", 2)
-    add_paragraph(document, "Đối tượng nghiên cứu là chuỗi URL và các bản ghi nhãn đã công bố trong PhishVN/PhiUSIIL. Luồng suy luận không tải HTML của website và không chạy mã trang đích. Không có xác thực chứng thư TLS, đánh giá tuổi tên miền, uy tín WHOIS, danh tiếng IP, phân tích nội dung DOM hoặc sandbox. DNS chỉ được truy vấn khi bật live inspection. Dự án là nguyên mẫu nghiên cứu, chưa có đánh giá người dùng, kiểm định độc lập theo thời gian thực hoặc chứng nhận an toàn thông tin.")
+    add_paragraph(document, "Phạm vi gồm chuỗi URL và nhãn trong các tập dữ liệu đã công bố. SafeWeb không tải/chạy HTML, không xác thực chứng thư TLS, tuổi tên miền, WHOIS, reputation hay hành vi trang; DNS chỉ kiểm tra khi bật live inspection. Nguyên mẫu chưa được đánh giá người dùng hoặc kiểm định bảo mật độc lập.")
     add_heading(document, "1.5. Giá trị và định hướng giáo dục", 2)
-    add_paragraph(document, "SafeWeb được thiết kế như một học cụ về an toàn số và tư duy dữ liệu, không chỉ là công cụ đưa ra nhãn URL. Giá trị giáo dục dự kiến nằm ở khả năng quan sát các bước phân tích, so sánh nguồn bằng chứng và thảo luận giới hạn của tự động hóa. Dự án chưa tiến hành nghiên cứu có người tham gia, đo kiến thức trước/sau hoặc đánh giá hiệu quả sư phạm; vì vậy các nội dung dưới đây là mục tiêu học tập và kịch bản sử dụng đề xuất, không phải kết quả thực nghiệm về học sinh.")
+    add_paragraph(document, "SafeWeb hướng tới dạy an toàn số và tư duy dữ liệu qua việc quan sát pipeline, so sánh bằng chứng và thảo luận giới hạn tự động hóa. Chưa có nghiên cứu học sinh, đo trước/sau hay đánh giá hiệu quả sư phạm; các nội dung sau là mục tiêu đề xuất, không phải kết quả thực nghiệm.")
     add_table(document, ["Năng lực hướng tới", "Hoạt động học tập có thể quan sát", "Giới hạn cần nêu"], [
         ("Hiểu cấu trúc URL", "Tách scheme, hostname, subdomain, path và query; chỉ ra phần nào chứa tín hiệu được trích xuất.", "Một dấu hiệu như từ khóa ngân hàng, IP hay HTTPS không tự chứng minh URL độc hại hoặc an toàn."),
         ("Tư duy phản biện về AI", "So sánh kết quả tra cứu cơ sở dữ liệu với xác suất từng mô hình; đọc precision, recall, F1 và false positive/false negative.", "Kết quả phụ thuộc corpus và threshold; SVM hiện có recall phishing rất thấp dù ROC-AUC cao."),
         ("Quyền riêng tư và công dân số", "Phân biệt phân tích local-only với live inspection; cân nhắc trước khi chia sẻ URL cho dịch vụ ngoài.", "Không nhập URL riêng tư, token hoặc thông tin đăng nhập; HTTPS không xác thực danh tính website."),
         ("Tư duy kỹ thuật và tái lập", "Theo dõi pipeline dữ liệu → đặc trưng → mô hình → giao diện; đối chiếu Python–JavaScript.", "Parity xác minh hai hiện thực nhất quán trên bộ ca đã chọn, không chứng minh độ chính xác phổ quát."),
     ], widths=[3.3, 6.4, 6.2], font_size=8.2)
-    add_paragraph(document, "Kịch bản lớp học an toàn có thể bắt đầu bằng URL mẫu vô hại hoặc địa chỉ IP dành riêng cho kiểm thử, yêu cầu học sinh đánh dấu thành phần URL trước khi xem dự đoán, rồi giải thích vì sao kết luận của mô hình không phải chứng nhận. Giáo viên có thể cho học sinh đối chiếu một lỗi bỏ sót và một cảnh báo nhầm trong ma trận nhầm lẫn, thảo luận vì sao không nhấp vào URL phishing mẫu và yêu cầu đề xuất cách xác minh qua kênh chính thức. Mọi bài tập nên dùng chuỗi công khai/giả lập, tắt live inspection và không mở đích URL.")
-    add_paragraph(document, "Nếu triển khai thành hoạt động nghiên cứu giáo dục, cần có kế hoạch riêng: bài kiểm tra khái niệm trước/sau, rubric chấm khả năng phân tích hostname và diễn giải chỉ số, kiểm tra lựa chọn hành vi an toàn, cùng quy trình đồng thuận và bảo vệ dữ liệu người học. Các phép đo này chưa thuộc phạm vi kết quả của phiên bản báo cáo hiện tại.")
+    add_paragraph(document, "Kịch bản lớp học có thể dùng URL giả lập: học sinh phân tích hostname trước khi xem dự đoán, giải thích một false negative/false positive và đề xuất cách xác minh qua kênh chính thức. Tắt live checks, không mở URL mẫu. Nghiên cứu sư phạm tương lai cần bài kiểm tra trước/sau, rubric và quy trình đồng thuận/bảo vệ dữ liệu; các phép đo này chưa được thực hiện.")
 
     # Chapter 2
     add_heading(document, "CHƯƠNG 2. PHÂN TÍCH GIẢI PHÁP VÀ CƠ SỞ LÝ THUYẾT", 1)
     add_heading(document, "2.1. Phân biệt dự án khoa học và dự án kỹ thuật", 2)
-    add_paragraph(document, "Theo cấu trúc KHKT được cung cấp, SafeWeb thuộc dự án kỹ thuật: đầu ra là một nguyên mẫu phần mềm giải quyết nhu cầu thực tiễn; tiêu chí chính là khả năng hoạt động, tính tái lập, độ nhất quán triển khai và giới hạn vận hành. Phần thí nghiệm học máy là thành phần đánh giá của quá trình thiết kế, không biến sản phẩm thành một nghiên cứu nhân quả về hành vi người dùng.")
+    add_paragraph(document, "SafeWeb thuộc dự án kỹ thuật: đầu ra là nguyên mẫu phần mềm; tiêu chí gồm khả năng hoạt động, tái lập, nhất quán triển khai và giới hạn vận hành. Thí nghiệm học máy đánh giá thiết kế, không nghiên cứu nhân quả hành vi người dùng.")
     add_heading(document, "2.2. Phân tích các phương án thiết kế", 2)
     add_table(document, ["Phương án", "Ưu điểm", "Đánh đổi / lý do lựa chọn"], [
         ("Chỉ heuristic URL", "Nhanh, dễ giải thích, không cần huấn luyện.", "Khó biểu diễn tương tác phi tuyến; giữ như lớp giải thích, không dùng làm nguồn kết luận duy nhất."),
@@ -511,12 +513,12 @@ def write_document(metrics, evaluation, output_path: Path):
         ("Mô hình trong trình duyệt + tra cứu + live opt-in", "Có thể chạy phân tích cục bộ, trình bày nhiều nguồn, bổ sung kiểm tra mạng có đồng ý.", "Bundle lớn hơn; phải duy trì parity và thừa nhận giới hạn CORS/nguồn dữ liệu."),
     ], widths=[3.5, 5.1, 7.3], font_size=8.4)
     add_heading(document, "2.3. Cơ sở lý thuyết của bốn bộ phân loại", 2)
-    add_paragraph(document, "Random Forest (rừng ngẫu nhiên) là tổ hợp cây quyết định được huấn luyện với lấy mẫu ngẫu nhiên; dự đoán xác suất lớp được tổng hợp qua các cây. Cách tiếp cận này mô tả quan hệ phi tuyến và tương tác đặc trưng, đồng thời cấu trúc cây có thể xuất sang JavaScript dưới dạng mảng nút, nhánh, điều kiện và đầu ra (Breiman, 2001). SafeWeb đặt 100 cây, độ sâu tối đa 16, lá tối thiểu 3 và balanced-subsample class weighting.")
-    add_paragraph(document, "Gradient Boosting (tăng cường gradient) xây dựng tuần tự các cây nông để giảm hàm mất mát theo gradient, thay vì bỏ phiếu độc lập (Friedman, 2001). Cấu hình hiện tại có 100 cây độ sâu 3, learning rate 0,1. Mô hình đạt recall phishing cao nhất trong phép đo hiện hành nhưng cũng phát sinh nhiều false positive hơn Random Forest.")
-    add_paragraph(document, "Linear SVM (máy véc-tơ hỗ trợ tuyến tính) tìm siêu phẳng có biên phân tách lớn trong không gian đặc trưng (Cortes & Vapnik, 1995); `StandardScaler` chuẩn hóa đầu vào và `LinearSVC` tạo decision score. Xác suất giao diện được lấy qua sigmoid calibration 3-fold với `ensemble=False`. Trên test, ROC-AUC cao không đồng nghĩa ngưỡng phân lớp mặc định hữu ích: recall phishing chỉ 0,0071. Đây là cảnh báo thực nghiệm trọng yếu, không được che khuất bằng accuracy.")
-    add_paragraph(document, "Logistic Regression (hồi quy logistic) ánh xạ tổ hợp tuyến tính đặc trưng qua hàm sigmoid để ước lượng xác suất lớp, đóng vai trò baseline tuyến tính dễ kiểm tra. Cấu hình sử dụng `StandardScaler`, `class_weight=balanced` và tối đa 2.000 vòng lặp. Các hiện thực của bộ phân loại được xây dựng bằng scikit-learn (Pedregosa et al., 2011).")
+    add_paragraph(document, "Random Forest tổng hợp xác suất từ các cây quyết định lấy mẫu ngẫu nhiên, phù hợp quan hệ phi tuyến và có thể export cây sang JavaScript (Breiman, 2001). Cấu hình: 100 cây, depth 16, leaf 3, balanced-subsample.")
+    add_paragraph(document, "Gradient Boosting cộng tuần tự cây nông theo gradient mất mát (Friedman, 2001). Cấu hình: 100 cây, depth 3, learning rate 0,1; đạt recall cao nhất nhưng có nhiều false positive.")
+    add_paragraph(document, "Linear SVM tối đa hóa biên phân tách (Cortes & Vapnik, 1995), dùng `StandardScaler`, `LinearSVC` và sigmoid calibration 3-fold. ROC-AUC 0,9308 nhưng recall hiện chỉ 0,0071, nên ngưỡng chưa hữu ích.")
+    add_paragraph(document, "Logistic Regression là baseline tuyến tính, ánh xạ tổ hợp đặc trưng qua sigmoid; cấu hình dùng `StandardScaler`, balanced class weights và tối đa 2.000 vòng lặp. Các estimator dựa trên scikit-learn (Pedregosa et al., 2011).")
     add_heading(document, "2.4. Lý do phối hợp mô hình và cách hiểu đồng thuận", 2)
-    add_paragraph(document, "Bốn mô hình tạo bốn xác suất riêng. Giao diện tính trung bình số học của chúng để tạo xác suất đồng thuận, rồi áp ngưỡng 0,5 cho nhãn tổng hợp. Đây là ensemble trung bình xác suất, không phải bỏ phiếu đa số và cũng không phải đảm bảo các mô hình độc lập về sai số. Giao diện vẫn hiển thị xác suất/mức riêng để người dùng thấy bất đồng. Đặc biệt, SVM hiện có recall rất thấp ở ngưỡng mặc định; việc đưa xác suất SVM vào trung bình có thể làm suy giảm độ hữu ích và cần hiệu chỉnh trước triển khai rộng.")
+    add_paragraph(document, "Hệ thống lấy trung bình số học bốn xác suất, dùng ngưỡng 0,5 cho nhãn và vẫn hiển thị điểm riêng; đây không phải bỏ phiếu đa số hay bảo đảm lỗi độc lập. Vì SVM có recall 0,0071 ở ngưỡng hiện tại, cần hiệu chỉnh trước khi dựa vào đồng thuận.")
     add_heading(document, "2.5. Điểm mới trong phạm vi nguyên mẫu", 2)
     add_bullets(document, [
         "Ghép cơ sở dữ liệu tham chiếu có provenance với suy luận bốn mô hình trong một trải nghiệm phía trình duyệt.",
@@ -610,13 +612,9 @@ def write_document(metrics, evaluation, output_path: Path):
     with tempfile.TemporaryDirectory(prefix="safeweb-report-") as temporary:
         temporary_path = Path(temporary)
         pipeline_path = temporary_path / "pipeline.png"
-        metrics_path = temporary_path / "metrics.png"
-        confusion_path = temporary_path / "confusion.png"
         test_evidence_path = temporary_path / "test-evidence.png"
         homepage_path = SCREENSHOTS_PATH / "homepage.png"
         make_pipeline_figure(pipeline_path)
-        make_metrics_figure(metrics_path, metrics["evaluations"])
-        make_confusion_figure(confusion_path, metrics["evaluations"])
         make_test_evidence_figure(test_evidence_path)
 
         add_heading(document, "3.11. Lưu đồ vận hành", 2)
@@ -650,8 +648,6 @@ def write_document(metrics, evaluation, output_path: Path):
             ))
         add_table(document, ["Mô hình", "Accuracy", "Precision", "Recall", "F1", "ROC-AUC", "TN / FP / FN / TP", "Train / Test"], result_rows, widths=[2.9, 1.3, 1.35, 1.2, 1.0, 1.2, 3.4, 2.5], font_size=7.7)
         add_paragraph(document, "Gradient Boosting có accuracy 0,8789 và F1 phishing 0,8697; recall 0,9561 tương ứng 2.676/2.799 phishing phát hiện đúng, song false positive là 679. Random Forest đạt recall 0,9232, F1 0,8615 và ít false negative hơn một số baseline tuyến tính. Logistic Regression có F1 0,8371. SVM giữ 3.825 benign đúng và không có false positive ở ngưỡng phân loại hiện tại, nhưng bỏ sót 2.779/2.799 phishing; accuracy 0,5805 và F1 phishing 0,0142 khiến nhãn SVM hiện tại không thể xem là hữu ích. ROC-AUC SVM 0,9308 gợi ý khả năng xếp hạng khác với ngưỡng hoạt động, nhưng cần khảo sát calibration/threshold trên validation trước khi thay đổi.")
-        add_figure(document, metrics_path, "Hình 4.1. So sánh recall và F1 của lớp phishing trên cùng tập test.", width=14.8)
-        add_figure(document, confusion_path, "Hình 4.2. Ma trận nhầm lẫn bốn mô hình; thứ tự nhãn [benign, phishing].", width=13.8)
         add_heading(document, "4.3. Phân tích sai số và độ tin cậy", 2)
         add_paragraph(document, "False negative là URL phishing bị gán benign; đây là loại sai số có thể làm người dùng mất cảnh giác. False positive làm URL hợp lệ bị cảnh báo, có thể gây mệt mỏi cảnh báo. Gradient Boosting giảm FN xuống 123 nhưng có 679 FP; Logistic Regression có 341 FN và 616 FP. SVM ưu tiên precision 1,0 trên 20 dự đoán phishing nhưng chỉ phát hiện 20 trường hợp, vì vậy precision cao ở đây không đại diện cho khả năng phát hiện tổng quát.")
         add_paragraph(document, "Các chỉ số là hiệu năng trên một corpus có quy trình gán nhãn và phân vùng cụ thể. Chúng không đo calibration xác suất, không phản ánh phân phối URL triển khai, không đo khả năng chống né tránh/adversarial và không chứng minh quan hệ nhân quả giữa từng đặc trưng với phishing. Phân vùng domain-disjoint làm giảm rò rỉ cùng tên miền nhưng không loại bỏ mọi dạng trùng chiến dịch, nguồn feed hoặc drift theo thời gian.")
@@ -765,54 +761,19 @@ def write_document(metrics, evaluation, output_path: Path):
         ("Data provenance", "Nguồn gốc dữ liệu", "Nguồn, nhãn, thời điểm và lịch sử biến đổi của bản ghi."),
         ("Held-out test set", "Tập kiểm thử giữ riêng", "Dữ liệu không dùng trong fit/tuning chính."),
         ("Data leakage", "Rò rỉ dữ liệu", "Thông tin test vô tình ảnh hưởng huấn luyện hoặc chọn mô hình."),
-        ("Domain drift", "Dịch chuyển phân phối tên miền", "Thay đổi dữ liệu/chiến dịch theo thời gian."),
         ("DNS over HTTPS (DoH)", "DNS qua HTTPS", "Tra cứu DNS qua giao thức HTTPS."),
         ("Redirect chain", "Chuỗi chuyển hướng", "Dãy đích URL qua các bước HTTP hoặc tham số nhúng."),
         ("Cross-Origin Resource Sharing (CORS)", "Chia sẻ tài nguyên khác nguồn", "Chính sách trình duyệt có thể chặn đọc phản hồi cross-origin."),
         ("Metadata", "Siêu dữ liệu trang", "Tiêu đề/mô tả/thuộc tính được dịch vụ preview trả về."),
         ("Consent gate", "Cổng đồng ý", "Bước yêu cầu người dùng cho phép trước khi chia sẻ URL."),
         ("Parity check", "Kiểm tra tương đương", "Đối chiếu đầu ra của hai hiện thực trên cùng bộ ca."),
-        ("False alarm", "Cảnh báo nhầm", "URL hợp lệ bị cảnh báo; gần nghĩa false positive."),
         ("Viewport scanner", "Bộ quét vùng nhìn", "Tiện ích phát hiện liên kết đang hiển thị trên khung nhìn."),
         ("Prototype", "Nguyên mẫu", "Phiên bản chứng minh tính khả thi, chưa phải sản phẩm chứng nhận."),
-        ("Iterative redesign", "Thiết kế lại lặp", "Chu trình thử nghiệm, phân tích lỗi và cải tiến."),
     ]
-    add_table(document, ["English term", "Thuật ngữ tiếng Việt", "Ý nghĩa trong báo cáo"], terms, widths=[4.4, 4.5, 6.8], font_size=8.1)
+    add_table(document, ["English term", "Thuật ngữ tiếng Việt", "Ý nghĩa trong báo cáo"], terms, widths=[4.4, 4.5, 6.8], font_size=7.6)
 
-    add_heading(document, "PHỤ LỤC B. MA TRẬN NHẦM LẪN VÀ CHỈ SỐ", 1)
-    add_table(document, ["Mô hình", "TN", "FP", "FN", "TP", "Hỗ trợ test (benign/phishing)"], [
-        (model_names[key], *(str(metrics["evaluations"][key]["confusion_counts"][name]) for name in ("tn", "fp", "fn", "tp")), "3.825 / 2.799")
-        for key in model_names
-    ], widths=[4.2, 1.5, 1.5, 1.5, 1.5, 5.5], font_size=8.6)
-    add_paragraph(document, "Thứ tự ma trận nhầm lẫn trong file metrics là [benign, phishing]: hàng nhãn thật, cột nhãn dự đoán. Ví dụ Random Forest: [[3.209, 616], [215, 2.584]].", first_line=False)
-
-    add_heading(document, "PHỤ LỤC C. QUY TRÌNH TÁI LẬP", 1)
-    for command in (
-        "python scripts/prepare_phishvn_dataset.py",
-        "python scripts/train_phishvn_model.py",
-        "python scripts/export_browser_model.py",
-        "python scripts/compare_browser_model.py",
-        "python -m pytest -q",
-        "npm run test:browser",
-        "npm run build",
-    ):
-        paragraph = document.add_paragraph()
-        paragraph.paragraph_format.left_indent = Cm(0.8)
-        paragraph.paragraph_format.space_after = Pt(3)
-        run = paragraph.add_run(command)
-        set_run_font(run, size=9.2, color=TEAL)
-    add_paragraph(document, "Các lệnh huấn luyện cần archive PhishVN/PhiUSIIL và môi trường phụ thuộc tương ứng. Tệp `_site` là artifact build; mô hình Python và bundle trình duyệt phải được sinh bằng pipeline đã ghi lại để tránh đưa nhầm artefact cũ vào đánh giá.", first_line=False)
-
-    add_heading(document, "PHỤ LỤC D. TÓM TẮT PHẠM VI KIỂM TRA", 1)
-    add_table(document, ["Kiểm tra", "Có trong bản hiện tại?", "Ghi chú"], [
-        ("URL lexical/structural features", "Có", "55 feature model, trong đó một phần lấy hồ sơ PhishVN."),
-        ("Network checks mặc định", "Không", "DNS/redirect/metadata/preview chỉ khi opt-in."),
-        ("HTML/DOM/script analysis", "Không", "Không tải/thi hành trang đích trong suy luận model."),
-        ("TLS certificate validation", "Không", "HTTPS chỉ là scheme URL."),
-        ("Exact database evidence", "Có", "URL/host/signature match; tách khỏi benchmark ML."),
-        ("Viewport link scanning extension", "Chưa có", "Hướng phát triển, chưa được triển khai trong nguyên mẫu hiện tại."),
-        ("Brand mismatch detector", "Chưa có", "Có brand/category hints theo luật, chưa có đối chiếu domain chính thức."),
-    ], widths=[4.4, 3.2, 7.6], font_size=8.5)
+    add_heading(document, "PHỤ LỤC B. QUY TRÌNH TÁI LẬP", 1)
+    add_paragraph(document, "Tái lập theo thứ tự: `python scripts/prepare_phishvn_dataset.py` → `python scripts/train_phishvn_model.py` → `python scripts/export_browser_model.py` → `python scripts/compare_browser_model.py` → `python -m pytest -q` → `npm run test:browser` → `npm run build`. Cần có archive PhishVN/PhiUSIIL và các dependency tương ứng.", first_line=False)
 
     document.add_page_break()
     back = document.add_paragraph()
