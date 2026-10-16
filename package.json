@@ -1,6 +1,6 @@
 {
   "name": "safeweb",
-  "version": "2.3.0",
+  "version": "2.3.5",
   "description": "SafeWeb phishing detection application",
   "private": true,
   "scripts": {

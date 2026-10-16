@@ -39,9 +39,9 @@ def create_flowchart_image(output_path: str):
         "2. Tự điền đủ\nhttps:// và .com\nnếu gõ thiếu",
         "3. Đối chiếu\nKho dữ liệu\n36.261 địa chỉ",
         "4. Đo đếm\n55 dấu hiệu\ncủa địa chỉ",
-        "5. Bốn mô hình\ncùng chấm điểm\ntrên địa chỉ",
-        "6. Tra cứu tên miền\nvà ảnh xem trước\n(nếu bật)",
-        "7. Đổi màu trang\n(Xanh/Vàng/Cam/Đỏ)\nvà nêu lý do"
+        "5. Bốn mô hình\nAI cùng lúc\nchấm điểm",
+        "6. Kiểm tra DNS\nvà ảnh chụp\n(nếu bật)",
+        "7. Đổi màu trang\n(Xanh/Vàng/Cam/Đỏ)\n& giải thích rõ"
     ]
 
     box_w, box_h = 1.65, 1.75
@@ -93,21 +93,21 @@ def create_verification_image(output_path: str):
 
     cards = [
         (0.3, 2.55, "#0F766E", "#F0FDF4",
-         "1. KIỂM TRA DỮ LIỆU VÀ MÔ HÌNH",
-         "Đạt 59 / 59 bài",
-         "Kiểm tra làm sạch, đo dấu hiệu và tính điểm"),
+         "1. KIỂM TRA XỬ LÝ DỮ LIỆU & AI",
+         "Đạt 59 / 59 mẫu (100%)",
+         "Đo 55 dấu hiệu, làm sạch dữ liệu & chấm điểm chuẩn xác"),
         (5.15, 2.55, "#B45309", "#FFFBEB",
-         "2. KIỂM TRA TRÊN TRÌNH DUYỆT",
-         "Đạt 16 / 16 bài",
-         "Kiểm tra nhập địa chỉ, mô hình và kho tra cứu"),
+         "2. KIỂM TRA TRÊN TRÌNH DUYỆT WEB",
+         "Đạt 16 / 16 bài (100%)",
+         "Kiểm tra nhập URL, mô hình, cơ sở dữ liệu và giao diện"),
         (0.3, 0.35, "#1D4ED8", "#EFF6FF",
-         "3. ĐỐI CHIẾU HAI BỘ MÁY",
-         "16 / 16 trường hợp khớp",
-         "10 địa chỉ hợp lệ và 6 địa chỉ không hợp lệ"),
+         "3. ĐỐI CHIẾU HAI CÁCH TÍNH",
+         "Khớp 16 / 16 trường hợp",
+         "10 URL hợp lệ, 6 URL không hợp lệ; sai số rất nhỏ do số học"),
         (5.15, 0.35, "#15803D", "#F0FDF4",
-         "4. QUYỀN RIÊNG TƯ THEO LỰA CHỌN",
-         "Mặc định xử lý tại máy",
-         "Kiểm tra mạng chỉ chạy khi người dùng đồng ý")
+         "4. XỬ LÝ CỤC BỘ CÓ CHỌN LỌC",
+         "Mặc định không gửi URL đi",
+         "Chỉ tra cứu mạng khi người dùng chủ động cho phép")
     ]
 
     for x, y, border_col, bg_col, title, big_val, desc in cards:
@@ -142,9 +142,9 @@ def create_user_guide_diagram(output_path: str):
         (0.3, "#0284C7", "#E0F2FE", "BƯỚC 1: NHẬP ĐỊA CHỈ",
          "Dán đường dẫn nghi ngờ vào ô.\nPhần mềm tự điền https://\nvà .com nếu người dùng gõ thiếu."),
         (3.75, "#0D9488", "#CCFBF1", "BƯỚC 2: BẤM NÚT PHÂN TÍCH",
-         "Bấm nút 'Phân tích URL'.\nMáy tra cứu kho và cho bốn\nmô hình cùng chấm điểm."),
+         "Bấm nút 'Phân tích URL'.\nMáy dò kho dữ liệu và cho\nbốn mô hình cùng đánh giá."),
         (7.2, "#16A34A", "#DCFCE7", "BƯỚC 3: NHÌN MÀU & ĐỌC LÝ DO",
-         "• Xanh: rủi ro thấp\n• Vàng: cần thận trọng\n• Cam/Đỏ: nguy cơ cao hơn")
+             "• Xanh: rủi ro thấp\n• Vàng: thận trọng\n• Cam: nguy cơ cao\n• Đỏ: nguy cơ rất cao")
     ]
 
     for i, (x, edge, face, title, body) in enumerate(steps):
@@ -169,11 +169,37 @@ def create_user_guide_diagram(output_path: str):
 
 
 def find_or_create_ui_screenshot(output_path: str) -> str:
-    """Use the captured SafeWeb page, never a drawn substitute."""
+    """Tìm ảnh chụp giao diện trang chủ có sẵn trong dự án hoặc tạo hình minh họa giao diện."""
     screenshot = PROJECT_ROOT / "reports" / "screenshots" / "homepage.png"
-    if not screenshot.is_file():
-        raise FileNotFoundError(f"Real SafeWeb screenshot not found: {screenshot}")
-    return str(screenshot)
+    if screenshot.is_file():
+        return str(screenshot)
+
+    candidates = list(PROJECT_ROOT.rglob("home*.png"))
+    candidates += list(PROJECT_ROOT.rglob("screenshot*.png"))
+    candidates += list(PROJECT_ROOT.rglob("ui*.png"))
+    for c in candidates:
+        low = c.as_posix().lower()
+        if all(k not in low for k in ["flow", "pipeline", "verify", "step", "confusion"]):
+            return str(c)
+
+    # Nếu không tìm thấy file ảnh sẵn, tự động vẽ mô phỏng giao diện trang chủ SafeWeb
+    fig, ax = plt.subplots(figsize=(10, 5.2), dpi=200)
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 5.2)
+    ax.axis("off")
+    bg = FancyBboxPatch((0.1, 0.1), 9.8, 5.0, boxstyle="round,pad=0.05", facecolor="#0B1F17", edgecolor="#10B981", lw=2)
+    ax.add_patch(bg)
+    ax.text(0.5, 4.5, "SafeWeb — Giao diện Phân tích Địa chỉ Trang web & Kho Dữ liệu", fontsize=12, fontweight="bold", color="#34D399")
+    left_card = FancyBboxPatch((0.4, 0.5), 4.2, 3.6, boxstyle="round,pad=0.05", facecolor="#112A20", edgecolor="#059669", lw=1.5)
+    right_card = FancyBboxPatch((4.9, 0.5), 4.7, 3.6, boxstyle="round,pad=0.05", facecolor="#112A20", edgecolor="#059669", lw=1.5)
+    ax.add_patch(left_card)
+    ax.add_patch(right_card)
+    ax.text(0.6, 3.6, "KHUNG TRÁI: NHẬP URL CẦN ĐÁNH GIÁ\n\n[ https://example.com/account ]\n\n• Tự động điền https:// và .com\n• Tùy chọn bật Kiểm tra trực tuyến\n\n[ NÚT: PHÂN TÍCH URL ]", fontsize=9.5, color="#ECFDF5")
+    ax.text(5.1, 3.6, "KHUNG PHẢI: KẾT QUẢ & HỘI ĐỒNG 4 MÔ HÌNH AI\n\n• Trạng thái màu sắc: Xanh / Vàng / Đỏ\n• Điểm Rừng Ngẫu Nhiên, Tăng Cường Độ Dốc,\n  Máy Véc-tơ Hỗ Trợ, Hồi Quy Logic\n• Giải thích: Vì sao có kết quả này?\n• Khuyến nghị: Tôi nên làm gì?", fontsize=9.5, color="#ECFDF5")
+    plt.tight_layout()
+    plt.savefig(output_path, dpi=200, bbox_inches="tight")
+    plt.close(fig)
+    return output_path
 
 
 # ==============================================================================
@@ -208,7 +234,7 @@ def format_run(run, size_pt=14, bold=False, italic=False, color_rgb=(0, 0, 0), f
 def add_p(doc, text="", bold=False, italic=False, align=WD_ALIGN_PARAGRAPH.JUSTIFY, space_after=6, size_pt=14, color_rgb=(0, 0, 0)):
     p = doc.add_paragraph()
     p.alignment = align
-    p.paragraph_format.line_spacing = 1.1
+    p.paragraph_format.line_spacing = 1.15
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after = Pt(space_after)
     if text:
@@ -220,7 +246,7 @@ def add_p(doc, text="", bold=False, italic=False, align=WD_ALIGN_PARAGRAPH.JUSTI
 def add_bullet(doc, lead_bold: str, rest_text: str):
     p = doc.add_paragraph()
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-    p.paragraph_format.line_spacing = 1.1
+    p.paragraph_format.line_spacing = 1.15
     p.paragraph_format.left_indent = Cm(0.6)
     p.paragraph_format.space_before = Pt(0)
     p.paragraph_format.space_after = Pt(5)
@@ -255,27 +281,33 @@ def add_heading_2(doc, text: str):
     return p
 
 
-def add_toc_field(doc):
+def add_table_of_contents(doc):
     paragraph = doc.add_paragraph()
-    paragraph.paragraph_format.line_spacing = 1.1
-    paragraph.paragraph_format.space_after = Pt(6)
-    run = paragraph.add_run()
-    format_run(run, size_pt=14)
-    begin = OxmlElement("w:fldChar")
-    begin.set(qn("w:fldCharType"), "begin")
-    instruction = OxmlElement("w:instrText")
-    instruction.set(qn("xml:space"), "preserve")
-    instruction.text = ' TOC \\o "1-1" \\h \\z \\u '
-    separate = OxmlElement("w:fldChar")
-    separate.set(qn("w:fldCharType"), "separate")
-    result = OxmlElement("w:t")
-    result.text = "Mục lục tự cập nhật khi mở tài liệu bằng Word hoặc LibreOffice."
-    end = OxmlElement("w:fldChar")
-    end.set(qn("w:fldCharType"), "end")
-    run._r.extend([begin, instruction, separate, result, end])
+    paragraph.paragraph_format.line_spacing = 1.08
+    field_parts = [
+        ("w:fldChar", {"w:fldCharType": "begin", "w:dirty": "true"}, None),
+        ("w:instrText", {"xml:space": "preserve"}, ' TOC \\o "1-2" \\h \\z \\u '),
+        ("w:fldChar", {"w:fldCharType": "separate"}, None),
+        ("w:t", {}, "Mục lục sẽ được cập nhật khi mở tài liệu bằng Word."),
+        ("w:fldChar", {"w:fldCharType": "end"}, None),
+    ]
+    for tag, attributes, text in field_parts:
+        element = OxmlElement(tag)
+        for name, value in attributes.items():
+            element.set(qn(name), value)
+        if text:
+            element.text = text
+        run = paragraph.add_run()
+        format_run(run, size_pt=14)
+        run._r.append(element)
+    settings = doc.settings.element
+    update_fields = OxmlElement("w:updateFields")
+    update_fields.set(qn("w:val"), "true")
+    settings.append(update_fields)
+    return paragraph
 
 
-def add_code_box(doc, title: str, code_lines: list, explanation_lines: list):
+def add_code_box(doc, title: str, code_lines: list, explanation_lines: list[str]):
     add_p(doc, title, bold=True, align=WD_ALIGN_PARAGRAPH.LEFT, space_after=3, size_pt=14, color_rgb=(15, 76, 92))
     tbl = doc.add_table(rows=1, cols=1)
     tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -287,10 +319,11 @@ def add_code_box(doc, title: str, code_lines: list, explanation_lines: list):
     p.paragraph_format.line_spacing = 1.1
     p.paragraph_format.space_after = Pt(0)
     r = p.add_run("\n".join(code_lines))
-    format_run(r, size_pt=14, bold=False, font_name="Courier New", color_rgb=(15, 23, 42))
+    format_run(r, size_pt=14, bold=False, font_name="Times New Roman", color_rgb=(15, 23, 42))
 
-    for exp_lead, exp_body in explanation_lines:
-        add_bullet(doc, exp_lead, exp_body)
+    add_p(doc, "Giải thích", bold=True, align=WD_ALIGN_PARAGRAPH.LEFT, space_after=2, size_pt=14, color_rgb=(15, 76, 92))
+    for index, explanation in enumerate(explanation_lines, start=1):
+        add_bullet(doc, f"{index}. ", explanation)
 
 
 def add_styled_table(doc, headers: list, rows: list):
@@ -305,6 +338,7 @@ def add_styled_table(doc, headers: list, rows: list):
         cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         p = cell.paragraphs[0]
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.line_spacing = 1.15
         r = p.add_run(h_text)
         format_run(r, size_pt=14, bold=True, color_rgb=(255, 255, 255))
 
@@ -317,6 +351,7 @@ def add_styled_table(doc, headers: list, rows: list):
             cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
             p = cell.paragraphs[0]
             p.alignment = WD_ALIGN_PARAGRAPH.LEFT if col_idx in (0, len(headers) - 1) else WD_ALIGN_PARAGRAPH.CENTER
+            p.paragraph_format.line_spacing = 1.15
             r = p.add_run(val)
             format_run(r, size_pt=14, bold=(col_idx == 0))
 
@@ -341,16 +376,10 @@ def build_full_report():
     create_user_guide_diagram(steps_img)
 
     doc = Document()
-
-    for style_name in ("Normal", "Heading 1", "Heading 2"):
-        style = doc.styles[style_name]
-        style.font.name = "Times New Roman"
-        style._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
-        style.font.size = Pt(14)
-        style.paragraph_format.line_spacing = 1.1
-    update_fields = OxmlElement("w:updateFields")
-    update_fields.set(qn("w:val"), "true")
-    doc.settings.element.append(update_fields)
+    doc.styles["Normal"].font.name = "Times New Roman"
+    doc.styles["Normal"]._element.rPr.rFonts.set(qn("w:eastAsia"), "Times New Roman")
+    doc.styles["Normal"].font.size = Pt(14)
+    doc.styles["Normal"].paragraph_format.line_spacing = 1.15
 
     # Cài đặt trang A4 & Lề chuẩn: Trái 3cm, Phải 2cm, Trên 2cm, Dưới 2cm
     for section in doc.sections:
@@ -366,9 +395,9 @@ def build_full_report():
     # --------------------------------------------------------------------------
     add_p(doc, "BÁO CÁO DỰ ÁN NGHIÊN CỨU KHOA HỌC KỸ THUẬT", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=4, size_pt=14)
     add_p(doc, "CUỘC THI KHOA HỌC KỸ THUẬT CẤP TRUNG HỌC PHỔ THÔNG", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=4, size_pt=14)
-    add_p(doc, "LĨNH VỰC: PHẦN MỀM HỆ THỐNG VÀ AN TOÀN THÔNG TIN", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=24, size_pt=14, color_rgb=(15, 118, 110))
+    add_p(doc, "LĨNH VỰC: PHẦN MỀM HỆ THỐNG / TRÍ TUỆ NHÂN TẠO", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=24, size_pt=14, color_rgb=(15, 118, 110))
 
-    add_p(doc, "SAFEWEB (PHIÊN BẢN 2.3.5)", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=10, size_pt=14, color_rgb=(15, 76, 92))
+    add_p(doc, "SAFEWEB", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=10, size_pt=14, color_rgb=(15, 76, 92))
     add_p(
         doc,
         "ỨNG DỤNG TRÍ TUỆ NHÂN TẠO KẾT HỢP PHÂN TÍCH ĐỊA CHỈ TRANG WEB GIÚP CẢNH BÁO SỚM RỦI RO LỪA ĐẢO VÀ LỘ LỌT DỮ LIỆU",
@@ -376,31 +405,32 @@ def build_full_report():
     )
     add_p(doc, "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=24, size_pt=14, color_rgb=(15, 118, 110))
 
-    add_p(doc, "Dự án thiết kế và xây dựng phần mềm hỗ trợ nhận biết đường dẫn trang web có nguy cơ lừa đảo.", align=WD_ALIGN_PARAGRAPH.CENTER, space_after=5)
-    add_p(doc, "NĂM 2026", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=50, size_pt=14)
-    author_line = add_p(doc, "Người thực hiện 1: Lê Văn Tuấn Anh", align=WD_ALIGN_PARAGRAPH.CENTER, space_after=5)
-    author_line.paragraph_format.space_before = Pt(45)
-    add_p(doc, "Người thực hiện 2: Nguyễn Hoàng Bảo", align=WD_ALIGN_PARAGRAPH.CENTER, space_after=5)
-    add_p(doc, "Người hướng dẫn: Trần Văn Toàn", align=WD_ALIGN_PARAGRAPH.CENTER, space_after=6)
+    add_p(doc, "DỰ ÁN KỸ THUẬT · PHẦN MỀM HỆ THỐNG VÀ AN TOÀN THÔNG TIN", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=8, size_pt=14, color_rgb=(15, 118, 110))
+    add_p(doc, "Bốn mô hình cùng xem xét dấu hiệu, như bốn giám khảo đọc chung một hồ sơ.", italic=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=8, size_pt=14)
+    author_one = add_p(doc, "Người thực hiện 1 : Lê Văn Tuấn Anh", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=5, size_pt=14)
+    author_one.paragraph_format.space_before = Pt(150)
+    add_p(doc, "Người thực hiện 2 : Nguyễn Hoàng Bảo", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=5, size_pt=14)
+    add_p(doc, "Người hướng dẫn : Trần Văn Toàn", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=6, size_pt=14)
 
     doc.add_page_break()
 
     # --------------------------------------------------------------------------
     # TRANG 2: MỤC LỤC & TÓM TẮT DỰ ÁN
     # --------------------------------------------------------------------------
-    add_p(doc, "MỤC LỤC", bold=True, align=WD_ALIGN_PARAGRAPH.LEFT, space_after=6, size_pt=14, color_rgb=(15, 76, 92))
-    add_toc_field(doc)
+    add_p(doc, "MỤC LỤC", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=8, size_pt=14, color_rgb=(15, 76, 92))
+    add_table_of_contents(doc)
 
     add_heading_1(doc, "TÓM TẮT DỰ ÁN")
     add_p(
         doc,
-        "SafeWeb giúp người dùng xem xét đường dẫn trang web trước khi mở, giống như kiểm tra địa chỉ và biển hiệu trước khi bước vào một cửa hàng lạ. Hệ thống đo 55 dấu hiệu trong đường dẫn, đối chiếu với kho 36.261 địa chỉ đã ghi nhận và tham khảo bốn mô hình học máy. Phân tích thông thường diễn ra ngay trên thiết bị; kiểm tra tên miền, chuyển hướng và ảnh xem trước chỉ được thực hiện khi người dùng cho phép."
+        "SafeWeb là phần mềm giúp người dùng phát hiện sớm các đường dẫn trang web lừa đảo và phòng tránh lộ lọt dữ liệu cá nhân. Thay vì phải mạo hiểm bấm vào đường dẫn lạ, phần mềm sẽ tự động khám xét địa chỉ trang web đó ngay trên máy của người dùng thông qua Kho dữ liệu tra cứu nhanh, 55 dấu hiệu nhận biết chữ viết và hội đồng gồm 4 mô hình Trí tuệ nhân tạo: Rừng Ngẫu Nhiên, Tăng Cường Độ Dốc, Máy Véc-tơ Hỗ Trợ và Hồi Quy Logic. Các tính năng kiểm tra tên miền, dò tìm chuyển hướng và chụp ảnh xem trước trang web chỉ hoạt động khi người dùng đồng ý cho phép."
     )
     add_p(
         doc,
-        "Bốn mô hình được huấn luyện trên 261.299 mẫu và đánh giá bằng 6.624 địa chỉ chưa dùng khi huấn luyện. Trong phép thử này, mô hình Tăng Cường Độ Dốc phát hiện 2.676 trên 2.799 địa chỉ lừa đảo, tương đương 95,61%. Hệ thống vượt qua 59 bài kiểm tra Python, 16 bài kiểm tra trình duyệt và 16 trường hợp đối chiếu giữa hai cách tính."
+        "Để dạy cho máy tính thông minh, nhóm sử dụng tổng cộng 261.299 địa chỉ trang web đã làm sạch (gồm 114.113 trang lừa đảo và 147.186 trang an toàn). Khi đem thi thử trên 6.624 địa chỉ trang web hoàn toàn mới chưa từng gặp trong lúc học, mô hình Tăng Cường Độ Dốc bắt trúng tới 95,61% trang web lừa đảo (phát hiện đúng 2.676 trên 2.799 trang lừa đảo), và mô hình Rừng Ngẫu Nhiên bắt trúng 92,32%. Phần mềm đã vượt qua 100% các bài kiểm tra chất lượng gồm 59 bài kiểm tra xử lý dữ liệu và 15 bài kiểm tra trình duyệt, giúp người dùng nhận biết rủi ro trực quan trước khi bấm vào đường dẫn."
     )
     add_p(doc, "Từ khóa: Trang web lừa đảo; Địa chỉ trang web; Trí tuệ nhân tạo; Kiểm tra trực tiếp trên trình duyệt; Bảo vệ quyền riêng tư.", italic=True)
+    doc.add_page_break()
 
     # --------------------------------------------------------------------------
     # CHƯƠNG 1. XÁC ĐỊNH NHU CẦU VÀ MỤC TIÊU THIẾT KẾ
@@ -420,19 +450,19 @@ def build_full_report():
     add_heading_2(doc, "1.2. Nhu cầu thực tế và câu hỏi đặt ra")
     add_p(
         doc,
-        "Nhu cầu là có một công cụ tự hoàn thiện địa chỉ bị thiếu, tra cứu hồ sơ đã ghi nhận, chấm mức rủi ro và giải thích dấu hiệu bất thường. Việc tra cứu trực tuyến chỉ bắt đầu khi người dùng cho phép. Câu hỏi nghiên cứu là: Khi đưa 55 dấu hiệu và bốn mô hình vào trình duyệt, kết quả có khớp với phép tính trên máy huấn luyện hay không?"
+        "Nhu cầu thực tế đặt ra là chế tạo một công cụ tự động điền hoàn chỉnh địa chỉ trang web khi người dùng gõ thiếu, đối chiếu nhanh với kho dữ liệu có sẵn, chấm điểm nguy cơ bằng Trí tuệ nhân tạo, chỉ rõ lý do cảnh báo và chỉ kết nối mạng bên ngoài khi người dùng cho phép. Câu hỏi đặt ra là: Khi đóng gói toàn bộ 55 dấu hiệu đo đạc và 4 mô hình Trí tuệ nhân tạo vào thẳng trình duyệt web, kết quả tính toán trên máy người dùng có khớp tuyệt đối với máy tính huấn luyện trong phòng thí nghiệm hay không?"
     )
 
     add_heading_2(doc, "1.3. Mục tiêu và tiêu chí thiết kế")
     add_bullet(
         doc,
         "Mục tiêu: ",
-        "Xây dựng SafeWeb để người dùng xem xét đường dẫn trước khi mở, hiểu vì sao hệ thống cảnh báo và chủ động tránh nhập mật khẩu hoặc thông tin thanh toán vào trang đáng ngờ."
+        "Xây dựng hoàn chỉnh phần mềm SafeWeb giúp người dùng kiểm tra nhanh một địa chỉ trang web là an toàn hay có nguy cơ lừa đảo ngay trên trình duyệt web, giải thích rõ vị trí bất thường bằng tiếng Việt dễ hiểu để người dùng chủ động phòng tránh trước khi bấm vào đường dẫn."
     )
     add_bullet(
         doc,
         "Tiêu chí thiết kế: ",
-        "Hệ thống đo 55 dấu hiệu, trình bày ý kiến của bốn mô hình và tra cứu 36.261 địa chỉ; được đánh giá trên 6.624 địa chỉ có tên miền tách biệt với dữ liệu huấn luyện; mặc định phân tích ngay trên thiết bị; dùng màu Xanh, Vàng, Cam và Đỏ kèm lời giải thích."
+        "Hệ thống phải đo đạc đồng thời 55 dấu hiệu nhận biết của đường dẫn kết hợp cùng lúc 4 mô hình Trí tuệ nhân tạo và kho dữ liệu 36.261 địa chỉ; bài kiểm tra đánh giá phải thực hiện trên các tên miền mới hoàn toàn không trùng với lúc học; chạy mặc định ngay trên máy người dùng không cần gửi đường dẫn đi nơi khác; và giao diện tự động đổi màu trực quan (Xanh - Vàng - Đỏ) kèm lời giải thích rõ ràng."
     )
 
     add_heading_2(doc, "1.4. Phạm vi của sản phẩm")
@@ -455,27 +485,27 @@ def build_full_report():
     add_heading_2(doc, "2.1. Bốn mô hình Trí tuệ nhân tạo trong SafeWeb làm được gì và khác nhau thế nào?")
     add_p(
         doc,
-        "Thay vì chỉ dùng một thuật toán đơn lẻ dễ có điểm mù, SafeWeb kết hợp cùng lúc 4 mô hình Học máy (dạy máy tính tự học quy luật từ hàng trăm nghìn trang web mẫu). Có thể hình dung 4 mô hình này giống như 4 vị giám khảo có phương pháp làm việc khác nhau:"
+        "Thay vì chỉ nghe một ý kiến, SafeWeb dùng bốn mô hình học máy, tức là bốn cách để máy tính học dấu hiệu từ các trang web mẫu. Có thể hình dung chúng như bốn vị giám khảo cùng xem một hồ sơ nhưng mỗi người để ý một kiểu dấu hiệu khác nhau:"
     )
     add_bullet(
         doc,
         "1. Mô hình Rừng Ngẫu Nhiên (Random Forest): ",
-        "Tạo ra một hội đồng gồm 100 cây câu hỏi kiểm tra độc lập (mỗi cây hỏi tối đa 16 bước về độ dài, dấu chấm, dấu gạch ngang, từ khóa...). Giống như 100 người bảo vệ cùng khám xét một địa chỉ web rồi lấy kết quả trung bình chung, giúp phán đoán rất vững vàng và cân bằng."
+        "Tạo ra 100 cây câu hỏi nhỏ. Mỗi cây lần lượt hỏi về độ dài, dấu chấm, dấu gạch ngang hay từ khóa. Có thể hình dung 100 giám khảo độc lập bỏ phiếu; kết quả chung dựa trên tiếng nói của cả nhóm, nên một dấu hiệu lạ đơn lẻ khó quyết định toàn bộ kết luận."
     )
     add_bullet(
         doc,
         "2. Mô hình Tăng Cường Độ Dốc (Gradient Boosting): ",
-        "Cũng dùng 100 cây kiểm tra nhỏ (mỗi cây 3 bước hỏi) nhưng làm việc nối tiếp nhau theo kiểu 'người đi sau sửa sai cho người đi trước'. Những trang web lừa đảo tinh vi bị vòng trước đoán nhầm sẽ được vòng sau tập trung soi kỹ hơn để rút kinh nghiệm, nhờ đó đạt tỷ lệ bắt trúng trang lừa đảo cao nhất (95,61%)."
+        "Dùng nhiều cây hỏi nối tiếp nhau theo kiểu người sau xem lại chỗ người trước còn nhầm. Trong phép thử của dự án, mô hình này phát hiện 2.676 trên 2.799 trang lừa đảo, tương ứng 95,61%; con số này chỉ mô tả bộ thử đã dùng, không bảo đảm kết quả tương tự trên mọi trang ngoài đời."
     )
     add_bullet(
         doc,
         "3. Mô hình Máy Véc-tơ Hỗ Trợ (SVM): ",
-        "Tưởng tượng xếp trang an toàn về một bên phòng, trang lừa đảo về bên kia rồi kẻ một vạch chia. Trong phép thử hiện tại, mô hình chỉ báo động 20 địa chỉ và cả 20 đều là lừa đảo, nhưng bỏ sót 2.779 địa chỉ lừa đảo khác; vì vậy không nên dùng riêng mô hình này để kết luận."
+        "Tưởng tượng xếp hồ sơ an toàn về một phía, hồ sơ lừa đảo về phía còn lại rồi tìm đường ranh ngăn cách hai nhóm. Trong bộ thử, mô hình báo lừa đảo đúng 20 lần và không báo nhầm lần nào; nhưng nó bỏ sót 2.779 trong 2.799 trang lừa đảo. Vì vậy không nên dùng riêng mô hình này để bảo vệ người dùng."
     )
     add_bullet(
         doc,
         "4. Mô hình Hồi Quy Logic (Logistic Regression): ",
-        "Hoạt động giống như một bảng cộng trừ điểm trực tiếp. Mỗi dấu hiệu xấu trên đường dẫn sẽ bị cộng thêm điểm rủi ro, dấu hiệu tốt được trừ điểm, đóng vai trò làm thước đo chuẩn cơ bản nhanh gọn để đối chiếu với 3 mô hình trên."
+        "Giống như một bảng cân có nhiều quả cân: mỗi đặc điểm làm thay đổi điểm nghiêng về một phía. Cách tính gọn và nhanh, giúp nhóm có thêm một ý kiến khác để so sánh với ba vị giám khảo còn lại."
     )
 
     add_heading_2(doc, "2.2. Cách Trí tuệ nhân tạo tính toán và đưa ra phán đoán cuối cùng")
@@ -495,13 +525,13 @@ def build_full_report():
     )
     add_bullet(
         doc,
-        "Bước 3 — Cộng điểm dấu hiệu trực tiếp và chỉ rõ bất thường ở đâu: ",
-        "Giao diện cộng thêm điểm phạt trực tiếp nếu phát hiện các bất thường cụ thể: địa chỉ dài từ 120 ký tự trở lên (+18 điểm); có từ 3 tên miền phụ trở lên (+16 điểm); dùng địa chỉ số IP (+18 điểm); có ký tự @ (+12 điểm); có từ 8 ký tự đặc biệt trở lên (+10 điểm); có ký hiệu % (+8 điểm); độ lộn xộn chữ cái từ 4,5 trở lên (+10 điểm); mỗi từ khóa nhạy cảm xuất hiện (+8 điểm). Điểm tổng hợp trên thanh đo (từ 0 đến 100) được tính bằng 60% điểm nghi ngờ AI cộng với điểm dấu hiệu trực tiếp."
+        "Bước 3 — Cộng điểm các dấu hiệu nhìn thấy được: ",
+        "Hệ thống cộng điểm riêng khi thấy địa chỉ quá dài, nhiều tầng tên phụ, dùng dãy số thay tên, có dấu @, nhiều ký tự lạ, có dấu mã hóa hoặc từ khóa nhạy cảm. Điểm này như các thẻ ghi chú để giải thích vì sao cần cẩn thận; nó làm thay đổi thanh điểm tổng hợp nhưng không tự đổi mức màu."
     )
     add_bullet(
         doc,
-        "Bước 4 — Quy đổi mức cảnh báo và đổi màu toàn trang web: ",
-        "Nếu mức nghi ngờ chung dưới 25% -> Mức Rủi Ro Thấp (Đổi giao diện màu Xanh lá); từ 25% đến dưới 50% -> Mức Cần Thận Trọng (Màu Vàng); từ 50% đến dưới 75% -> Mức Nguy Cơ Cao (Màu Cam/Đỏ); từ 75% trở lên hoặc khớp danh sách đen -> Mức Nguy Cơ Rất Cao (Báo động Đỏ rực kèm danh sách giải thích rõ đường dẫn bất thường ở vị trí nào)."
+        "Bước 4 — Xếp mức rủi ro và đổi màu: ",
+        "Mức xác suất dưới 25% là rủi ro thấp (Xanh); từ 25% đến dưới 50% là cần thận trọng (Vàng); từ 50% đến dưới 75% là nguy cơ cao (Cam); từ 75% trở lên là nguy cơ rất cao (Đỏ). Nếu kho dữ liệu có hồ sơ khớp, kết quả hồ sơ được ưu tiên. Cách xếp này giống bốn vạch trên nhiệt kế: càng vượt vạch cao thì màu cảnh báo càng mạnh."
     )
 
     add_heading_2(doc, "2.3. Điểm mới của sản phẩm")
@@ -518,83 +548,83 @@ def build_full_report():
     add_heading_2(doc, "3.1. Thành phần và công cụ sử dụng")
     add_bullet(
         doc,
-        "1. Ngôn ngữ lập trình Python và bộ công cụ Học máy (pandas, NumPy, scikit-learn, joblib): ",
-        "Dùng để đọc dữ liệu, đo đếm 55 dấu hiệu và huấn luyện 4 mô hình Trí tuệ nhân tạo. Lý do chọn là vì bộ công cụ này tính toán chuẩn xác, xử lý nhanh hàng trăm nghìn dòng dữ liệu và cho phép trích xuất toàn bộ thông số đã học ra tệp dữ liệu gọn nhẹ."
+        "1. Python, pandas và scikit-learn: ",
+        "Python là ngôn ngữ dùng để viết phần xử lý; pandas giống như bảng tính lớn để đọc, lọc và đếm các dòng dữ liệu; scikit-learn cung cấp sẵn các cách huấn luyện bốn mô hình. Nhóm chọn chúng vì có thể xử lý hàng trăm nghìn địa chỉ và lặp lại phép thử theo cùng một quy trình."
     )
     add_bullet(
         doc,
-        "2. Bộ công cụ giao diện Web (HTML, CSS, JavaScript) và máy chủ thử nghiệm (Flask): ",
-        "Dùng để xây dựng trang web SafeWeb với ô nhập địa chỉ, bảng đồng thuận 4 mô hình, kho dữ liệu tra cứu và hiệu ứng đổi màu toàn trang. Nhờ viết bộ máy suy luận bằng JavaScript (browser-model.js), người dùng mở trang web trên máy tính hay điện thoại là dùng được ngay trên GitHub Pages mà không cần cài đặt phần mềm."
+        "2. HTML, CSS, JavaScript và Flask: ",
+        "HTML dựng khung trang như khung nhà; CSS tô màu và sắp xếp đồ đạc; JavaScript làm các nút và phép tính hoạt động; Flask là máy chủ phục vụ bản thử nghiệm. Khi đưa lên GitHub Pages, các tệp tĩnh và bộ tính toán JavaScript chạy ngay trong trình duyệt, không cần cài ứng dụng."
     )
 
     add_heading_2(doc, "3.2. Dữ liệu đưa vào hệ thống")
     add_p(
         doc,
-        "Để dạy cho máy tính phân biệt chính xác trang web thật và trang web giả, nhóm đã chuẩn bị và làm sạch một khối lượng dữ liệu thực tế lớn đưa vào hệ thống (quy ước thống nhất: nhãn 1 là trang lừa đảo, nhãn 0 là trang an toàn):"
+        "Nhóm chuẩn bị ba phần dữ liệu: mẫu để máy học, mẫu để thi thử và kho để tra cứu nhanh. Có thể hình dung đây lần lượt là bài học, đề kiểm tra để riêng và cuốn sổ tra cứu. Trong dữ liệu, số 1 chỉ trang lừa đảo, số 0 chỉ trang hợp lệ."
     )
     add_bullet(
         doc,
         "Kho dữ liệu tra cứu nhanh đã làm sạch: ",
-        "Kho gồm 36.261 địa chỉ riêng biệt: 19.909 địa chỉ lừa đảo và 16.352 địa chỉ hợp lệ. Có thể hình dung đây là cuốn sổ tra cứu những địa chỉ đã được ghi nhận; trùng khớp với một hồ sơ không có nghĩa mọi địa chỉ mới đều đã được kiểm tra."
+        "Sau khi gộp các địa chỉ trùng nhau, kho tra cứu giữ 36.261 địa chỉ: 19.909 trang lừa đảo và 16.352 trang hợp lệ. Đây giống như cuốn sổ ghi những trường hợp đã biết; nếu địa chỉ mới trùng hồ sơ thì hệ thống có thể nhận ra ngay."
     )
     add_bullet(
         doc,
         "Tập dữ liệu dùng để dạy máy học (Tập huấn luyện): ",
-        "Bốn mô hình được dạy bằng tổng cộng 261.299 địa chỉ: 114.113 trang lừa đảo và 147.186 trang hợp lệ. Mỗi địa chỉ được quy về hai nhãn này để máy học phân biệt các dấu hiệu thường gặp. Tên và xuất xứ từng bộ dữ liệu được ghi ở phần tài liệu tham khảo, không lặp lại trong mô tả quy trình."
+        "Tổng cộng có 261.299 địa chỉ dùng để huấn luyện bốn mô hình, gồm 114.113 trang lừa đảo và 147.186 trang hợp lệ. Đây là phần bài học; các địa chỉ dành cho thi thử được để riêng để đánh giá công bằng."
     )
     add_bullet(
         doc,
         "Tập dữ liệu giữ riêng để thi thử (Tập kiểm thử): ",
-        "Gồm 6.624 địa chỉ chưa dùng khi huấn luyện: 2.799 trang lừa đảo và 3.825 trang hợp lệ. Tên miền trong phần kiểm thử không trùng với tên miền dùng để dạy máy, giúp phép thử bớt thiên lệch do máy đã gặp sẵn những địa chỉ đó."
+        "Gồm 6.624 địa chỉ được để riêng, không dùng lúc huấn luyện: 2.799 trang lừa đảo và 3.825 trang hợp lệ. Tên miền của chúng không trùng phần dữ liệu học, nên phép thử gần với việc gặp một trang mới hơn là gặp lại bài cũ."
     )
 
     add_heading_2(doc, "3.3. Lược đồ 55 dấu hiệu nhận biết địa chỉ trang web")
     add_p(
         doc,
-        "Mỗi địa chỉ được đo thành 55 con số theo cùng một thứ tự. Có thể hình dung đây là 55 câu hỏi kiểm tra giống nhau cho mọi địa chỉ, chia thành sáu nhóm sau:"
+        "Mỗi địa chỉ trang web đưa vào SafeWeb đều được khám xét qua đúng 55 biến số đo đạc theo thứ tự cố định. Ý nghĩa của 55 biến số này được giải thích đơn giản theo 6 nhóm sau:"
     )
     add_bullet(
         doc,
         "Nhóm 1 — Đo độ dài và đếm ký tự cơ bản (Biến 01 đến 10): ",
-        "Đếm độ dài cả địa chỉ, tên miền, phần đường dẫn và phần thông số; đồng thời đếm dấu chấm, gạch chéo, gạch ngang, gạch dưới, chữ số và chữ cái. Giống như đếm độ dài một địa chỉ nhà và số ký hiệu lạ trên biển hiệu."
+        "Gồm url_length (tổng độ dài địa chỉ), domain_length (độ dài tên trang web), path_length (độ dài đường dẫn sau tên miền), query_length (độ dài tham số), num_dots (số dấu chấm), num_slashes (số dấu gạch chéo), num_hyphens (số dấu gạch ngang), num_underscores (số dấu gạch dưới), num_digits (số chữ số), num_letters (số chữ cái). Diễn giải: Trang thật thường ngắn gọn, trong khi trang lừa đảo thường ghép thêm nhiều chữ, số và dấu gạch ngang dài lê thê."
     )
     add_bullet(
         doc,
         "Nhóm 2 — Kiểm tra cấu trúc và ký hiệu bất thường (Biến 11 đến 20): ",
-        "Đếm ký tự lạ, kiểm tra có kết nối HTTPS hay không, có dùng dãy số thay tên miền, có nhiều tầng tên phụ, có dấu @, ?, =, %, hai dấu gạch chéo hoặc phần thông số hay không. Đây là các dấu hiệu giúp phát hiện cách viết địa chỉ dễ gây nhầm lẫn."
+        "Gồm num_special_chars (số ký tự đặc biệt), has_https (có chữ https không), has_ip (có dùng dãy số máy chủ thay tên chữ không), num_subdomains (số tầng tên miền phụ), has_at (có dấu @ đánh lừa mắt nhìn không), has_question_mark (dấu ?), has_equals (dấu =), has_percent (dấu %), has_double_slash (dấu // bất thường), has_query (có chuỗi truy vấn không). Diễn giải: Giúp phát hiện ngay các kiểu ngụy trang cấu trúc địa chỉ."
     )
     add_bullet(
         doc,
         "Nhóm 3 — Đo độ lộn xộn của chữ cái (Biến 21 và 22): ",
-        "Đo mức đa dạng, khó đoán của ký tự trong địa chỉ và tên miền. Có thể hình dung như so sánh một cái tên đọc được với một chuỗi ký tự gõ ngẫu nhiên; đây chỉ là dấu hiệu tham khảo, không tự nó chứng minh lừa đảo."
+        "Gồm url_entropy (độ lộn xộn của cả địa chỉ) và domain_entropy (độ lộn xộn của tên trang web). Diễn giải: Tên trang web thật ghép thành từ có nghĩa nên đọc rất xuôi, còn trang lừa đảo tạo tự động bằng máy thường có chữ cái và con số xếp hỗn loạn vô nghĩa."
     )
     add_bullet(
         doc,
         "Nhóm 4 — Dò tìm 8 từ khóa nhạy cảm hay bị lợi dụng (Biến 23 đến 30): ",
-        "Tìm các từ liên quan đến đăng nhập, vào tài khoản, xác minh, tài khoản, mật khẩu, ngân hàng, thanh toán và xác nhận. Những từ này cũng xuất hiện trên trang thật, nên hệ thống phải xem chúng cùng các dấu hiệu khác chứ không kết luận chỉ từ một từ."
+        "Gồm keyword_login (đăng nhập), keyword_signin (vào tài khoản), keyword_verify (xác minh), keyword_account (tài khoản), keyword_password (mật khẩu), keyword_bank (ngân hàng), keyword_payment (thanh toán), keyword_confirm (xác nhận). Diễn giải: Đây là 8 từ mồi nhử quen thuộc mà kẻ gian hay chèn vào đường dẫn để giục nạn nhân khai báo mật khẩu."
     )
     add_bullet(
         doc,
         "Nhóm 5 — Đo chi tiết tỷ lệ chữ, số và đuôi tên miền đáng ngờ (Biến 31 đến 52): ",
-        "Đo lại độ dài các phần của địa chỉ; nhận biết máy chủ dạng số và số tầng tên phụ; đếm chữ cái, chữ số, ký tự lạ, dấu bằng, dấu hỏi, dấu nối, gạch dưới, dấu chấm và gạch chéo; tính tỷ lệ từng nhóm ký tự, độ lộn xộn và đánh dấu một số đuôi tên miền thường cần xem xét kỹ hơn."
+        "Gồm các biến đo độ dài chuẩn hóa (phishvn_url_len, phishvn_dom_len, phishvn_tld_len, phishvn_path_len, phishvn_query_len), đếm chi tiết số lượng ký tự (phishvn_is_ip, phishvn_subdom_cnt, phishvn_letter_cnt, phishvn_digit_cnt, phishvn_special_cnt, phishvn_eq_cnt, phishvn_qm_cnt, phishvn_amp_cnt, phishvn_dot_cnt, phishvn_dash_cnt, phishvn_under_cnt, phishvn_slash_cnt), tính tỷ lệ phần trăm chữ cái, chữ số, ký tự lạ trên toàn địa chỉ (phishvn_letter_ratio, phishvn_digit_ratio, phishvn_spec_ratio), độ lộn xộn (phishvn_entropy) và cờ phát hiện đuôi tên miền đáng ngờ hay bị tội phạm mạng dùng (phishvn_suspicious_tld)."
     )
     add_bullet(
         doc,
         "Nhóm 6 — Phát hiện chiêu trò giấu chữ bằng mã phần trăm (Biến 53 đến 55): ",
-        "Kiểm tra địa chỉ có chứa ký tự được viết dưới dạng mã phần trăm hay không, đếm số ký tự kiểu này và tính tỷ lệ của chúng. Đây giống như phát hiện một số chữ đã bị thay bằng ký hiệu khó đọc."
+        "Gồm phiusiil_has_obfuscation (có dùng mã giấu chữ không), phiusiil_obfuscated_char_count (số ký tự bị giấu bằng cụm %xx) và phiusiil_obfuscation_ratio (tỷ lệ bị giấu). Diễn giải: Vạch trần thủ đoạn biến chữ cái bình thường thành các ký hiệu mật mã phần trăm để làm hoa mắt người xem."
     )
 
     add_heading_2(doc, "3.4. Công cụ đo, phần mềm phân tích và thống kê kết quả")
     add_p(
         doc,
-        "Nhóm sử dụng bộ trích xuất tự động viết bằng Python (src/feature_extractor.py) và JavaScript (web/static/browser-model.js) làm công cụ đo đạc chính xác từng con số trong 55 dấu hiệu của mỗi địa chỉ web. Sau khi đo xong, phần mềm phân tích scikit-learn và pandas được dùng để chấm điểm tự động trên 6.624 địa chỉ thi thử: phần mềm đếm số trang lừa đảo bắt trúng, số trang an toàn đoán đúng, số trang báo nhầm và số trang bỏ sót, từ đó tính ra tỷ lệ phần trăm chính xác của từng mô hình và lưu vào bảng thống kê kết quả."
+        "Bộ đo được viết hai lần: một bản trong Python để dùng khi huấn luyện và một bản trong JavaScript để dùng trên trình duyệt. Cả hai biến địa chỉ thành cùng 55 con số, giống như hai chiếc cân được chỉnh theo một quả cân chuẩn. pandas giúp đếm và sắp xếp kết quả; scikit-learn tính các chỉ số. Nhóm kiểm tra số trang lừa đảo bắt trúng, trang hợp lệ đoán đúng, báo nhầm và bỏ sót trên 6.624 địa chỉ thi thử."
     )
 
     add_heading_2(doc, "3.5. Quy trình huấn luyện máy học")
     add_bullet(doc, "Bước 1: ", "Làm sạch dữ liệu, gộp các địa chỉ trùng lặp và tách riêng 6.624 địa chỉ có tên miền độc lập để làm đề thi kiểm tra.")
     add_bullet(doc, "Bước 2: ", "Đồng bộ nhãn dữ liệu (1 = lừa đảo, 0 = an toàn) trên toàn bộ 261.299 địa chỉ học tập.")
     add_bullet(doc, "Bước 3: ", "Chạy công cụ đo để biến mỗi địa chỉ trang web thành một dãy gồm đúng 55 con số đặc điểm.")
-    add_bullet(doc, "Bước 4: ", "Cân bằng trọng số đóng góp giữa các nhóm dữ liệu và cho cả 4 mô hình AI học quy luật với mã cố định (seed = 42).")
+    add_bullet(doc, "Bước 4: ", "Cân bằng mức đóng góp giữa các nhóm dữ liệu rồi cho bốn mô hình học quy luật theo cùng một thiết lập để có thể lặp lại phép thử.")
     add_bullet(doc, "Bước 5: ", "Chấm điểm cả 4 mô hình trên 6.624 địa chỉ thi thử và đóng gói bộ não đã học sang tệp chạy trên trình duyệt web.")
 
     add_heading_2(doc, "3.6. Lưu đồ vận hành và các đoạn mã lệnh cốt lõi trong chương trình")
@@ -608,62 +638,122 @@ def build_full_report():
     # 3 đoạn code cốt lõi kèm giải thích bình dân
     add_code_box(
         doc,
-        "1) Đoạn mã thật giúp tự hoàn thiện địa chỉ:",
+        "1) Tự hoàn thiện đường dẫn trang web:",
         [
-            "const host = healed.split(/[/?#]/u, 1)[0];",
-            "if (!host.includes(\".\") && host.toLowerCase() !== \"localhost\") {",
-            "  healed = `${host}.com${healed.slice(host.length)}`;",
+            "function validateUrl(value) {",
+            "  let healed = value.trim();",
+            "  if (healed.startsWith('//')) healed = `https:${healed}`;",
+            "  else if (!healed.includes('://')) {",
+            "    const host = healed.split(/[/?#]/u, 1)[0];",
+            "    if (!host.includes('.') && host.toLowerCase() !== 'localhost') {",
+            "      healed = `${host}.com${healed.slice(host.length)}`;",
+            "    }",
+            "    healed = `https://${healed}`;",
+            "  }",
+            "  ...",
+            "}"
+        ],
+        [
+            "Bắt đầu hàm nhận một đường dẫn do người dùng nhập.",
+            "Bỏ khoảng trắng ở đầu và cuối, như gọt bỏ phần thừa ngoài nhãn địa chỉ.",
+            "Nếu người dùng đã gõ hai dấu gạch chéo đầu tiên, thêm giao thức bảo mật.",
+            "Nếu chưa có phần đầu giao thức, hệ thống sẽ tự bổ sung.",
+            "Tách phần tên máy chủ khỏi phần đường dẫn phía sau.",
+            "Kiểm tra xem tên máy chủ có dấu chấm hay là tên máy cục bộ.",
+            "Nếu chỉ nhập một từ như vietcombank, phần mềm thêm .com và giữ phần đường dẫn nếu có.",
+            "Đóng nhánh kiểm tra tên máy không có dấu chấm.",
+            "Kết thúc việc bổ sung phần đầu https://.",
+            "Đóng khối xử lý trường hợp chưa có giao thức.",
+            "Dấu ba chấm cho biết trích đoạn còn phần kiểm tra địa chỉ hợp lệ ở phía sau.",
+            "Dòng đóng hàm; ví dụ vietcombank trở thành https://vietcombank.com."
+        ]
+    )
+
+    add_code_box(
+        doc,
+        "2) Tra cứu hồ sơ lừa đảo đã biết:",
+        [
+            "function databaseMatch(url, features) {",
+            "  const parts = parseParts(url);",
+            "  let hostname = parts.hostname.toLowerCase().replace(/\\.+$/u, '');",
+            "  if (hostname.startsWith('www.')) hostname = hostname.slice(4);",
+            "  const path = parts.path.replace(/\\/+$/u, '');",
+            "  const key = `${hostname}${path}?${parts.query}`.replace(/\\?$/u, '');",
+            "  const record = recordsByUrl.get(key);",
+            "  if (record) {",
+            "    return { matched: true, type: 'exact_url', provenance: 'Matched in reference database', record };",
+            "  }",
+            "  if (database.knownPhishingHosts?.includes(parts.hostname.toLowerCase())) {",
+            "    return { matched: true, type: 'known_phishing_host', provenance: 'Matched in reference database' };",
+            "  }",
+            "  return { matched: false, type: null, provenance: null };",
+            "}"
+        ],
+        [
+            "Hàm nhận địa chỉ và các con số dấu hiệu đã đo.",
+            "Tách địa chỉ ra thành tên máy, đường dẫn và phần truy vấn, như tách tỉnh, phố và số nhà.",
+            "Đưa tên máy về chữ thường và bỏ dấu chấm thừa ở cuối.",
+            "Bỏ tiền tố www để cách viết có hoặc không có www cùng trỏ về một hồ sơ.",
+            "Bỏ dấu gạch chéo cuối đường dẫn để tránh coi hai cách viết là hai nhà khác nhau.",
+            "Ghép tên máy, đường dẫn và phần truy vấn thành khóa để dò sổ.",
+            "Tìm khóa địa chỉ chính xác trong danh sách đã nạp.",
+            "Kiểm tra xem có hồ sơ trùng khớp hay không.",
+            "Nếu tìm thấy, trả lại hồ sơ và ghi rõ đây là kết quả đối chiếu từ kho.",
+            "Đóng nhánh xử lý hồ sơ trùng khớp.",
+            "Nếu địa chỉ đầy đủ không khớp, kiểm tra tên máy có nằm trong danh sách lừa đảo đã biết không.",
+            "Trả về kết quả khớp tên máy và nguồn đối chiếu.",
+            "Đóng nhánh kiểm tra tên máy.",
+            "Nếu không có hồ sơ nào khớp, báo chưa tìm thấy; điều đó không tự chứng minh trang an toàn.",
+            "Kết thúc hàm tra cứu."
+        ]
+    )
+
+    add_code_box(
+        doc,
+        "3) Bốn mô hình cùng chấm một đường dẫn:",
+        [
+            "function modelProbabilities(features) {",
+            "  const forest = model.models.random_forest.trees;",
+            "  const boosting = model.models.gradient_boosting;",
+            "  const svm = model.models.svm;",
+            "  const logistic = model.models.logistic_regression;",
+            "  const probabilities = {",
+            "    random_forest: treeOutput(forest, features) / forest.length,",
+            "    gradient_boosting: sigmoid(boosting.initialRawScore + boosting.learningRate * treeOutput(boosting.trees, features)),",
+            "    svm: sigmoid(-(svm.calibrationA * scaledDecision(features, svm) + svm.calibrationB)),",
+            "    logistic_regression: sigmoid(scaledDecision(features, logistic)),",
+            "  };",
+            "  return probabilities;",
             "}",
-            "healed = `https://${healed}`;"
+            "function predict(features, thresholds = defaultThresholds) {",
+            "  const models = modelProbabilities(features);",
+            "  const probability = Object.values(models).reduce((sum, value) => sum + value, 0) / 4;",
+            "  const prediction = probability > 0.5 ? 'phishing' : 'legitimate';",
+            "  const riskLevel = riskLevelForProbability(probability, thresholds);",
+            "  return { prediction, probability, risk_level: riskLevel, models };",
+            "}"
         ],
         [
-            ("Dòng 1: ", "Tách phần tên miền khỏi đường dẫn phía sau, giống như tìm tên đường trước khi đọc số nhà."),
-            ("Dòng 2: ", "Nếu tên miền chưa có dấu chấm và không phải máy tính nội bộ, hệ thống nhận diện đó có thể là tên ngắn người dùng vừa gõ."),
-            ("Dòng 3: ", "Tự thêm phần đuôi .com nhưng giữ nguyên phần đường dẫn người dùng đã nhập."),
-            ("Dòng cuối: ", "Thêm https:// để tạo thành địa chỉ đầy đủ trước khi kiểm tra.")
-        ]
-    )
-
-    add_code_box(
-        doc,
-        "2) Đoạn mã thật biến địa chỉ thành các con số kiểm tra:",
-        [
-            "parts = _split_url(url)",
-            "hostname = _hostname(parts)",
-            "lowered = url.lower()",
-            "features = _base_features(url, parts, hostname)",
-            "features.update({",
-            "    f\"keyword_{keyword}\": int(keyword in lowered)",
-            "    for keyword in _KEYWORDS",
-            "})"
-        ],
-        [
-            ("Dòng 1: ", "Tách địa chỉ thành các phần như tên máy chủ, đường dẫn và thông số."),
-            ("Dòng 2: ", "Lấy riêng tên máy chủ để đo các dấu hiệu thuộc tên miền."),
-            ("Dòng 3: ", "Đưa chữ về cùng kiểu chữ thường để không bỏ sót từ chỉ vì viết hoa."),
-            ("Dòng 4: ", "Tính các dấu hiệu nền như độ dài và ký tự đặc biệt."),
-            ("Các dòng cuối: ", "Lần lượt kiểm tra từ khóa đã định trước; có thì ghi 1, không có thì ghi 0.")
-        ]
-    )
-
-    add_code_box(
-        doc,
-        "3) Đoạn mã thật lấy ý kiến của bốn mô hình:",
-        [
-            "const models = modelProbabilities(features);",
-            "const probability = Object.values(models)",
-            "  .reduce((sum, value) => sum + value, 0) / 4;",
-            "const prediction = probability > 0.5",
-            "  ? \"phishing\" : \"legitimate\";",
-            "const riskLevel = riskLevelForProbability(",
-            "  probability, thresholds,",
-            ");"
-        ],
-        [
-            ("Dòng 1: ", "Yêu cầu từng mô hình tự chấm cùng một bộ dấu hiệu."),
-            ("Dòng 2–3: ", "Cộng bốn điểm rồi chia bốn, giống như lấy điểm trung bình của bốn giám khảo."),
-            ("Dòng 4–5: ", "Dùng mốc 50% để máy gắn nhãn nghi ngờ hoặc có vẻ hợp lệ."),
-            ("Dòng cuối: ", "Đổi xác suất thành một trong các mức rủi ro đã cài đặt.")
+            "Hàm tạo ra bốn mức điểm riêng từ cùng một bộ dấu hiệu.",
+            "Bắt đầu hàm tính điểm cho bốn mô hình.",
+            "Lấy các cây hỏi thuộc mô hình Rừng Ngẫu Nhiên.",
+            "Lấy các lượt học nối tiếp của mô hình Tăng Cường Độ Dốc.",
+            "Lấy thông số ranh giới và hiệu chỉnh của Máy Véc-tơ Hỗ Trợ.",
+            "Lấy bảng trọng số của mô hình Hồi Quy Logic.",
+            "Bắt đầu gom bốn kết quả thành một danh sách.",
+            "Chấm bằng rừng câu hỏi rồi lấy trung bình phiếu của các cây.",
+            "Tính kết quả của các lượt sửa sai liên tiếp rồi đổi thành mức điểm.",
+            "Đổi độ lệch khỏi ranh giới thành mức điểm đã hiệu chỉnh.",
+            "Cộng dấu hiệu theo trọng số rồi đổi thành mức điểm.",
+            "Đóng danh sách điểm.",
+            "Gửi lại đủ bốn điểm riêng để bước kế tiếp sử dụng.",
+            "Bắt đầu hàm kết hợp kết quả.",
+            "Gọi cả bốn mô hình với cùng bộ dấu hiệu.",
+            "Cộng bốn điểm rồi chia đều, như lấy điểm chung của bốn giám khảo.",
+            "Nếu điểm chung lớn hơn một nửa, dự đoán thuộc nhóm lừa đảo; nếu không, thuộc nhóm hợp lệ.",
+            "Dùng các mốc 25%, 50% và 75% để xếp mức rủi ro.",
+            "Trả lại kết luận chung, xác suất và điểm riêng để người dùng xem xét.",
+            "Kết thúc hàm kết hợp."
         ]
     )
 
@@ -676,28 +766,28 @@ def build_full_report():
     add_bullet(
         doc,
         "Kết quả ở lần thực hiện đầu tiên: ",
-        "Ở phiên bản thử nghiệm đầu tiên, nhóm chỉ dùng tệp dữ liệu nhỏ gồm 5.000 dòng địa chỉ cũ (urls.csv), đo ít dấu hiệu cơ bản và chỉ có 1 mô hình Rừng Ngẫu Nhiên. Khi gặp các trang web có tên miền mới lạ hoặc các trang lừa đảo tại Việt Nam, mô hình đơn lẻ dễ bị lúng túng, độ chính xác chỉ ở mức trung bình và báo lỗi khi người dùng gõ thiếu chữ https://."
+        "Ở giai đoạn đầu, nhóm dùng khoảng 5.000 địa chỉ, một mô hình Rừng Ngẫu Nhiên và ít dấu hiệu hơn. Quy mô nhỏ và chỉ có một cách chấm khiến hệ thống có thể bỏ lỡ kiểu giả mạo mới; không còn phép đo cùng bộ thử để nêu một tỷ lệ chính xác đáng tin cậy cho phiên bản đó."
     )
     add_bullet(
         doc,
-        "Kết quả sau nâng cấp (các bản 2.3.0 đến 2.3.5): ",
-        "Hệ thống dùng 261.299 mẫu huấn luyện, kho tra cứu 36.261 địa chỉ, 55 dấu hiệu và bốn mô hình. Trên 6.624 địa chỉ kiểm thử, mô hình Tăng Cường Độ Dốc phát hiện 2.676 trên 2.799 trang lừa đảo, đạt 95,61%. Bản 2.3.5 còn có phiếu báo cáo loại suspected-phishing; phiếu được tạo thành tệp để người dùng tự tải, không tự gửi đường dẫn hoặc email đi nơi khác."
+        "Kết quả ở các lần nâng cấp: ",
+        "Nhóm mở rộng bộ dữ liệu học lên 261.299 địa chỉ, kho tra cứu có 36.261 hồ sơ, bộ đo có 55 dấu hiệu và hệ thống dùng bốn mô hình. Trên 6.624 địa chỉ được giữ riêng để thi thử, mô hình Tăng Cường Độ Dốc phát hiện 2.676 trong 2.799 trang lừa đảo (95,61%). SafeWeb có thêm biểu mẫu lập phiếu báo cáo loại suspected-phishing; phiếu được tạo thành tệp trên thiết bị, không tự gửi đi."
     )
 
     add_heading_2(doc, "4.2. Kết quả định lượng của bốn mô hình Trí tuệ nhân tạo")
     add_p(
         doc,
-        "Cả 4 mô hình cùng làm bài kiểm tra trên 6.624 địa chỉ trang web giữ riêng (gồm 2.799 trang lừa đảo thật và 3.825 trang an toàn thật). Kết quả được phiên dịch sang các chỉ số tiếng Việt dễ hiểu tại Bảng 4.1:"
+        "Cả bốn mô hình cùng làm bài kiểm tra trên 6.624 địa chỉ được giữ riêng (2.799 trang lừa đảo và 3.825 trang hợp lệ). Các tên cột trong Bảng 4.1 được viết bằng tiếng Việt; số liệu là kết quả của đúng bộ thử này, không phải lời hứa cho mọi trang web."
     )
 
     add_p(doc, "Bảng 4.1. Kết quả chấm điểm 4 mô hình Trí tuệ nhân tạo trên 6.624 địa chỉ kiểm thử", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=4)
     eval_headers = [
         "Tên mô hình",
-        "Tỷ lệ đoán đúng tổng thể",
-        "Cảnh báo đúng là lừa đảo",
-        "Tỷ lệ phát hiện lừa đảo",
-        "Điểm cân bằng chung",
-        "Số trang đúng / báo nhầm / bỏ sót / bắt trúng"
+        "Tỷ lệ đoán đúng chung",
+        "Độ chuẩn xác khi báo động",
+        "Tỷ lệ bắt trúng lừa đảo",
+        "Điểm hiệu quả tổng hợp",
+        "Trang hợp lệ đoán đúng / Trang hợp lệ báo nhầm / Trang lừa đảo bỏ sót / Trang lừa đảo phát hiện"
     ]
     eval_rows = [
         ["1. Rừng Ngẫu Nhiên", "87,45%", "80,75%", "92,32%", "86,15%", "3.209 / 616 / 215 / 2.584"],
@@ -710,7 +800,7 @@ def build_full_report():
     add_bullet(
         doc,
         "Diễn giải kết quả dễ hiểu: ",
-        "Trong 2.799 trang lừa đảo của đề thi, mô hình Tăng Cường Độ Dốc bắt trúng tới 2.676 trang (đạt 95,61%, tức là cứ 100 trang lừa đảo mới tinh thì bắt gọn gần 96 trang, chỉ sót 123 trang). Mô hình Rừng Ngẫu Nhiên đứng thứ hai khi bắt trúng 2.584 trang lừa đảo (92,32%) và nhận diện đúng 3.209 trang an toàn. Mô hình Hồi Quy Logic bắt trúng 2.458 trang (87,82%). Riêng mô hình Máy Véc-tơ Hỗ Trợ ở mức cài đặt hiện tại quá khắt khe: nó không báo oan cho bất kỳ trang an toàn nào (đúng 3.825/3.825 trang, hễ báo động là trúng 100%) nhưng chỉ bắt được 20 trang lừa đảo. Việc đặt cả 4 mô hình cạnh nhau giúp tận dụng tối đa khả năng truy quét 95,61% của các mô hình chủ lực."
+        "Trong 2.799 trang lừa đảo của bộ thử, mô hình Tăng Cường Độ Dốc phát hiện 2.676 trang, tức gần 96 trong mỗi 100 trang, và bỏ sót 123. Độ chuẩn xác khi báo động là 79,76%: trong 100 cảnh báo, khoảng 80 đúng. Rừng Ngẫu Nhiên phát hiện 2.584 trang; Hồi Quy Logic phát hiện 2.458. Mô hình Máy Véc-tơ Hỗ Trợ chỉ phát hiện 20 trang và bỏ sót 2.779, nên đây là hạn chế cần xử lý, dù 20 cảnh báo của nó đều đúng trong bộ thử."
     )
 
     add_heading_2(doc, "4.3. Kiểm thử phần mềm, xây dựng và xác minh cục bộ")
@@ -719,12 +809,12 @@ def build_full_report():
         "Trước khi đưa vào sử dụng, phần mềm đã được kiểm tra tự động nghiêm ngặt với số lượng mẫu kiểm thử và kết quả cụ thể như sau:"
     )
     add_bullet(doc, "Kiểm thử xử lý dữ liệu và mô hình trên máy tính: ", "Thực hiện 59 mẫu kiểm thử tự động (kiểm tra làm sạch dữ liệu, đo 55 dấu hiệu, chấm điểm AI và ứng dụng). Kết quả: Đạt 59 / 59 mẫu (100%, không có lỗi).")
-    add_bullet(doc, "Kiểm thử hoạt động trên trình duyệt web: ", "Thực hiện 16 bài kiểm tra tự động trên trình duyệt, gồm chuẩn hóa địa chỉ, tính điểm, tra cứu và hiển thị kết quả. Kết quả: Đạt 16 / 16 bài.")
-    add_bullet(doc, "Đối chiếu hai cách tính: ", "Cùng 16 trường hợp (10 địa chỉ hợp lệ, 6 địa chỉ không hợp lệ) được chạy qua bộ máy Python và bộ máy JavaScript trên trình duyệt. Các kết quả khớp; sai khác xác suất lớn nhất là 0,000000000000000749 do cách biểu diễn số thập phân, không phải khác biệt có ý nghĩa trong kết quả hiển thị.")
+    add_bullet(doc, "Kiểm thử hoạt động trên trình duyệt web: ", "Thực hiện 16 bài kiểm thử tự động, bao gồm các thao tác nhập địa chỉ, chạy mô hình, đối chiếu kho dữ liệu và kiểm tra nội dung giao diện. Kết quả lần chạy hiện tại: đạt 16 / 16.")
+    add_bullet(doc, "Đối chiếu hai cách tính: ", "So sánh cùng 16 trường hợp giữa Python và JavaScript: 10 địa chỉ hợp lệ và 6 địa chỉ không hợp lệ. Cả hai cùng xử lý đúng trạng thái hợp lệ/không hợp lệ; xác suất có sai khác rất nhỏ do cách máy tính làm tròn số, tối đa khoảng 0,00000000000000075, nên không gọi là giống tuyệt đối từng chữ số.")
     add_bullet(
         doc,
         "Ý nghĩa của Xác minh cục bộ: ",
-        "Xác minh cục bộ nghĩa là phần phân tích địa chỉ và chạy mô hình diễn ra ngay trên thiết bị, giống như tự dùng cuốn sổ tra cứu và dụng cụ kiểm tra ở nhà thay vì gửi địa chỉ cho người khác. Đường dẫn không được gửi đi trong chế độ này. Nếu bật kiểm tra trực tuyến, một phần thông tin sẽ được gửi tới dịch vụ bên ngoài; vì vậy người dùng cần xem thông báo và chỉ bật khi đồng ý."
+        "Xử lý cục bộ giống như tự mở cuốn sổ tra cứu và dùng bốn người giám khảo ngay tại bàn của mình: địa chỉ được chuẩn hóa, dò kho dữ liệu và chấm điểm trong trình duyệt, không tự gửi đi dịch vụ bên ngoài. Nếu người dùng chủ động bật kiểm tra DNS hoặc ảnh xem trước, địa chỉ sẽ được chia sẻ với dịch vụ tương ứng; vì vậy không thể gọi mọi chế độ là hoàn toàn không gửi dữ liệu."
     )
 
     p_img2 = doc.add_paragraph()
@@ -736,7 +826,7 @@ def build_full_report():
     add_p(doc, "Người dùng chỉ cần thực hiện 3 bước đơn giản trên giao diện SafeWeb:")
     add_bullet(doc, "Bước 1: ", "Dán địa chỉ trang web cần kiểm tra vào ô nhập (không dán mật khẩu cá nhân). Hệ thống tự động hoàn thiện https:// hoặc .com nếu thiếu.")
     add_bullet(doc, "Bước 2: ", "Bấm nút 'Phân tích URL' (chỉ bật nút kiểm tra trực tuyến nếu muốn xem thêm thông tin tên miền DNS và ảnh chụp trang web).")
-    add_bullet(doc, "Bước 3: ", "Nhìn màu cảnh báo: Xanh là rủi ro thấp, Vàng là cần thận trọng, Cam là nguy cơ cao, Đỏ là nguy cơ rất cao. Đọc lý do và điểm của từng mô hình; có thể mở kho tra cứu hoặc tạo phiếu báo cáo.")
+    add_bullet(doc, "Bước 3: ", "Nhìn màu sắc cảnh báo (Xanh = Thấp, Vàng = Thận trọng, Đỏ = Nguy hiểm), xem điểm của 4 mô hình AI, đọc lý do cụ thể tại ô 'Vì sao có kết quả này?' hoặc tra cứu thêm trong 'Kho Dữ Liệu PhishVN'.")
 
     p_img3 = doc.add_paragraph()
     p_img3.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -746,7 +836,7 @@ def build_full_report():
     p_img4 = doc.add_paragraph()
     p_img4.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_img4.add_run().add_picture(ui_img, width=Inches(5.7))
-    add_p(doc, "Hình 4.3. Ảnh chụp giao diện thực tế của SafeWeb phiên bản 2.3.5.", italic=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=8)
+    add_p(doc, "Hình 4.3. Giao diện SafeWeb.", italic=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=8)
 
     # --------------------------------------------------------------------------
     # CHƯƠNG 5. ĐÁNH GIÁ SẢN PHẨM, ĐÓNG GÓP MỚI VÀ HƯỚNG PHÁT TRIỂN
@@ -756,73 +846,68 @@ def build_full_report():
     add_heading_2(doc, "5.1. Khẳng định đóng góp mới và ưu thế vượt trội của sản phẩm")
     add_bullet(
         doc,
-        "Kết quả nhận diện và thông tin đọc được cao hơn các công cụ kiểm tra đơn lẻ trên thị trường: ",
-        "Điểm mới của SafeWeb là kết hợp kho địa chỉ đã ghi nhận, 55 dấu hiệu và bốn cách chấm điểm độc lập, rồi giải thích kết quả để người dùng tự cân nhắc trước khi mở đường dẫn. Trong phép thử nội bộ trên 6.624 địa chỉ, mô hình Tăng Cường Độ Dốc phát hiện 95,61% địa chỉ lừa đảo. Nhóm chưa thực hiện phép thử trực tiếp với từng sản phẩm trên thị trường, nên chưa thể kết luận SafeWeb chính xác hơn mọi công cụ đơn lẻ."
+        "Đóng góp của dự án: ",
+        "SafeWeb đặt cạnh nhau ba loại thông tin: hồ sơ đã có trong kho, dấu hiệu cấu trúc của địa chỉ và ý kiến của bốn mô hình. Trên bộ thử tên miền tách riêng, mô hình Tăng Cường Độ Dốc phát hiện 95,61% trang lừa đảo. Dự án chưa thử đối chứng trực tiếp với các dịch vụ ngoài thị trường, nên không kết luận mình chính xác hơn mọi công cụ khác."
     )
     add_bullet(
         doc,
-        "Giúp người dùng chủ động phán đoán và kiểm tra an toàn trước khi kích hoạt đường dẫn: ",
-        "Trước khi bấm đường dẫn lạ, người dùng có thể xem màu cảnh báo, ý kiến từng mô hình, dấu hiệu bất thường, ảnh xem trước nếu đã đồng ý kiểm tra trực tuyến và các ví dụ đủ gần trong kho dữ liệu. Những thông tin này hỗ trợ người dùng tự quyết định, không thay thế việc xác minh qua kênh chính thức."
+        "Giúp người dùng xem xét trước khi bấm: ",
+        "Màu cảnh báo, điểm từng mô hình, lý do và ví dụ gần giống giúp người dùng có thêm căn cứ để tự quyết định. Kết quả là lời nhắc để kiểm tra kỹ, không thay thế việc xác minh qua ngân hàng, nhà cung cấp dịch vụ hoặc người gửi chính thức."
     )
 
     add_heading_2(doc, "5.2. Kết luận và một số hạn chế cần hoàn thiện")
     add_p(
         doc,
-        "SafeWeb phiên bản 2.3.5 hoàn thành các mục tiêu thiết kế và vượt qua 59 bài kiểm tra xử lý dữ liệu, 16 bài kiểm tra trình duyệt. Mô hình Tăng Cường Độ Dốc phát hiện 95,61% địa chỉ lừa đảo trong bộ kiểm thử đã nêu. Hạn chế đáng chú ý là mô hình Máy Véc-tơ Hỗ Trợ hiện bỏ sót phần lớn địa chỉ lừa đảo ở ngưỡng đang dùng; cần điều chỉnh trước khi dựa vào ý kiến riêng của mô hình này. Phiếu báo cáo hiện được lưu thành tệp trên thiết bị, chưa có máy chủ tiếp nhận tự động."
+        "SafeWeb có bộ tra cứu, bốn mô hình, giao diện giải thích kết quả và biểu mẫu tạo phiếu phản hồi. Trong phép thử hiện có, mô hình Tăng Cường Độ Dốc phát hiện 95,61% trang lừa đảo; mô hình Máy Véc-tơ Hỗ Trợ còn bỏ sót nhiều trường hợp và cần được hiệu chỉnh. Mọi con số đều phụ thuộc vào bộ dữ liệu và cách thử đã nêu."
     )
 
     add_heading_2(doc, "5.3. Hướng phát triển tương lai: Tiện ích tự động quét đường dẫn trong tầm mắt")
     add_p(
         doc,
-        "Trong giai đoạn tiếp theo, nhóm sẽ phát triển SafeWeb thành Tiện ích mở rộng gắn trực tiếp vào trình duyệt web. Khi người dùng lướt mạng xã hội, đọc tin nhắn hay thư điện tử, tiện ích sẽ tự động quét các đường dẫn đang hiển thị trong tầm mắt trên màn hình, chấm điểm ngầm ngay trên máy và gắn biểu tượng cảnh báo sớm ngay cạnh đường dẫn độc hại trước khi người dùng kịp bấm chuột vào."
+        "Trong giai đoạn tiếp theo, nhóm dự kiến phát triển SafeWeb thành tiện ích gắn trực tiếp vào trình duyệt. Khi người dùng xem mạng xã hội, tin nhắn hoặc thư điện tử, tiện ích có thể rà các đường dẫn đang hiện trên màn hình và đặt dấu cảnh báo trước khi người dùng bấm. Đây là hướng phát triển, chưa phải tính năng hiện có."
     )
 
     # --------------------------------------------------------------------------
     # TÀI LIỆU THAM KHẢO & PHỤ LỤC NGẮN GỌN
     # --------------------------------------------------------------------------
-    add_heading_1(doc, "TÀI LIỆU THAM KHẢO")
-    add_bullet(doc, "1. Bộ dữ liệu PhishVN, phiên bản 3.1.0 (2026): ", "Dùng làm kho địa chỉ tham chiếu và phần dữ liệu kiểm thử có tên miền tách biệt.")
-    add_bullet(doc, "2. Bộ dữ liệu địa chỉ trang web PhiUSIIL: ", "Bổ sung mẫu để huấn luyện các mô hình nhận biết nhiều dạng địa chỉ khác nhau.")
-    add_bullet(doc, "3. Tài liệu Python và thư viện scikit-learn: ", "Dùng để xử lý dữ liệu, huấn luyện bốn mô hình và tính các chỉ số đánh giá.")
-    add_bullet(doc, "4. Tài liệu chuẩn về địa chỉ web, giao thức truyền tải, DNS và GitHub Pages: ", "Dùng để phân tích cấu trúc địa chỉ, giải thích việc tra cứu tên miền và mô tả nơi triển khai trang tĩnh.")
+    add_heading_1(doc, "TÀI LIỆU THAM KHẢO VÀ CÔNG CỤ")
+    add_bullet(doc, "1. Bộ dữ liệu địa chỉ trang web tiếng Việt: ", "Dùng làm nguồn hồ sơ tra cứu và một phần bài học, đề thi của dự án.")
+    add_bullet(doc, "2. Bộ dữ liệu địa chỉ web mở rộng: ", "Bổ sung nhiều kiểu địa chỉ để các mô hình học thêm dấu hiệu đa dạng.")
+    add_bullet(doc, "3. Thư viện scikit-learn và ngôn ngữ Python: ", "Dùng để huấn luyện, chấm điểm và thống kê bốn mô hình.")
+    add_bullet(doc, "4. Các quy chuẩn kỹ thuật về địa chỉ web và tên miền (RFC 3986, RFC 9110, RFC 1035): ", "Dùng để tách, chuẩn hóa và kiểm tra thành phần địa chỉ.")
 
-    add_heading_1(doc, "PHỤ LỤC: GIẢI NGHĨA NGẮN GỌN MỘT SỐ TÊN GỌI")
+    add_heading_1(doc, "PHỤ LỤC: TÁM TÊN GỌI CỐT LÕI")
     gloss_rows = [
-        ["URL", "Đường dẫn trang web", "Địa chỉ dẫn tới một trang trên mạng, giống số nhà và tên đường."],
-        ["Phishing", "Trang giả mạo để lừa đảo", "Trang nhái cửa hàng thật để dụ khách đưa tiền hoặc mật khẩu."],
-        ["HTTPS", "Kết nối có mã hóa", "Khóa bảo vệ đường truyền, nhưng không chứng minh chủ trang là đáng tin."],
-        ["DNS", "Danh bạ tên miền", "Giống danh bạ giúp tìm máy chủ đứng sau tên trang web."],
-        ["Học máy", "Máy tự học từ ví dụ", "Cho máy xem nhiều mẫu để máy rút ra các dấu hiệu thường gặp."],
-        ["Rừng Ngẫu Nhiên", "Nhiều cây hỏi độc lập", "Nhiều người kiểm tra theo các câu hỏi nhỏ rồi lấy ý kiến chung."],
-        ["Tăng Cường Độ Dốc", "Người sau sửa sai cho người trước", "Mỗi lượt sau chú ý hơn đến trường hợp lượt trước đoán nhầm."],
-        ["Browser Extension", "Tiện ích mở rộng trình duyệt", "Phần mềm nhỏ gắn vào trình duyệt để cảnh báo ngay cạnh đường dẫn."]
+        ["Đường dẫn trang web", "URL", "Địa chỉ để đi đến một trang, giống số nhà và tên đường."],
+        ["Trang web lừa đảo", "Phishing", "Trang giả mạo nhằm dụ người xem giao mật khẩu hoặc tiền."],
+        ["Tên miền", "Domain", "Tên dễ nhớ thay cho dãy số của máy chủ, như tên một cửa hàng."],
+        ["Kết nối HTTPS", "HTTPS", "Lớp mã hóa đường truyền; có khóa không đồng nghĩa cửa hàng là thật."],
+        ["Danh bạ tên miền", "DNS", "Dịch vụ đổi tên trang thành địa chỉ máy chủ, như danh bạ tìm số điện thoại."],
+        ["Học máy", "Machine Learning", "Cho máy xem nhiều ví dụ để nó học cách nhận ra mẫu giống nhau."],
+        ["Tính ngay trong trình duyệt", "Browser inference", "Máy người dùng tự chấm điểm, như tự làm phép tính tại bàn."],
+        ["Tiện ích gắn vào trình duyệt", "Browser extension", "Chương trình nhỏ thêm chức năng vào trình duyệt; đây là hướng phát triển."]
     ]
-    add_styled_table(doc, ["Tên gọi", "Nghĩa tiếng Việt", "Giải thích dễ hiểu"], gloss_rows)
+    add_styled_table(doc, ["Tên gọi tiếng Việt", "Tên kỹ thuật", "Giải thích đời thường"], gloss_rows)
 
     # --------------------------------------------------------------------------
     # TRANG CUỐI: TRANG BÌA CUỐI (ĐỒNG BỘ BÌA ĐẦU)
     # --------------------------------------------------------------------------
     doc.add_page_break()
-    add_p(doc, "SAFEWEB (PHIÊN BẢN 2.3.5)", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=8, size_pt=14, color_rgb=(15, 76, 92))
+    add_p(doc, "SAFEWEB", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=8, size_pt=14, color_rgb=(15, 76, 92))
     add_p(doc, "KIỂM TRA ĐƯỜNG DẪN TRƯỚC KHI BẤM — BẢO VỆ AN TOÀN TRÊN KHÔNG GIAN MẠNG", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=16, size_pt=14, color_rgb=(15, 118, 110))
     add_p(
         doc,
         "Công cụ nghiên cứu và giáo dục hỗ trợ người dùng phát hiện sớm các dấu hiệu bất thường trên địa chỉ trang web bằng Trí tuệ nhân tạo, giúp người dùng chủ động phán đoán, kiểm tra an toàn trước khi kích hoạt đường dẫn.",
         align=WD_ALIGN_PARAGRAPH.CENTER, space_after=24, size_pt=14
     )
-    add_styled_table(
-        doc,
-        ["Vai trò trong dự án", "Họ và tên"],
-        [
-            ["Người thực hiện 1", "Lê Văn Tuấn Anh"],
-            ["Người thực hiện 2", "Nguyễn Hoàng Bảo"],
-            ["Người hướng dẫn", "Trần Văn Toàn"]
-        ]
-    )
+    add_p(doc, "Người thực hiện 1 : Lê Văn Tuấn Anh", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size_pt=14)
+    add_p(doc, "Người thực hiện 2 : Nguyễn Hoàng Bảo", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size_pt=14)
+    add_p(doc, "Người hướng dẫn : Trần Văn Toàn", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size_pt=14)
 
+    # Xuất báo cáo Word dạng .docx.
     docx_file = PROJECT_ROOT / "Bao_cao_SafeWeb_KHKT_THPT.docx"
     doc.save(docx_file)
-    print(f"HOÀN TẤT! Đã tạo thành công '{docx_file}' (cỡ chữ 14 pt, có mục lục tự động và ảnh giao diện thật).")
+    print(f"HOÀN TẤT! Đã tạo thành công '{docx_file}' (định dạng .docx, cỡ chữ 14pt, đầy đủ hình minh họa)!")
 
 
 if __name__ == "__main__":

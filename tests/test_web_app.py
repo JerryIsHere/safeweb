@@ -24,8 +24,8 @@ def test_home_page_renders_model_state() -> None:
     assert b'id="live-inspection-toggle"' in response.data
     assert b'id="live-results"' in response.data
     assert b'id="score-value"' not in response.data
-    assert b"?v=2.3.0" in response.data
-    assert b"web-inspection.js?v=2.3.0" in response.data
+    assert b"?v=2.3.5" in response.data
+    assert b"web-inspection.js?v=2.3.5" in response.data
     assert b"safeweb-api-url" not in response.data
     assert b"/static/model-data.js" in response.data
 

@@ -170,17 +170,47 @@
     });
   }
 
-  function getPhishingExamples(categoryId, brand, limit = 5) {
-    const phishing = phishvnRecords.filter((record) => record.label === "Phishing");
-    const sameBrand = phishing.filter((record) => brand && record.brand === brand && record.brand !== "No known brand signature");
-    const sameCategory = phishing.filter((record) => record.category_id === categoryId);
-    const ordered = [...sameBrand, ...sameCategory, ...phishing];
-    const seen = new Set();
-    return ordered.filter((record) => {
-      if (seen.has(record.url_key)) return false;
-      seen.add(record.url_key);
-      return true;
-    }).slice(0, limit);
+  function getPhishingExamples(value, limit = 5) {
+    let targetHost;
+    try {
+      targetHost = new URL(validateUrl(value)).hostname.toLowerCase().replace(/^www\./u, "");
+    } catch {
+      return [];
+    }
+
+    const similarity = (left, right) => {
+      const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+      for (let row = 1; row <= left.length; row += 1) {
+        let diagonal = previous[0];
+        previous[0] = row;
+        for (let column = 1; column <= right.length; column += 1) {
+          const above = previous[column];
+          previous[column] = Math.min(
+            previous[column] + 1,
+            previous[column - 1] + 1,
+            diagonal + (left[row - 1] === right[column - 1] ? 0 : 1),
+          );
+          diagonal = above;
+        }
+      }
+      return 1 - previous[right.length] / Math.max(left.length, right.length, 1);
+    };
+
+    return phishvnRecords
+      .filter((record) => record.label === "Phishing"
+        && record.detected_at
+        && ["gold", "silver"].includes(String(record.tier).toLowerCase()))
+      .map((record) => {
+        try {
+          const host = new URL(record.url).hostname.toLowerCase().replace(/^www\./u, "");
+          return { ...record, similarity: similarity(targetHost, host) };
+        } catch {
+          return null;
+        }
+      })
+      .filter((record) => record && record.similarity >= 0.8)
+      .sort((left, right) => right.similarity - left.similarity)
+      .slice(0, limit);
   }
 
   function isSafeWebUrl(value) {

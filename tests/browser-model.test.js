@@ -82,6 +82,49 @@ test("known PhishVN hosts are attributed and still pass through model verificati
   assert.equal(result.verification_stages.machine_learning, "evaluated");
 });
 
+test("comparison examples require a high-confidence phishing record and 80% host similarity", () => {
+  browserModel.setDatabaseRecords([
+    {
+      url: "https://pinteresst.com/login",
+      url_key: "pinteresst.com/login",
+      label: "Phishing",
+      detected_at: "2025-04-03",
+      tier: "Silver",
+      category_id: "social_messaging",
+      category: "Social Media",
+      provider: "Custom domain",
+      brand: "Pinterest",
+    },
+    {
+      url: "https://unrelated.example/login",
+      url_key: "unrelated.example/login",
+      label: "Phishing",
+      detected_at: "2025-04-03",
+      tier: "Gold",
+    },
+    {
+      url: "https://pinterest-login.example/verify",
+      url_key: "pinterest-login.example/verify",
+      label: "Phishing",
+      detected_at: "2025-04-03",
+      tier: "Silver",
+    },
+    {
+      url: "https://pinteresst.com/offer",
+      url_key: "pinteresst.com/offer",
+      label: "Phishing",
+      detected_at: "2025-04-03",
+      tier: "Bronze",
+    },
+  ]);
+
+  const examples = browserModel.getPhishingExamples("https://pinterest.com", 5);
+
+  assert.equal(examples.length, 1);
+  assert.equal(examples[0].url, "https://pinteresst.com/login");
+  assert.ok(examples[0].similarity >= 0.8);
+});
+
 test("exact PhishVN benign records decide the verdict without changing model scores", () => {
   browserModel.setDatabaseRecords([{
     url: "https://verified.example/account",

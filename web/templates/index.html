@@ -5,18 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f1f2ec">
     <title data-i18n="pageTitle">SafeWeb | URL analysis</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.3.0">
-    <script src="{{ url_for('static', filename='translations.js') }}?v=2.3.0" defer></script>
-    <script src="{{ url_for('static', filename='model-data.js') }}?v=2.3.0" defer></script>
-    <script src="{{ url_for('static', filename='browser-model.js') }}?v=2.3.0" defer></script>
-    <script src="{{ url_for('static', filename='web-inspection.js') }}?v=2.3.0" defer></script>
-    <script src="{{ url_for('static', filename='script.js') }}?v=2.3.0" defer></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.3.5">
+    <script src="{{ url_for('static', filename='translations.js') }}?v=2.3.5" defer></script>
+    <script src="{{ url_for('static', filename='model-data.js') }}?v=2.3.5" defer></script>
+    <script src="{{ url_for('static', filename='browser-model.js') }}?v=2.3.5" defer></script>
+    <script src="{{ url_for('static', filename='web-inspection.js') }}?v=2.3.5" defer></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=2.3.5" defer></script>
   </head>
   <body>
     <header class="topbar">
       <a class="brand" href="{{ home_url }}" aria-label="SafeWeb home" data-i18n-attr="aria-label:homeLabel">
         <span class="brand-mark" aria-hidden="true">S</span>
-          <span>SafeWeb <small class="version-tag">v2.3.0</small></span>
+          <span>SafeWeb <small class="version-tag">v2.3.5</small></span>
       </a>
       <div class="header-actions">
         <div class="topbar-meta">
@@ -34,16 +34,12 @@
     </header>
 
     <main class="workspace">
-      <section class="intro" aria-labelledby="page-title">
-        <div class="eyebrow"><span data-i18n="researchLabel">RESEARCH PROTOTYPE</span><span class="eyebrow-rule" aria-hidden="true"></span><span data-i18n="reviewLabel">01 / URL REVIEW</span></div>
-        <h1 id="page-title"><span data-i18n="headlineOne">Read the signals.</span><br><em data-i18n="headlineTwo">Keep the context.</em></h1>
-        <p class="intro-copy" data-i18n="introCopy">Assess URL characteristics with a reference database and locally trained models. Live checks are optional.</p>
-      </section>
-
-      <nav class="workspace-nav" aria-label="SafeWeb tools">
-        <button class="database-open-button" id="database-toggle" type="button">Cơ sở dữ liệu URL / URL Database</button>
-      </nav>
-      <section class="analysis-grid" aria-label="URL analysis" data-i18n-attr="aria-label:analysisLabel">
+      <section class="hero" aria-labelledby="page-title">
+        <div class="hero-content">
+          <div class="eyebrow"><span data-i18n="researchLabel">RESEARCH PROTOTYPE</span><span class="eyebrow-rule" aria-hidden="true"></span><span data-i18n="reviewLabel">01 / URL REVIEW</span></div>
+          <h1 id="page-title"><span data-i18n="headlineOne">Read the signals.</span><br><em data-i18n="headlineTwo">Keep the context.</em></h1>
+          <p class="intro-copy" data-i18n="introCopy">Assess URL characteristics with a reference database and locally trained models. Live checks are optional.</p>
+        </div>
         <form class="analysis-form" id="analysis-form" novalidate>
           <label for="url-input" data-i18n="inputLabel">URL to assess</label>
           <div class="input-wrap">
@@ -71,6 +67,16 @@
             <p data-i18n="methodNote">Predictions describe patterns learned from training data. They are not a verdict about a website.</p>
           </div>
         </form>
+      </section>
+
+      <nav class="workspace-nav" aria-label="SafeWeb tools">
+        <span class="nav-caption" data-i18n="quickActions">SAFEWEB TOOLS</span>
+        <div class="nav-actions">
+          <button class="database-open-button" id="database-toggle" type="button" data-i18n="databaseNav">Cơ sở dữ liệu URL</button>
+          <button class="database-open-button report-open-button" id="report-toggle" type="button" data-i18n="reportNav">Gửi báo cáo</button>
+        </div>
+      </nav>
+      <section class="analysis-grid" aria-label="URL analysis" data-i18n-attr="aria-label:analysisLabel">
 
         <section class="result-panel" aria-labelledby="result-title" aria-live="polite">
           <div class="result-heading">
@@ -114,8 +120,8 @@
             <div class="model-consensus-grid" id="model-consensus"></div>
           </article>
           <article class="counterexample-card" id="counterexample-card" hidden>
-            <h3>Cảnh giác: Các trang giả mạo / lừa đảo thực tế trong Cơ sở dữ liệu để đối chiếu</h3>
-            <p>Real phishing URLs from the cited dataset, shown as text for safe comparison.</p>
+            <h3 data-i18n="counterexampleTitle">Cảnh giác: Các trang giả mạo tương tự trong cơ sở dữ liệu</h3>
+            <p data-i18n="counterexampleNote">Chỉ hiển thị mẫu lừa đảo có độ tin cậy cao, đã ghi nhận và tương đồng tên miền ít nhất 80%.</p>
             <div class="counterexample-list" id="counterexample-list"></div>
           </article>
           <div class="result-divider"></div>
@@ -145,24 +151,33 @@
           <ul class="signal-list" id="signal-list">
             <li class="empty-signal" data-i18n="emptySignals">Signals will appear after analysis.</li>
           </ul>
-          <section class="live-results" id="live-results" hidden aria-labelledby="live-results-title">
-            <h3 id="live-results-title" data-i18n="liveResultsTitle">Live web inspection</h3>
-            <div class="live-grid">
-              <article class="live-card"><h4 data-i18n="dnsTitle">DNS and domain status</h4><ul id="dns-summary" class="signal-list compact"></ul></article>
-              <article class="live-card"><h4 data-i18n="redirectTitle">Redirect chain</h4><ol id="redirect-chain" class="redirect-chain"></ol></article>
-              <article class="live-card"><h4 data-i18n="metadataTitle">Page metadata</h4><dl id="metadata-summary" class="metadata-list"></dl></article>
-              <article class="live-card screenshot-card" id="screenshot-card" hidden>
-                <div class="screenshot-heading"><h4 data-i18n="screenshotTitle">Destination preview</h4><label><input id="screenshot-toggle" type="checkbox" checked><span data-i18n="screenshotShow">Show preview</span></label></div>
-                <div class="screenshot-frame" id="screenshot-frame"><div class="screenshot-skeleton" data-i18n="screenshotLoading">Loading safe preview…</div><img id="site-screenshot" alt="Destination website screenshot" data-i18n-attr="alt:screenshotAlt" hidden></div>
-              </article>
-            </div>
-          </section>
           <details class="feature-details">
             <summary data-i18n="featureSummary">View extracted features</summary>
             <dl id="feature-list"></dl>
           </details>
           <p class="result-disclaimer" id="result-disclaimer" data-i18n="disclaimer">Risk level is a model warning, not a determination that a URL is safe or malicious.</p>
         </section>
+        <aside class="result-aside" aria-label="Additional URL information">
+          <article class="preview-panel live-card" id="screenshot-card">
+            <div class="screenshot-heading"><h4 data-i18n="screenshotTitle">Destination preview</h4><label><input id="screenshot-toggle" type="checkbox" checked><span data-i18n="screenshotShow">Show preview</span></label></div>
+            <div class="screenshot-frame" id="screenshot-frame"><div class="screenshot-skeleton" data-i18n="screenshotOptIn">Enable live checks to request a page preview.</div><img id="site-screenshot" alt="Destination website screenshot" data-i18n-attr="alt:screenshotAlt" hidden></div>
+          </article>
+          <section class="live-results" id="live-results" hidden aria-labelledby="live-results-title">
+            <h3 id="live-results-title" data-i18n="liveResultsTitle">Live web inspection</h3>
+            <div class="live-grid">
+              <article class="live-card"><h4 data-i18n="dnsTitle">DNS and domain status</h4><ul id="dns-summary" class="signal-list compact"></ul></article>
+              <article class="live-card"><h4 data-i18n="redirectTitle">Redirect chain</h4><ol id="redirect-chain" class="redirect-chain"></ol></article>
+              <article class="live-card"><h4 data-i18n="metadataTitle">Page metadata</h4><dl id="metadata-summary" class="metadata-list"></dl></article>
+            </div>
+          </section>
+          <article class="quick-panel live-card">
+            <span class="section-kicker" data-i18n="referenceKicker">REFERENCE & FEEDBACK</span>
+            <h3 data-i18n="quickPanelTitle">Kiểm tra thêm, góp ý dễ dàng</h3>
+            <p data-i18n="quickPanelCopy">Tìm trong các mẫu đã biết hoặc gửi thông tin về kết quả cần xem xét lại.</p>
+            <button class="database-open-button" type="button" data-action="open-database" data-i18n="databaseNav">Mở cơ sở dữ liệu</button>
+            <button class="database-open-button report-open-button" type="button" data-action="open-report" data-i18n="reportNav">Gửi báo cáo</button>
+          </article>
+        </aside>
       </section>
       <section class="database-explorer" id="database-explorer" hidden aria-labelledby="database-title">
         <div class="explorer-heading">
@@ -185,7 +200,21 @@
         </div>
         <div class="database-pagination"><span id="database-page-status" aria-live="polite"></span><div><button id="database-previous" type="button" disabled>Previous</button><button id="database-next" type="button" disabled>Next</button></div></div>
       </section>
-      <footer class="page-footer"><span data-i18n="footerResearch">SAFEWEB · EDUCATIONAL RESEARCH</span><span>SafeWeb v2.3.0</span><span data-i18n="footerNetwork">LOCAL CHECKS · LIVE CHECKS OPTIONAL</span></footer>
+      <section class="report-section" id="report-section" aria-labelledby="report-title">
+        <div class="report-heading">
+          <div><span class="section-kicker" data-i18n="reportKicker">USER FEEDBACK</span><h2 id="report-title" data-i18n="reportTitle">Báo cáo kết quả cần xem xét</h2></div>
+          <span class="report-mark" aria-hidden="true">+</span>
+        </div>
+        <p class="report-intro" data-i18n="reportIntro">Thông tin được đóng gói thành tệp trên thiết bị của bạn. SafeWeb không tự gửi dữ liệu đi.</p>
+        <form id="report-form" class="report-form">
+          <label for="report-url"><span data-i18n="reportUrlLabel">Đường dẫn cần báo cáo</span><input id="report-url" name="url" type="url" autocomplete="url" required></label>
+          <label for="report-type"><span data-i18n="reportTypeLabel">Loại báo cáo</span><select id="report-type" name="type"><option value="suspected-phishing" data-i18n="reportTypePhishing">Nghi ngờ là trang lừa đảo</option><option value="false-warning" data-i18n="reportTypeFalsePositive">SafeWeb cảnh báo nhầm</option><option value="missed-phishing" data-i18n="reportTypeMissed">SafeWeb bỏ sót trang lừa đảo</option></select></label>
+          <label class="report-details" for="report-details"><span data-i18n="reportDetailsLabel">Thông tin bổ sung</span><textarea id="report-details" name="details" rows="4" maxlength="1500" placeholder="Không nhập mật khẩu, mã xác thực hoặc dữ liệu riêng tư." data-i18n-attr="placeholder:reportDetailsPlaceholder"></textarea></label>
+          <label for="report-contact"><span data-i18n="reportContactLabel">Email liên hệ (không bắt buộc)</span><input id="report-contact" name="contact" type="email" autocomplete="email"></label>
+          <div class="report-actions"><button class="analyze-button" type="submit" data-i18n="reportDownload">Tạo tệp báo cáo</button><a id="report-download-link" class="report-download-link" hidden></a><p id="report-status" role="status" aria-live="polite"></p></div>
+        </form>
+      </section>
+      <footer class="page-footer"><span data-i18n="footerResearch">SAFEWEB · EDUCATIONAL RESEARCH</span><span>SafeWeb v2.3.5</span><span data-i18n="footerNetwork">LOCAL CHECKS · LIVE CHECKS OPTIONAL</span></footer>
     </main>
 
     <dialog class="language-dialog" id="language-dialog" open aria-labelledby="language-title" aria-describedby="language-subtitle">

@@ -482,7 +482,7 @@ function renderEasterEgg(result, language) {
 function renderCounterexamples(result, language) {
   const panel = document.querySelector("#counterexample-card");
   const safe = result.prediction === "legitimate";
-  const examples = safe ? getPhishingExamples(result.url_category?.category_id, result.url_category?.brand, 5) : [];
+  const examples = safe ? getPhishingExamples(result.url, 5) : [];
   panel.hidden = examples.length === 0;
   if (!examples.length) return;
   const list = document.querySelector("#counterexample-list");
@@ -490,8 +490,8 @@ function renderCounterexamples(result, language) {
   examples.forEach((example) => {
     const badge = document.createElement("code");
     badge.className = "counterexample-url";
-    badge.textContent = example.url;
-    badge.title = `${example.category} · ${example.brand}`;
+    badge.textContent = `${example.url} · ${Math.round(example.similarity * 100)}%`;
+    badge.title = `${example.category} · ${example.brand} · ${Math.round(example.similarity * 100)}% similar hostname`;
     list.append(badge);
   });
   panel.querySelector("p").textContent = translation("counterexampleNote", language);
@@ -645,6 +645,7 @@ async function showDatabaseExplorer() {
   try {
     await loadDatabaseRecords();
     renderDatabaseExplorer();
+    explorer.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch {
     document.querySelector("#database-rows").textContent = "Database records could not be loaded.";
   }
@@ -654,6 +655,10 @@ function renderLiveInspection(inspection, language = currentLanguage) {
   const panel = document.querySelector("#live-results");
   panel.hidden = !inspection;
   if (!inspection) return;
+  const screenshot = document.querySelector("#site-screenshot");
+  const screenshotNote = document.querySelector(".screenshot-skeleton");
+  screenshot.hidden = true;
+  screenshotNote.textContent = translation(inspection.screenshotUrl ? "screenshotLoading" : "screenshotUnavailable", language);
   const dns = document.querySelector("#dns-summary");
   dns.replaceChildren();
   Object.entries(inspection.dns?.records || {}).forEach(([type, answers]) => {
@@ -689,10 +694,9 @@ function renderLiveInspection(inspection, language = currentLanguage) {
     text.textContent = value;
     metadata.append(label, text);
   });
-  document.querySelector("#screenshot-card").hidden = !inspection.screenshotUrl;
   if (inspection.screenshotUrl) {
-    const image = document.querySelector("#site-screenshot");
-    const skeleton = document.querySelector(".screenshot-skeleton");
+    const image = screenshot;
+    const skeleton = screenshotNote;
     const previewEnabled = document.querySelector("#screenshot-toggle").checked;
     const frame = document.querySelector("#screenshot-frame");
     frame.hidden = !previewEnabled;
@@ -874,6 +878,22 @@ languageSwitcher.addEventListener("click", () => openLanguageDialog(languageSwit
 document.querySelector("#theme-switcher").addEventListener("click", cycleTheme);
 document.querySelector("#reset-result").addEventListener("click", resetResult);
 document.querySelector("#database-toggle").addEventListener("click", showDatabaseExplorer);
+document.querySelector("#report-toggle").addEventListener("click", () => {
+  if (latestNormalizedUrl) {
+    const reportUrl = new URL(latestNormalizedUrl);
+    reportUrl.search = "";
+    reportUrl.hash = "";
+    document.querySelector("#report-url").value = reportUrl.href;
+  }
+  document.querySelector("#report-section").scrollIntoView({ behavior: "smooth", block: "start" });
+  document.querySelector("#report-url").focus({ preventScroll: true });
+});
+document.querySelectorAll('[data-action="open-database"]').forEach((button) => {
+  button.addEventListener("click", showDatabaseExplorer);
+});
+document.querySelectorAll('[data-action="open-report"]').forEach((button) => {
+  button.addEventListener("click", () => document.querySelector("#report-toggle").click());
+});
 document.querySelector("#database-close").addEventListener("click", () => {
   document.querySelector("#database-explorer").hidden = true;
 });
@@ -902,6 +922,44 @@ document.querySelector("#screenshot-toggle").addEventListener("change", (event) 
   document.querySelector("#screenshot-frame").hidden = !visible;
   image.hidden = !visible || !image.complete || image.naturalWidth === 0;
   skeleton.hidden = !visible || image.complete && image.naturalWidth > 0;
+});
+const reportForm = document.querySelector("#report-form");
+const reportDownloadLink = document.querySelector("#report-download-link");
+reportForm.addEventListener("input", () => {
+  if (reportDownloadLink.href.startsWith("blob:")) URL.revokeObjectURL(reportDownloadLink.href);
+  reportDownloadLink.hidden = true;
+  document.querySelector("#report-status").textContent = "";
+});
+reportForm.addEventListener("submit", (event) => {
+  event.preventDefault();
+  const reportUrl = document.querySelector("#report-url").value.trim();
+  const payload = {
+    product: "SafeWeb",
+    version: "2.3.5",
+    submitted_at: new Date().toISOString(),
+    url: reportUrl,
+    report_type: document.querySelector("#report-type").value,
+    details: document.querySelector("#report-details").value.trim(),
+    contact_email: document.querySelector("#report-contact").value.trim() || null,
+    assessment: (() => {
+      if (!latestResult) return null;
+      try {
+        const reported = new URL(reportUrl);
+        const assessed = new URL(latestResult.url);
+        return reported.origin === assessed.origin && reported.pathname === assessed.pathname
+          ? { prediction: latestResult.prediction, risk_level: latestResult.risk_level }
+          : null;
+      } catch {
+        return null;
+      }
+    })(),
+  };
+  const file = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  reportDownloadLink.href = URL.createObjectURL(file);
+  reportDownloadLink.download = `safeweb-report-${new Date().toISOString().slice(0, 10)}.json`;
+  reportDownloadLink.textContent = translation("reportDownloadLink");
+  reportDownloadLink.hidden = false;
+  document.querySelector("#report-status").textContent = translation("reportReady");
 });
 languageOptions.forEach((option) => {
   option.addEventListener("click", () => selectLanguage(option.dataset.language));
