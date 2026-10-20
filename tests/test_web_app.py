@@ -24,8 +24,9 @@ def test_home_page_renders_model_state() -> None:
     assert b'id="live-inspection-toggle"' in response.data
     assert b'id="live-results"' in response.data
     assert b'id="score-value"' not in response.data
-    assert b"?v=2.3.5" in response.data
-    assert b"web-inspection.js?v=2.3.5" in response.data
+    assert b"?v=2.4.0" in response.data
+    assert b"web-inspection.js?v=2.4.0" in response.data
+    assert b"SafeWeb v2.4.0" in response.data
     assert b"safeweb-api-url" not in response.data
     assert b"/static/model-data.js" in response.data
 
@@ -94,4 +95,3 @@ def test_predict_reports_missing_model_without_stack_trace() -> None:
         "error": {"code": "model_unavailable", "message": "No trained model is available yet."}
     }
     assert not {"Access-Control-Allow-Origin", "Vary"} & set(response.headers.keys())
-

@@ -12,7 +12,7 @@ import joblib
 import matplotlib
 import numpy as np
 import pandas as pd
-from sklearn.metrics import classification_report
+from sklearn.metrics import classification_report, precision_recall_curve
 import tldextract
 
 matplotlib.use("Agg")
@@ -30,7 +30,6 @@ DATASET_PATH = PROJECT_ROOT / "data" / "processed" / "phishvn_clean.csv"
 DATABASE_PATH = PROJECT_ROOT / "data" / "phishvn_database.json"
 REPORT_PATH = PROJECT_ROOT / "reports" / "phishvn_domain_eval.json"
 METRICS_PATH = PROJECT_ROOT / "reports" / "metrics.json"
-SOURCE_FEATURE_NAMES = tuple(name.removeprefix("phishvn_") for name in PHISHVN_FEATURE_NAMES)
 PHIUSIIL_PATH = PROJECT_ROOT / "data" / "raw" / "phiusiil+phishing+url+dataset.zip"
 _DOMAIN_PARSER = tldextract.TLDExtract(suffix_list_urls=())
 
@@ -85,8 +84,8 @@ def prepare_phiusiil_training_rows(
         "invalid_url_rows_removed": invalid_url_rows,
         "conflicting_url_rows_removed": conflicting_url_rows,
         "duplicate_url_rows_removed": duplicate_url_rows,
-        "test_domain_rows_removed": excluded_test_domain_rows,
-        "test_domains_excluded": len(excluded_domains),
+        "excluded_domain_rows_removed": excluded_test_domain_rows,
+        "excluded_domains": len(excluded_domains),
         "training_rows": int(len(prepared)),
         "training_labels": {
             "benign": int((prepared["label"] == 0).sum()),
@@ -132,7 +131,7 @@ def build_feature_frame(frame: pd.DataFrame, database: dict[str, object]) -> pd.
     suspicious_tlds = set(database.get("suspiciousTlds", []))
     values = []
     for url in frame["url"]:
-        host = (urlsplit(url).hostname or "").lower()
+        host = (urlsplit(url).hostname or "").lower().removeprefix("www.")
         profile_values = profiles.get(host)
         profile_fields = database.get("hostProfileFields", [])
         profile = dict(zip(profile_fields, profile_values, strict=True)) if profile_values else None
@@ -144,11 +143,6 @@ def build_feature_frame(frame: pd.DataFrame, database: dict[str, object]) -> pd.
             )
         )
     features = pd.DataFrame(values, index=frame.index)
-    for source_name, model_name in zip(SOURCE_FEATURE_NAMES, PHISHVN_FEATURE_NAMES, strict=True):
-        if source_name == "suspicious_tld":
-            features[model_name] = frame[source_name].astype(float)
-        else:
-            features[model_name] = frame[model_name].astype(float)
     return features
 
 
@@ -163,7 +157,7 @@ def build_url_feature_frame(
     suspicious_tlds = set(database.get("suspiciousTlds", []))
     values = []
     for url in urls:
-        host = (urlsplit(url).hostname or "").lower()
+        host = (urlsplit(url).hostname or "").lower().removeprefix("www.")
         profile_values = profiles.get(host)
         profile = dict(zip(profile_fields, profile_values, strict=True)) if profile_values else None
         values.append(
@@ -207,20 +201,37 @@ def fit_classifier(model, features: pd.DataFrame, labels: pd.Series, sample_weig
         model.fit(features, labels, sample_weight=sample_weights)
 
 
+def select_f1_threshold(labels: pd.Series, probabilities: np.ndarray) -> float:
+    """Select the phishing-probability threshold maximizing validation F1."""
+    precision, recall, thresholds = precision_recall_curve(labels, probabilities)
+    if not len(thresholds):
+        raise ValueError("Validation data must contain both classes to select a threshold.")
+    f1_scores = 2 * precision[:-1] * recall[:-1] / np.maximum(precision[:-1] + recall[:-1], 1e-12)
+    best_indexes = np.flatnonzero(f1_scores == f1_scores.max())
+    best_index = max(best_indexes, key=lambda index: (precision[index], thresholds[index]))
+    return float(thresholds[best_index])
+
+
 def main() -> None:
     dataset = pd.read_csv(DATASET_PATH, low_memory=False)
     database = json.loads(DATABASE_PATH.read_text(encoding="utf-8"))
-    train_frame = dataset[dataset["split"].isin(["train", "val"])].copy()
+    train_frame = dataset[dataset["split"] == "train"].copy()
+    validation_frame = dataset[dataset["split"] == "val"].copy()
     test_frame = dataset[dataset["split"] == "test"].copy()
-    if train_frame.empty or test_frame.empty:
-        raise ValueError("The cleaned dataset must include train/val and test partitions.")
+    if train_frame.empty or validation_frame.empty or test_frame.empty:
+        raise ValueError("The cleaned dataset must include train, val, and test partitions.")
     phishvn_train_features = build_feature_frame(train_frame, database)
+    X_validation = build_feature_frame(validation_frame, database)
+    y_validation = validation_frame["label"].astype(int)
     X_test = build_feature_frame(test_frame, database)
     y_test = test_frame["label"].astype(int)
 
-    test_domains = {_registrable_domain(url) for url in test_frame["url"]}
+    heldout_domains = {
+        _registrable_domain(url)
+        for url in pd.concat([validation_frame["url"], test_frame["url"]], ignore_index=True)
+    }
     phiusiil_raw = load_phiusiil_archive()
-    phiusiil_frame, phiusiil_audit = prepare_phiusiil_training_rows(phiusiil_raw, test_domains)
+    phiusiil_frame, phiusiil_audit = prepare_phiusiil_training_rows(phiusiil_raw, heldout_domains)
     if phiusiil_frame["label"].nunique() != 2:
         raise ValueError("PhiUSIIL training rows must contain both benign and phishing labels.")
     feature_names = list(phishvn_train_features.columns)
@@ -242,22 +253,55 @@ def main() -> None:
         "logistic_regression": PROJECT_ROOT / "model" / "logistic_regression.joblib",
     }
     evaluations = {}
+    validation_evaluations = {}
     report_sections = [
         "PhishVN v3.1.0 official domain-disjoint test partition",
-        f"Training rows: {len(X_train)} (PhishVN: {len(train_frame)}, PhiUSIIL: {len(phiusiil_frame)}) | Test rows: {len(test_frame)}",
+        f"Training rows: {len(X_train)} (PhishVN: {len(train_frame)}, PhiUSIIL: {len(phiusiil_frame)}) | Validation rows: {len(validation_frame)} | Test rows: {len(test_frame)}",
     ]
     for name, model in model_suite().items():
         fit_classifier(model, X_train, y_train, sample_weights)
-        evaluations[name] = measure_classifier(model, X_test, y_test, len(X_train))
+        decision_threshold = None
+        if name == "svm":
+            classes = list(model.classes_)
+            validation_probabilities = model.predict_proba(X_validation)[:, classes.index(1)]
+            decision_threshold = select_f1_threshold(y_validation, validation_probabilities)
+            validation_evaluations[name] = measure_classifier(
+                model,
+                X_validation,
+                y_validation,
+                decision_threshold=decision_threshold,
+            )
+        evaluations[name] = measure_classifier(
+            model,
+            X_test,
+            y_test,
+            len(X_train),
+            decision_threshold=decision_threshold,
+        )
         model_paths[name].parent.mkdir(parents=True, exist_ok=True)
-        joblib.dump({"model": model, "feature_names": feature_names}, model_paths[name])
+        bundle = {"model": model, "feature_names": feature_names}
+        if decision_threshold is not None:
+            bundle["decision_threshold"] = decision_threshold
+        joblib.dump(bundle, model_paths[name])
+        test_predictions = (
+            model.predict(X_test)
+            if decision_threshold is None
+            else (
+                model.predict_proba(X_test)[:, list(model.classes_).index(1)]
+                >= decision_threshold
+            ).astype(int)
+        )
         report_sections.extend(
             [
                 "",
                 name.replace("_", " ").title(),
+                *(
+                    [f"Validation-selected decision threshold: {decision_threshold:.6f}"]
+                    if decision_threshold is not None else []
+                ),
                 classification_report(
                     y_test,
-                    model.predict(X_test),
+                    test_predictions,
                     labels=[0, 1],
                     target_names=["benign", "phishing"],
                     zero_division=0,
@@ -269,21 +313,23 @@ def main() -> None:
     payload = {
         "dataset": str(DATASET_PATH),
         "dataset_source": ["PhishVN v3.1.0 open archive", "PhiUSIIL Phishing URL Dataset"],
-        "split": "phishvn_official_grouped_temporal_test_untouched_phiusiil_train_filtered_for_test_domain_overlap",
+        "split": "phishvn_official_grouped_temporal_train_val_test; phiusiil_excludes_validation_and_test_domain_overlap",
         "train_rows": int(len(X_train)),
         "phishvn_train_rows": int(len(train_frame)),
         "phiusiil_train_rows": int(len(phiusiil_frame)),
         "phiusiil_audit": phiusiil_audit,
         "training_weighting": "equal total weight per source and equal benign/phishing weight within source",
         "test_rows": int(len(test_frame)),
+        "validation_rows": int(len(validation_frame)),
         "feature_count": len(feature_names),
         "features": feature_names,
-        "pre_extracted_comp_phish_features_used": len(SOURCE_FEATURE_NAMES) - 1,
-        "phishvn_pre_extracted_feature_columns_including_tld_flag": len(PHISHVN_FEATURE_NAMES),
+        "pre_extracted_comp_phish_features_used": 0,
+        "phishvn_source_feature_columns_recomputed": len(PHISHVN_FEATURE_NAMES),
         "test_domains_disjoint_from_training": True,
         "train_labels": {"benign": int((y_train == 0).sum()), "phishing": int((y_train == 1).sum())},
         "test_labels": {"benign": int((y_test == 0).sum()), "phishing": int((y_test == 1).sum())},
         "evaluations": evaluations,
+        "validation_evaluations": validation_evaluations,
         "selected_model": "random_forest",
     }
     REPORT_PATH.write_text(json.dumps(payload, indent=2), encoding="utf-8")
@@ -298,6 +344,10 @@ def main() -> None:
                 "phiusiil_audit": phiusiil_audit,
                 "training_weighting": "equal total weight per source and equal benign/phishing weight within source",
                 "test_rows": int(len(test_frame)),
+                "validation_rows": int(len(validation_frame)),
+                "validation_evaluations": validation_evaluations,
+                "pre_extracted_comp_phish_features_used": 0,
+                "phishvn_source_feature_columns_recomputed": len(PHISHVN_FEATURE_NAMES),
             },
             indent=2,
         ),

@@ -98,6 +98,7 @@ def _export_models(model_paths: dict[str, Path]) -> tuple[list[str], dict[str, o
                 **_scale_payload(calibrated.estimator, "linearsvc"),
                 "calibrationA": float(calibrator.a_),
                 "calibrationB": float(calibrator.b_),
+                "decisionThreshold": float(bundle.get("decision_threshold", 0.5)),
             }
     return features, exported
 

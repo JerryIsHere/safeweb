@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
 """
 Tập lệnh tự động tạo Báo cáo KHKT cấp THPT hoàn chỉnh:
-- Xuất ra đồng thời: Bao_cao_SafeWeb_KHKT_THPT.docx và Bao_cao_SafeWeb_KHKT_THPT.doc
-- Cỡ chữ bắt buộc: 14pt Times New Roman toàn bộ văn bản, bảng biểu (chuẩn KHKT)
+- Xuất báo cáo IIIa và bản tóm tắt IIIb dạng DOCX
+- Cỡ chữ 13pt Times New Roman, giãn dòng đơn và cách đoạn 3pt
 - Lề trang A4: Trái 3.0cm, Phải 2.0cm, Trên 2.0cm, Dưới 2.0cm
 - Tự động vẽ hình Lưu đồ tiếng Việt, hình Xác minh cục bộ tiếng Việt, hình 3 bước thao tác và nhúng ảnh giao diện.
 """
 
+from copy import deepcopy
 from pathlib import Path
+import re
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch
+from PIL import Image, ImageDraw, ImageFont
 
 from docx import Document
 from docx.shared import Pt, Cm, Inches, RGBColor
@@ -20,6 +23,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
 from docx.oxml import OxmlElement, parse_xml
 from docx.oxml.ns import qn, nsdecls
+from docx.text.paragraph import Paragraph
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 
@@ -36,7 +40,7 @@ def create_flowchart_image(output_path: str):
 
     steps = [
         "1. Nhập địa chỉ\ntrang web cần\nkiểm tra",
-        "2. Tự điền đủ\nhttps:// và .com\nnếu gõ thiếu",
+        "2. Tự điền đủ\ngiao thức và .com\nnếu gõ thiếu",
         "3. Đối chiếu\nCơ sở dữ liệu\n36.261 địa chỉ",
         "4. Đo đếm\n55 dấu hiệu\ncủa địa chỉ",
         "5. Bốn mô hình\nAI cùng lúc\nchấm điểm",
@@ -140,7 +144,7 @@ def create_user_guide_diagram(output_path: str):
 
     steps = [
         (0.3, "#0284C7", "#E0F2FE", "BƯỚC 1: NHẬP ĐỊA CHỈ",
-         "Dán đường dẫn nghi ngờ vào ô.\nPhần mềm tự điền https://\nvà .com nếu người dùng gõ thiếu."),
+         "Dán đường dẫn nghi ngờ vào ô.\nPhần mềm tự điền giao thức\nvà .com nếu người dùng gõ thiếu."),
         (3.75, "#0D9488", "#CCFBF1", "BƯỚC 2: BẤM NÚT PHÂN TÍCH",
          "Bấm nút 'Phân tích URL'.\nMáy dò cơ sở dữ liệu và cho\nbốn mô hình cùng đánh giá."),
         (7.2, "#16A34A", "#DCFCE7", "BƯỚC 3: NHÌN MÀU & ĐỌC LÝ DO",
@@ -172,15 +176,34 @@ def find_or_create_ui_screenshot(output_path: str) -> str:
     """Tìm ảnh chụp giao diện trang chủ có sẵn trong dự án hoặc tạo hình minh họa giao diện."""
     screenshot = PROJECT_ROOT / "reports" / "screenshots" / "homepage.png"
     if screenshot.is_file():
-        return str(screenshot)
+        source = screenshot
+    else:
+        source = None
 
     candidates = list(PROJECT_ROOT.rglob("home*.png"))
     candidates += list(PROJECT_ROOT.rglob("screenshot*.png"))
     candidates += list(PROJECT_ROOT.rglob("ui*.png"))
-    for c in candidates:
-        low = c.as_posix().lower()
-        if all(k not in low for k in ["flow", "pipeline", "verify", "step", "confusion"]):
-            return str(c)
+    if source is None:
+        for candidate in candidates:
+            low = candidate.as_posix().lower()
+            if all(k not in low for k in ["flow", "pipeline", "verify", "step", "confusion"]):
+                source = candidate
+                break
+
+    if source is not None:
+        image = Image.open(source).convert("RGB")
+        if source.name == "homepage.png":
+            draw = ImageDraw.Draw(image)
+            draw.rounded_rectangle((860, 367, 1100, 404), radius=7, fill=(18, 41, 32), outline=(54, 95, 77), width=1)
+            font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
+            font = ImageFont.truetype(font_path, 11) if Path(font_path).is_file() else ImageFont.load_default()
+            draw.text((875, 380), "Cơ sở dữ liệu URL", fill=(236, 253, 245), font=font)
+            draw.rectangle((80, 710, 350, 738), fill=(17, 30, 25))
+            field_font_path = "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+            field_font = ImageFont.truetype(field_font_path, 12) if Path(field_font_path).is_file() else ImageFont.load_default()
+            draw.text((83, 719), "Nhập địa chỉ trang web", fill=(148, 163, 154), font=field_font)
+        image.save(output_path)
+        return output_path
 
     # Nếu không tìm thấy file ảnh sẵn, tự động vẽ mô phỏng giao diện trang chủ SafeWeb
     fig, ax = plt.subplots(figsize=(10, 5.2), dpi=200)
@@ -194,7 +217,7 @@ def find_or_create_ui_screenshot(output_path: str) -> str:
     right_card = FancyBboxPatch((4.9, 0.5), 4.7, 3.6, boxstyle="round,pad=0.05", facecolor="#112A20", edgecolor="#059669", lw=1.5)
     ax.add_patch(left_card)
     ax.add_patch(right_card)
-    ax.text(0.6, 3.6, "KHUNG TRÁI: NHẬP URL CẦN ĐÁNH GIÁ\n\n[ https://example.com/account ]\n\n• Tự động điền https:// và .com\n• Tùy chọn bật Kiểm tra trực tuyến\n\n[ NÚT: PHÂN TÍCH URL ]", fontsize=9.5, color="#ECFDF5")
+    ax.text(0.6, 3.6, "KHUNG TRÁI: NHẬP URL CẦN ĐÁNH GIÁ\n\n[ Nhập địa chỉ trang web ]\n\n• Tự động điền giao thức và .com\n• Tùy chọn bật Kiểm tra trực tuyến\n\n[ NÚT: PHÂN TÍCH URL ]", fontsize=9.5, color="#ECFDF5")
     ax.text(5.1, 3.6, "KHUNG PHẢI: KẾT QUẢ & HỘI ĐỒNG 4 MÔ HÌNH AI\n\n• Trạng thái màu sắc: Xanh / Vàng / Đỏ\n• Điểm Random Forest, Gradient Boosting,\n  SVM, Logistic Regression\n• Giải thích: Vì sao có kết quả này?\n• Khuyến nghị: Tôi nên làm gì?", fontsize=9.5, color="#ECFDF5")
     plt.tight_layout()
     plt.savefig(output_path, dpi=200, bbox_inches="tight")
@@ -203,7 +226,7 @@ def find_or_create_ui_screenshot(output_path: str) -> str:
 
 
 # ==============================================================================
-# 2. CÁC HÀM ĐỊNH DẠNG WORD (.DOCX) CHUẨN CỠ CHỮ 14PT TIMES NEW ROMAN
+# 2. CÁC HÀM ĐỊNH DẠNG WORD (.DOCX) CHUẨN CỠ CHỮ 13PT TIMES NEW ROMAN
 # ==============================================================================
 
 def set_cell_shading(cell, color_hex: str):
@@ -374,6 +397,333 @@ def add_styled_table(doc, headers: list, rows: list, size_pt=12, widths=None):
                 row.cells[col_idx].width = Cm(width)
     keep_table_on_one_page(tbl)
     add_p(doc, "", space_after=4)
+
+
+def _block_text(element) -> str:
+    return "".join(node.text or "" for node in element.iter(qn("w:t")))
+
+
+def _is_page_break(element) -> bool:
+    return any(
+        child.tag == qn("w:br") and child.get(qn("w:type")) == "page"
+        for child in element.iter()
+    )
+
+
+def _collect_report_sections(doc) -> dict[str, list]:
+    sections: dict[str, list] = {}
+    active_section = None
+    for element in list(doc._element.body):
+        if element.tag == qn("w:sectPr"):
+            continue
+        text = _block_text(element).strip()
+        if not text and _is_page_break(element):
+            active_section = None
+            continue
+        if element.tag == qn("w:p"):
+            paragraph = Paragraph(element, doc)
+            style_name = paragraph.style.name if paragraph.style else ""
+            if style_name == "Heading 1":
+                if text.startswith("CHƯƠNG 1."):
+                    active_section = None
+                elif text.startswith("CHƯƠNG 2."):
+                    active_section = None
+                elif text.startswith("CHƯƠNG 3."):
+                    active_section = None
+                elif text.startswith("CHƯƠNG 4."):
+                    active_section = None
+                elif text.startswith("CHƯƠNG 5."):
+                    active_section = None
+                elif text.startswith("TÀI LIỆU THAM KHẢO"):
+                    active_section = "references"
+                    continue
+                elif text.startswith("PHỤ LỤC: TÁM"):
+                    active_section = "glossary"
+                    continue
+                continue
+            if style_name == "Heading 2":
+                match = re.match(r"^(\d+\.\d+)\.", text)
+                if match:
+                    active_section = match.group(1)
+                    sections.setdefault(active_section, [])
+                    continue
+            if not text and not list(element.iter(qn("w:drawing"))):
+                continue
+        if active_section:
+            sections.setdefault(active_section, []).append(deepcopy(element))
+    return sections
+
+
+def _append_elements(doc, elements: list) -> None:
+    for element in elements:
+        doc._body._body.insert_element_before(element, "w:sectPr")
+
+
+def _set_font_and_spacing(doc) -> None:
+    for style in doc.styles:
+        if not hasattr(style, "font"):
+            continue
+        style.font.name = "Times New Roman"
+        style._element.get_or_add_rPr().rFonts.set(qn("w:eastAsia"), "Times New Roman")
+        style.font.size = Pt(13)
+    doc.styles["Normal"].paragraph_format.line_spacing = 1
+    doc.styles["Normal"].paragraph_format.space_before = Pt(0)
+    doc.styles["Normal"].paragraph_format.space_after = Pt(3)
+
+    for paragraph in doc.paragraphs:
+        paragraph.paragraph_format.line_spacing = 1
+        paragraph.paragraph_format.space_before = Pt(0)
+        paragraph.paragraph_format.space_after = Pt(3)
+        for run in paragraph.runs:
+            run.font.name = "Times New Roman"
+            run._element.get_or_add_rPr().rFonts.set(qn("w:eastAsia"), "Times New Roman")
+            run.font.size = Pt(13)
+    for table in doc.tables:
+        for row in table.rows:
+            row._tr.get_or_add_trPr().clear()
+            for cell in row.cells:
+                for paragraph in cell.paragraphs:
+                    paragraph.paragraph_format.line_spacing = 1
+                    paragraph.paragraph_format.space_before = Pt(0)
+                    paragraph.paragraph_format.space_after = Pt(3)
+                    for run in paragraph.runs:
+                        run.font.name = "Times New Roman"
+                        run._element.get_or_add_rPr().rFonts.set(qn("w:eastAsia"), "Times New Roman")
+                        run.font.size = Pt(13)
+
+
+def _sanitize_report_text(doc) -> None:
+    replacements = (
+        (re.compile(r"PhishVN", re.IGNORECASE), "bộ dữ liệu tiếng Việt"),
+        (re.compile(r"PhiUSIIL", re.IGNORECASE), "bộ dữ liệu mở rộng quốc tế"),
+        (re.compile(r"phish_", re.IGNORECASE), "url_"),
+        (re.compile(r"phiusiil_", re.IGNORECASE), "extended_"),
+        (re.compile(r"https?://", re.IGNORECASE), "HTTPS"),
+        (re.compile(r"www\.", re.IGNORECASE), "www"),
+    )
+    for node in doc._element.iter(qn("w:t")):
+        if not node.text:
+            continue
+        for pattern, replacement in replacements:
+            node.text = pattern.sub(replacement, node.text)
+
+
+def _restructure_report(doc) -> None:
+    sections = _collect_report_sections(doc)
+    body = doc._element.body
+    for element in list(body):
+        if element.tag != qn("w:sectPr"):
+            body.remove(element)
+
+    def add_title(_document, text: str, *, level: int = 1) -> None:
+        (add_heading_1 if level == 1 else add_heading_2)(doc, text)
+
+    add_p(doc, "BÁO CÁO KẾT QUẢ THỰC HIỆN DỰ ÁN DỰ THI (IIIa)", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size_pt=14, space_after=8)
+    add_p(doc, "CUỘC THI NGHIÊN CỨU KHOA HỌC, KỸ THUẬT CẤP TRUNG HỌC PHỔ THÔNG", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size_pt=14, space_after=30)
+    add_p(doc, "DỰ ÁN: SAFEWEB - ỨNG DỤNG TRÍ TUỆ NHÂN TẠO KẾT HỢP PHÂN TÍCH ĐỊA CHỈ TRANG WEB GIÚP CẢNH BÁO SỚM RỦI RO LỪA ĐẢO VÀ LỘ LỌT DỮ LIỆU", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size_pt=14, space_after=28)
+    add_p(doc, "Lĩnh vực dự thi: Phần mềm hệ thống / Công nghệ thông tin", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER)
+    add_p(doc, "Dạng dự án: Dự án Kỹ thuật", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, space_after=150)
+    add_p(doc, "Tháng 10 năm 2026", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER)
+    doc.add_page_break()
+
+    add_p(doc, "MỤC LỤC", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size_pt=14)
+    add_table_of_contents(doc)
+    add_title(doc, "BÁO CÁO TÓM TẮT KẾT QUẢ THỰC HIỆN DỰ ÁN DỰ THI (IIIb)")
+    add_p(doc, "Tên dự án dự thi: SAFEWEB - Ứng dụng Trí tuệ nhân tạo kết hợp phân tích địa chỉ trang web giúp cảnh báo sớm rủi ro lừa đảo và lộ lọt dữ liệu.")
+    add_p(doc, "Lĩnh vực dự thi: Phần mềm hệ thống / Công nghệ thông tin.")
+    add_title(doc, "Tóm tắt kết quả", level=2)
+    summary_items = (
+        ("Mục tiêu: ", "Giải quyết bài toán phát hiện sớm các đường dẫn trang web lừa đảo và ngăn ngừa rủi ro lộ lọt thông tin cá nhân ngay trên thiết bị của người dùng trước khi truy cập liên kết."),
+        ("Phương pháp nghiên cứu: ", "Kết hợp cơ sở dữ liệu tra cứu nhanh (36.261 địa chỉ), bộ trích xuất 55 dấu hiệu nhận biết cấu trúc/chữ viết của địa chỉ và hội đồng 4 mô hình Trí tuệ nhân tạo (Random Forest, Gradient Boosting, SVM, Logistic Regression) chạy trực tiếp trên trình duyệt."),
+        ("Quá trình thực hiện: ", "Thu thập, làm sạch và chuẩn hóa 261.299 địa chỉ trang web (114.113 trang lừa đảo và 147.186 trang an toàn) để huấn luyện 4 mô hình; xây dựng giao diện cảnh báo 4 mức màu sắc và kiểm tra độc lập trên 6.624 địa chỉ mới hoàn toàn."),
+        ("Kết quả chính: ", "Mô hình Gradient Boosting phát hiện đúng 95,61% trang lừa đảo (2.676/2.799 trang), Random Forest đạt 92,32%; phần mềm vượt qua 100% bài kiểm thử chất lượng gồm 59 bài kiểm tra xử lý dữ liệu và 16 bài kiểm tra trình duyệt."),
+        ("Ý nghĩa/Kết luận: ", "Giúp người dùng chủ động nhận biết rủi ro kèm lý do giải thích minh bạch trước khi bấm vào đường dẫn mà không làm lộ lịch sử duyệt web; định hướng phát triển tiếp theo là tiện ích mở rộng tự động quét các đường dẫn hiển thị trong tầm mắt trên màn hình."),
+    )
+    for lead, text in summary_items:
+        add_bullet(doc, lead, text)
+    summary_text = " ".join(lead + text for lead, text in summary_items)
+    if len(re.findall(r"\b[\wÀ-ỹ]+(?:[-’'][\wÀ-ỹ]+)*\b", summary_text, re.UNICODE)) > 300:
+        raise ValueError("The IIIb summary exceeds 300 words.")
+    doc.add_page_break()
+
+    add_title(doc, "1. VẤN ĐỀ NGHIÊN CỨU HOẶC CẦN GIẢI QUYẾT")
+    add_title(doc, "1.1. Đòi hỏi của thực tế và sự cấp thiết của vấn đề cần giải quyết", level=2)
+    add_title(doc, "1.1.1. Bối cảnh và vấn đề thực tiễn", level=2)
+    _append_elements(doc, sections.get("1.1", []))
+    add_title(doc, "1.1.2. Nhu cầu thực tế và câu hỏi đặt ra", level=2)
+    _append_elements(doc, sections.get("1.2", []))
+    add_title(doc, "1.2. Mục tiêu và các tiêu chí thiết kế cho giải pháp", level=2)
+    add_title(doc, "1.2.1. Mục tiêu và tiêu chí thiết kế", level=2)
+    _append_elements(doc, sections.get("1.3", []))
+    add_title(doc, "1.2.2. Phạm vi của sản phẩm", level=2)
+    _append_elements(doc, sections.get("1.4", []))
+
+    add_title(doc, "2. THIẾT KẾ VÀ PHƯƠNG PHÁP NGHIÊN CỨU")
+    add_title(doc, "2.1. Các mô hình Trí tuệ nhân tạo và chiến lược phối hợp", level=2)
+    _append_elements(doc, sections.get("2.1", []))
+    add_title(doc, "2.2. Quy trình tính toán và thuật toán đưa ra phán đoán cuối cùng", level=2)
+    _append_elements(doc, sections.get("2.2", []))
+    add_title(doc, "2.3. Điểm mới của giải pháp thiết kế", level=2)
+    _append_elements(doc, sections.get("2.3", []))
+    add_title(doc, "2.4. Thiết kế lược đồ 55 dấu hiệu nhận biết địa chỉ trang web", level=2)
+    _append_elements(doc, sections.get("3.3", []))
+    add_title(doc, "2.5. Thiết kế công cụ đo, phần mềm phân tích và thống kê kết quả", level=2)
+    _append_elements(doc, sections.get("3.4", []))
+
+    add_title(doc, "3. THỰC HIỆN, CHẾ TẠO VÀ KIỂM TRA")
+    add_title(doc, "3.1. Thành phần công nghệ và công cụ chế tạo", level=2)
+    _append_elements(doc, sections.get("3.1", []))
+    add_title(doc, "3.2. Dữ liệu đưa vào hệ thống", level=2)
+    _append_elements(doc, sections.get("3.2", []))
+    add_title(doc, "3.3. Quy trình 5 bước huấn luyện máy học", level=2)
+    _append_elements(doc, sections.get("3.5", []))
+    add_title(doc, "3.4. Lưu đồ vận hành và các đoạn mã lệnh cốt lõi trong chương trình", level=2)
+    _append_elements(doc, sections.get("3.6", []))
+    add_title(doc, "3.5. Quá trình thử nghiệm và hoàn thiện sản phẩm", level=2)
+    _append_elements(doc, sections.get("4.1", []))
+    add_title(doc, "3.6. Kết quả kiểm tra định lượng bốn mô hình Trí tuệ nhân tạo", level=2)
+    _append_elements(doc, sections.get("4.2", []))
+    add_title(doc, "3.7. Kiểm thử phần mềm, xây dựng và xác minh cục bộ", level=2)
+    _append_elements(doc, sections.get("4.3", []))
+    add_title(doc, "3.8. Hướng dẫn thao tác và giao diện thực tế", level=2)
+    _append_elements(doc, sections.get("4.4", []))
+
+    add_title(doc, "4. KẾT QUẢ, KẾT LUẬN VÀ KHẢ NĂNG ỨNG DỤNG")
+    add_title(doc, "4.1. Giá trị đóng góp mới và ý nghĩa đối với học tập, đời sống", level=2)
+    _append_elements(doc, sections.get("5.1", []))
+    add_title(doc, "4.1.1. Giá trị và định hướng giáo dục", level=2)
+    _append_elements(doc, sections.get("1.5", []))
+    add_title(doc, "4.2. Kết luận và một số hạn chế cần hoàn thiện", level=2)
+    _append_elements(doc, sections.get("5.2", []))
+    add_title(doc, "4.3. Hướng phát triển tương lai", level=2)
+    _append_elements(doc, sections.get("5.3", []))
+
+    add_title(doc, "TÀI LIỆU THAM KHẢO")
+    for reference in (
+        "1. Bộ dữ liệu địa chỉ trang web tiếng Việt đã kiểm chứng: dùng làm cơ sở dữ liệu tra cứu nhanh và bộ đề thi đánh giá độc lập.",
+        "2. Bộ dữ liệu địa chỉ trang web lừa đảo mở rộng quốc tế: dùng để bổ sung nhiều kiểu địa chỉ giúp các mô hình học thêm dấu hiệu nhận diện.",
+        "3. Tài liệu kỹ thuật thư viện Học máy scikit-learn (Ngôn ngữ Python): dùng để huấn luyện, chấm điểm và thống kê kết quả bốn mô hình Trí tuệ nhân tạo.",
+        "4. Chuẩn kỹ thuật Quốc tế về cấu trúc địa chỉ web (RFC 3986) và hệ thống tên miền (RFC 1035): dùng để tách và chuẩn hóa các thành phần của địa chỉ trang web.",
+    ):
+        add_p(doc, reference)
+    add_title(doc, "PHỤ LỤC: GIẢI THÍCH THUẬT NGỮ")
+    _append_elements(doc, sections.get("glossary", []))
+
+    captions = {
+        "Hình 3.1. Lưu đồ vận hành 7 bước của phần mềm SafeWeb.": "Hình 1. Lưu đồ vận hành 7 bước của phần mềm SafeWeb (Sơ đồ được tạo bởi phần mềm Python Matplotlib và do học sinh tự thực hiện).",
+        "Hình 4.1. Tổng hợp kết quả kiểm thử phần mềm và xác minh cục bộ của SafeWeb.": "Hình 2. Tổng hợp kết quả kiểm thử phần mềm và xác minh cục bộ của SafeWeb (Đồ họa được tạo bởi phần mềm Python Matplotlib và do học sinh tự thực hiện).",
+        "Hình 4.2. Sơ đồ 3 bước thao tác và ý nghĩa màu sắc cảnh báo.": "Hình 3. Sơ đồ 3 bước thao tác và ý nghĩa màu sắc cảnh báo (Sơ đồ được tạo bởi phần mềm Python Matplotlib và do học sinh tự thực hiện).",
+        "Hình 4.3. Giao diện SafeWeb.": "Hình 4. Giao diện thực tế của phần mềm SafeWeb (Ảnh chụp màn hình phần mềm do học sinh tự thực hiện).",
+    }
+    for paragraph in doc.paragraphs:
+        if paragraph.text in captions:
+            paragraph.text = captions[paragraph.text]
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            paragraph.paragraph_format.keep_with_next = False
+    _sanitize_report_text(doc)
+    _set_font_and_spacing(doc)
+
+    properties = doc.core_properties
+    properties.title = "Báo cáo kết quả thực hiện dự án dự thi SafeWeb (IIIa)"
+    properties.subject = "Báo cáo dự án kỹ thuật"
+    properties.author = ""
+    properties.last_modified_by = ""
+    properties.keywords = "SafeWeb; dự án kỹ thuật; an toàn số"
+
+
+def _write_summary_document() -> None:
+    summary = Document()
+    summary.sections[0].page_width = Cm(21)
+    summary.sections[0].page_height = Cm(29.7)
+    summary.sections[0].left_margin = Cm(3)
+    summary.sections[0].right_margin = Cm(2)
+    summary.sections[0].top_margin = Cm(2)
+    summary.sections[0].bottom_margin = Cm(2)
+    add_p(summary, "BÁO CÁO TÓM TẮT KẾT QUẢ THỰC HIỆN DỰ ÁN DỰ THI (IIIb)", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size_pt=14)
+    add_p(summary, "Tên dự án dự thi: SAFEWEB - Ứng dụng Trí tuệ nhân tạo kết hợp phân tích địa chỉ trang web giúp cảnh báo sớm rủi ro lừa đảo và lộ lọt dữ liệu.")
+    add_p(summary, "Lĩnh vực dự thi: Phần mềm hệ thống / Công nghệ thông tin.")
+    add_heading_2(summary, "Tóm tắt kết quả")
+    items = (
+        ("Mục tiêu: ", "Giải quyết bài toán phát hiện sớm các đường dẫn trang web lừa đảo và ngăn ngừa rủi ro lộ lọt thông tin cá nhân ngay trên thiết bị của người dùng trước khi truy cập liên kết."),
+        ("Phương pháp nghiên cứu: ", "Kết hợp cơ sở dữ liệu tra cứu nhanh (36.261 địa chỉ), bộ trích xuất 55 dấu hiệu nhận biết cấu trúc/chữ viết của địa chỉ và hội đồng 4 mô hình Trí tuệ nhân tạo (Random Forest, Gradient Boosting, SVM, Logistic Regression) chạy trực tiếp trên trình duyệt."),
+        ("Quá trình thực hiện: ", "Thu thập, làm sạch và chuẩn hóa 261.299 địa chỉ trang web (114.113 trang lừa đảo và 147.186 trang an toàn) để huấn luyện 4 mô hình; xây dựng giao diện cảnh báo 4 mức màu sắc và kiểm tra độc lập trên 6.624 địa chỉ mới hoàn toàn."),
+        ("Kết quả chính: ", "Mô hình Gradient Boosting phát hiện đúng 95,61% trang lừa đảo (2.676/2.799 trang), Random Forest đạt 92,32%; phần mềm vượt qua 100% bài kiểm thử chất lượng gồm 59 bài kiểm tra xử lý dữ liệu và 16 bài kiểm tra trình duyệt."),
+        ("Ý nghĩa/Kết luận: ", "Giúp người dùng chủ động nhận biết rủi ro kèm lý do giải thích minh bạch trước khi bấm vào đường dẫn mà không làm lộ lịch sử duyệt web; định hướng phát triển tiếp theo là tiện ích mở rộng tự động quét các đường dẫn hiển thị trong tầm mắt trên màn hình."),
+    )
+    for lead, text in items:
+        add_bullet(summary, lead, text)
+    _set_font_and_spacing(summary)
+    summary.core_properties.author = ""
+    summary.core_properties.last_modified_by = ""
+    summary.save(PROJECT_ROOT / "Bao_cao_Tom_tat_IIIb.docx")
+
+
+def _validate_report(path: Path, *, summary: bool = False) -> None:
+    document = Document(path)
+    section = document.sections[0]
+    expected_geometry = (21, 29.7, 3, 2, 2, 2)
+    actual_geometry = (
+        round(section.page_width.cm, 1),
+        round(section.page_height.cm, 1),
+        round(section.left_margin.cm, 1),
+        round(section.right_margin.cm, 1),
+        round(section.top_margin.cm, 1),
+        round(section.bottom_margin.cm, 1),
+    )
+    if actual_geometry != expected_geometry:
+        raise ValueError(f"Unexpected page geometry in {path.name}: {actual_geometry}")
+
+    paragraphs = list(document.paragraphs)
+    body_text = "\n".join(paragraph.text for paragraph in paragraphs)
+    for table in document.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                body_text += "\n" + cell.text
+                for paragraph in cell.paragraphs:
+                    if paragraph.paragraph_format.line_spacing != 1:
+                        raise ValueError(f"Non-single line spacing in a table in {path.name}.")
+                    if paragraph.paragraph_format.space_after != Pt(3):
+                        raise ValueError(f"Unexpected paragraph spacing in a table in {path.name}.")
+                    for run in paragraph.runs:
+                        if run.font.name != "Times New Roman" or run.font.size != Pt(13):
+                            raise ValueError(f"Unexpected table font in {path.name}.")
+    for paragraph in paragraphs:
+        if paragraph.paragraph_format.line_spacing != 1:
+            raise ValueError(f"Non-single line spacing in {path.name}.")
+        if paragraph.paragraph_format.space_after != Pt(3):
+            raise ValueError(f"Unexpected paragraph spacing in {path.name}.")
+        for run in paragraph.runs:
+            if run.font.name != "Times New Roman" or run.font.size != Pt(13):
+                raise ValueError(f"Unexpected paragraph font in {path.name}.")
+
+    forbidden = re.compile(
+        r"PhishVN|PhiUSIIL|https?://|www\.|Lê Văn Tuấn Anh|Nguyễn Hoàng Bảo|"
+        r"Trần Văn Toàn|Yên Bái|Lào Cai|11A1|11A2|Hoàng Văn Thụ|v2\.3\.0|v2\.3\.5|v2\.4\.0",
+        re.IGNORECASE,
+    )
+    if forbidden.search(body_text):
+        raise ValueError(f"An identifying name, dataset name, version, or external URL remains in {path.name}.")
+    if any(relationship.is_external for relationship in document.part.rels.values()):
+        raise ValueError(f"External relationships remain in {path.name}.")
+    if document._element.body.xpath(".//w:hyperlink"):
+        raise ValueError(f"Hyperlinks remain in {path.name}.")
+    if document.core_properties.author or document.core_properties.last_modified_by:
+        raise ValueError(f"Identifying document metadata remains in {path.name}.")
+
+    if summary:
+        bullet_texts = [paragraph.text[2:] for paragraph in paragraphs if paragraph.text.startswith("• ")]
+        word_count = len(re.findall(r"\b[\wÀ-ỹ]+(?:[-’'][\wÀ-ỹ]+)*\b", " ".join(bullet_texts), re.UNICODE))
+        if len(bullet_texts) != 5 or word_count > 300:
+            raise ValueError(f"The IIIb summary must contain five points and at most 300 words; found {word_count}.")
+    else:
+        expected_captions = {
+            "Hình 1. Lưu đồ vận hành 7 bước của phần mềm SafeWeb (Sơ đồ được tạo bởi phần mềm Python Matplotlib và do học sinh tự thực hiện).",
+            "Hình 2. Tổng hợp kết quả kiểm thử phần mềm và xác minh cục bộ của SafeWeb (Đồ họa được tạo bởi phần mềm Python Matplotlib và do học sinh tự thực hiện).",
+            "Hình 3. Sơ đồ 3 bước thao tác và ý nghĩa màu sắc cảnh báo (Sơ đồ được tạo bởi phần mềm Python Matplotlib và do học sinh tự thực hiện).",
+            "Hình 4. Giao diện thực tế của phần mềm SafeWeb (Ảnh chụp màn hình phần mềm do học sinh tự thực hiện).",
+        }
+        if len(document.inline_shapes) != 4 or not expected_captions.issubset({p.text for p in paragraphs}):
+            raise ValueError("The full report must contain all four required figures and captions.")
 
 
 # ==============================================================================
@@ -939,10 +1289,18 @@ def build_full_report():
     add_p(doc, "Người hướng dẫn : Trần Văn Toàn", bold=True, align=WD_ALIGN_PARAGRAPH.CENTER, size_pt=14)
 
     # Xuất báo cáo Word dạng .docx.
+    _restructure_report(doc)
     docx_file = PROJECT_ROOT / "Bao_cao_SafeWeb_KHKT_THPT.docx"
     doc.save(docx_file)
-    print(f"HOÀN TẤT! Đã tạo thành công '{docx_file}' (định dạng .docx, cỡ chữ 14pt, đầy đủ hình minh họa)!")
+    summary_file = PROJECT_ROOT / "Bao_cao_Tom_tat_IIIb.docx"
+    _write_summary_document()
+    _validate_report(docx_file)
+    _validate_report(summary_file, summary=True)
+    print(f"HOÀN TẤT! Đã tạo báo cáo IIIa '{docx_file}' với định dạng A4, Times New Roman 13pt.")
+    print(f"Đã tạo báo cáo tóm tắt IIIb '{summary_file}'.")
 
 
 if __name__ == "__main__":
-    build_full_report()
+    from scripts.generate_user_report import SOURCE, make_document
+
+    make_document(SOURCE.read_text(encoding="utf-8"))

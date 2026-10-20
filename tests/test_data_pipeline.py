@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from scripts.prepare_phishvn_dataset import DEFAULT_SOURCE, PROJECT_ROOT, prepare_dataset
-from scripts.train_phishvn_model import prepare_phiusiil_training_rows
+from scripts.train_phishvn_model import prepare_phiusiil_training_rows, select_f1_threshold
 from src.data_loader import load_dataset
 from src.url_validation import validate_url
 
@@ -36,7 +36,18 @@ def test_phiusiil_cleaning_flips_labels_and_excludes_held_out_domains() -> None:
     ]
     assert summary["conflicting_url_rows_removed"] == 2
     assert summary["duplicate_url_rows_removed"] == 1
-    assert summary["test_domain_rows_removed"] == 1
+    assert summary["excluded_domain_rows_removed"] == 1
+
+
+def test_svm_threshold_is_selected_by_validation_f1() -> None:
+    import numpy as np
+
+    threshold = select_f1_threshold(
+        pd.Series([0, 0, 1, 1]),
+        np.array([0.1, 0.4, 0.35, 0.8]),
+    )
+
+    assert threshold == pytest.approx(0.35)
 
 
 def test_load_dataset_validates_and_removes_exact_duplicates(tmp_path) -> None:

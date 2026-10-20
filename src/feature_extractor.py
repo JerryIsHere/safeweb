@@ -68,7 +68,7 @@ def _split_url(url: str) -> SplitResult:
 
 def _hostname(parts: SplitResult) -> str:
     try:
-        return (parts.hostname or "").lower().rstrip(".")
+        return (parts.hostname or "").lower().rstrip(".").removeprefix("www.")
     except ValueError:
         return ""
 
@@ -84,6 +84,7 @@ def _is_ip(hostname: str) -> bool:
 
 
 def _subdomain_count(hostname: str) -> int:
+    hostname = hostname.lower().removeprefix("www.")
     if not hostname or _is_ip(hostname):
         return 0
     extracted = _DOMAIN_PARSER(hostname)
@@ -91,6 +92,7 @@ def _subdomain_count(hostname: str) -> int:
 
 
 def _hostname_depth(hostname: str) -> int:
+    hostname = hostname.lower().removeprefix("www.")
     if not hostname or _is_ip(hostname):
         return 0
     return len([label for label in hostname.split(".") if label])
@@ -226,13 +228,12 @@ def _phishvn_features(
     digits = sum(character.isdigit() for character in scheme_stripped)
     length = len(scheme_stripped)
     profile = domain_profile or {}
-    tld_labels = suspicious_tlds or set()
     return {
         "phishvn_url_len": length,
         "phishvn_dom_len": profile.get("phishvn_dom_len", len(registrable)),
         "phishvn_is_ip": int(_is_ip(hostname)),
         "phishvn_tld_len": profile.get("phishvn_tld_len", len(tld)),
-        "phishvn_subdom_cnt": profile.get("phishvn_subdom_cnt", _subdomain_count(hostname)),
+        "phishvn_subdom_cnt": _subdomain_count(hostname),
         "phishvn_letter_cnt": letters,
         "phishvn_digit_cnt": digits,
         "phishvn_special_cnt": length - letters - digits,
@@ -249,10 +250,7 @@ def _phishvn_features(
         "phishvn_entropy": _entropy(scheme_stripped),
         "phishvn_path_len": len(parts.path.strip("/")),
         "phishvn_query_len": len(parts.query),
-        "phishvn_suspicious_tld": profile.get(
-            "phishvn_suspicious_tld",
-            int(bool(tld) and tld.lower() in tld_labels),
-        ),
+        "phishvn_suspicious_tld": 0,
     }
 
 
@@ -269,30 +267,37 @@ def extract_features(
     if not url.strip():
         raise ValueError("url must not be empty")
 
-    parts = _split_url(url)
+    feature_url = re.sub(
+        r"^([a-z][a-z0-9+.-]*://)([^/?#]*@)?www\.",
+        r"\1\2",
+        url,
+        count=1,
+        flags=re.IGNORECASE,
+    )
+    parts = _split_url(feature_url)
     hostname = _hostname(parts)
-    lowered = url.lower()
-    features = _base_features(url, parts, hostname)
+    lowered = feature_url.lower()
+    features = _base_features(feature_url, parts, hostname)
     features.update({f"keyword_{keyword}": int(keyword in lowered) for keyword in _KEYWORDS})
-    features.update(_phishvn_features(url, parts, hostname, domain_profile, suspicious_tlds))
-    features.update(_phiusiil_obfuscation_features(url))
+    features.update(_phishvn_features(feature_url, parts, hostname, domain_profile, suspicious_tlds))
+    features.update(_phiusiil_obfuscation_features(feature_url))
 
     if not include_experimental:
         return features
 
     experimental = {
-        "digit_to_letter_ratio": _digit_to_letter_ratio(url),
-        "digit_ratio": _digit_ratio(url),
-        "special_char_ratio": _special_char_ratio(url),
-        "query_parameter_count": _query_parameter_count(url),
+        "digit_to_letter_ratio": _digit_to_letter_ratio(feature_url),
+        "digit_ratio": _digit_ratio(feature_url),
+        "special_char_ratio": _special_char_ratio(feature_url),
+        "query_parameter_count": _query_parameter_count(feature_url),
         "hostname_depth": _hostname_depth(hostname),
         "has_punycode_or_idn": _has_punycode_or_idn(hostname),
-        "percent_encoding_count": _percent_encoding_count(url),
-        "has_repeated_characters": _repeated_characters(url),
-        "has_username_password": _username_password_count(url),
-        "has_unusual_port": _port_count(url),
+        "percent_encoding_count": _percent_encoding_count(feature_url),
+        "has_repeated_characters": _repeated_characters(feature_url),
+        "has_username_password": _username_password_count(feature_url),
+        "has_unusual_port": _port_count(feature_url),
         "hostname_token_count": _hostname_token_count(hostname),
-        "repeated_query_keys": _repeated_query_keys(url),
+        "repeated_query_keys": _repeated_query_keys(feature_url),
     }
     features.update(experimental)
     return features

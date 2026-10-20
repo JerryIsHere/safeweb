@@ -7,8 +7,8 @@ def test_extracts_features_for_https_url() -> None:
     features = extract_features("https://www.example.com/login?next=home")
 
     assert features["has_https"] == 1
-    assert features["domain_length"] == len("www.example.com")
-    assert features["num_subdomains"] == 1
+    assert features["domain_length"] == len("example.com")
+    assert features["num_subdomains"] == 0
     assert features["has_query"] == 1
     assert features["keyword_login"] == 1
     assert features["url_entropy"] > 0
@@ -57,6 +57,24 @@ def test_feature_names_and_values_are_deterministic() -> None:
 
 def test_counts_multiple_hostname_subdomains() -> None:
     assert extract_features("https://one.two.example.co.uk/")["num_subdomains"] == 2
+
+
+def test_www_prefix_is_removed_before_all_feature_extraction() -> None:
+    apex = extract_features("https://divineskins.gg")
+    www = extract_features("https://www.divineskins.gg")
+
+    assert www == apex
+    assert www["phishvn_suspicious_tld"] == apex["phishvn_suspicious_tld"] == 0
+
+
+def test_suspicious_tld_feature_is_neutral_even_with_database_profile() -> None:
+    features = extract_features(
+        "https://example.xyz",
+        domain_profile={"phishvn_suspicious_tld": 1},
+        suspicious_tlds={"xyz"},
+    )
+
+    assert features["phishvn_suspicious_tld"] == 0
 
 
 def test_keyword_detection_is_case_insensitive() -> None:

@@ -13,6 +13,7 @@ import pandas as pd
 from src.config import RiskThresholds, risk_level
 from src.explain import explain_features
 from src.feature_extractor import extract_features
+from src.url_intelligence import detect_brand_impersonation
 from src.url_validation import normalize_url, validate_url
 
 
@@ -45,10 +46,10 @@ def _database_match(url: str, features: dict[str, int | float], database: dict[s
     if not database:
         return {"matched": False, "type": None, "provenance": None}
     key = _database_url_key(url)
-    host = (urlsplit(url).hostname or "").lower()
+    host = (urlsplit(url).hostname or "").lower().removeprefix("www.")
     if key in set(database.get("knownPhishingUrlKeys", [])):
         match_type = "exact_url"
-    elif host in set(database.get("knownPhishingHosts", [])):
+    elif host in {value.removeprefix("www.") for value in database.get("knownPhishingHosts", [])}:
         match_type = "known_phishing_host"
     else:
         signature_names = database.get("signatureFeatureNames", [])
@@ -110,13 +111,17 @@ def predict_url(
     """Return a model assessment or explicit no-model state without network access."""
     normalized_url = validate_url(url)
     database = load_phishvn_database()
-    host = (urlsplit(normalized_url).hostname or "").lower()
+    host = (urlsplit(normalized_url).hostname or "").lower().removeprefix("www.")
     features = extract_features(
         normalized_url,
         domain_profile=_profile_for_host(host, database),
         suspicious_tlds=set(database.get("suspiciousTlds", [])),
     )
     database_match = _database_match(normalized_url, features, database)
+    impersonated_brand = detect_brand_impersonation(normalized_url)
+    explanations = explain_features(features)
+    if impersonated_brand:
+        explanations.insert(0, f"Potential brand lookalike detected: {impersonated_brand}.")
     selected_model_path = Path(model_path) if model_path is not None else configured_model_path()
     if bundle is None:
         if not selected_model_path.is_file():
@@ -126,8 +131,9 @@ def predict_url(
                 "probability": None,
                 "risk_level": None,
                 "features": features,
-                "explanations": explain_features(features),
                 "database_match": database_match,
+                "brand_impersonation": impersonated_brand,
+                "explanations": explanations,
             }
         bundle = load_model(selected_model_path)
 
@@ -138,11 +144,18 @@ def predict_url(
     model = bundle["model"]
     classes = list(model.classes_)
     probability = float(model.predict_proba(row)[0][classes.index(1)])
-    predicted_label = int(model.predict(row)[0])
+    decision_threshold = bundle.get("decision_threshold")
+    predicted_label = (
+        int(probability >= float(decision_threshold))
+        if decision_threshold is not None
+        else int(model.predict(row)[0])
+    )
     if database_match["matched"]:
         probability = max(probability, 0.99)
         predicted_label = 1
-    level = risk_level(probability, thresholds)
+    if impersonated_brand:
+        predicted_label = 1
+    level = "VERY HIGH" if impersonated_brand else risk_level(probability, thresholds)
     return {
         "status": "ok",
         "prediction": "phishing" if predicted_label == 1 else "legitimate",
@@ -150,10 +163,11 @@ def predict_url(
         "risk_level": level,
         "features": features,
         "database_match": database_match,
+        "brand_impersonation": impersonated_brand,
         "verification_stages": {
             "database": "matched" if database_match["matched"] else "checked_no_match",
             "machine_learning": "evaluated",
         },
-        "explanations": explain_features(features),
+        "explanations": explanations,
         "disclaimer": "This is a dataset-backed risk assessment, not proof that a destination is safe or malicious.",
     }

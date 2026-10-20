@@ -33,11 +33,16 @@ def measure_classifier(
     features: pd.DataFrame,
     labels: pd.Series,
     training_rows: int | None = None,
+    decision_threshold: float | None = None,
 ) -> dict[str, object]:
     """Return comparable phishing-class metrics for a fixed held-out set."""
-    predictions = model.predict(features)
-    matrix = confusion_matrix(labels, predictions, labels=[0, 1])
     probabilities = model.predict_proba(features)[:, list(model.classes_).index(1)]
+    predictions = (
+        model.predict(features)
+        if decision_threshold is None
+        else (probabilities >= decision_threshold).astype(int)
+    )
+    matrix = confusion_matrix(labels, predictions, labels=[0, 1])
     result: dict[str, object] = {
         "accuracy": float(accuracy_score(labels, predictions)),
         "precision": float(precision_score(labels, predictions, zero_division=0)),
@@ -64,6 +69,8 @@ def measure_classifier(
     }
     if training_rows is not None:
         result["training_rows"] = int(training_rows)
+    if decision_threshold is not None:
+        result["decision_threshold"] = float(decision_threshold)
     return result
 
 

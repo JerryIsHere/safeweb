@@ -1,10 +1,11 @@
-# SafeWeb v2.3.0
+# SafeWeb v2.4.0
 
-SafeWeb là công cụ nghiên cứu hỗ trợ nhận diện URL có dấu hiệu lừa đảo. Bản 2.3.0 kết hợp tra cứu trực tiếp PhishVN, bốn mô hình ML chạy cục bộ trên trình duyệt, khám phá dữ liệu tương tác, phân loại URL và các kiểm tra web tùy chọn. Kết quả là tín hiệu tham khảo, không phải chứng nhận một website an toàn hay độc hại.
+SafeWeb là công cụ nghiên cứu hỗ trợ nhận diện URL có dấu hiệu lừa đảo. Bản 2.4.0 kết hợp tra cứu trực tiếp PhishVN, bốn mô hình ML chạy cục bộ trên trình duyệt, phát hiện tên miền nhái thương hiệu, khám phá dữ liệu tương tác, phân loại URL và các kiểm tra web tùy chọn. Kết quả là tín hiệu tham khảo, không phải chứng nhận một website an toàn hay độc hại.
 
 ## Tính năng
 
 - **Đồng thuận bốn mô hình:** Random Forest, Gradient Boosting, SVM tuyến tính hiệu chuẩn và Logistic Regression chạy cục bộ; từng xác suất và kết luận được hiển thị cạnh trung bình tổ hợp.
+- **Chuẩn hóa và cảnh báo:** tiền tố `www.` được bỏ trước khi tính toàn bộ đặc trưng; cờ TLD được giữ trung tính. Tên miền gần giống thương hiệu được hiển thị như cảnh báo riêng, không làm thay đổi xác suất thô của mô hình.
 - **Kết luận PhishVN trực tiếp:** khớp URL chính xác trả về nhãn và metadata gốc; các điểm ML vẫn được giữ riêng để đối chiếu.
 - **Khám phá PhishVN:** tìm kiếm URL, lọc nhãn/category/tier, phân trang và gửi URL đã chọn tới máy quét.
 - **Thông tin URL:** nhận diện danh mục, nền tảng hosting và thương hiệu liên quan theo luật xác định.
@@ -22,9 +23,9 @@ HTTPS chỉ phản ánh giao thức trong URL; SafeWeb không xác thực chứn
 
 ## Dữ liệu PhishVN
 
-Pipeline huấn luyện kết hợp hai nguồn độc lập: PhishVN v3.1.0 từ `data/raw/PhishVN A Time-Stamped Vietnamese URL Phishing Dat.zip` và PhiUSIIL từ `data/raw/phiusiil+phishing+url+dataset.zip`. Archive PhiUSIIL được giữ nguyên cho công việc khác; script chỉ đọc cột URL và nhãn. Nhãn PhiUSIIL được đảo về quy ước SafeWeb (`1 = phishing`). Sau chuẩn hóa scheme-independent, 86 dòng thuộc URL xung đột nhãn và 3.586 dòng trùng được loại; 461 dòng thuộc các domain PhishVN test bị loại để giữ domain-disjoint. Còn 231.662 URL PhiUSIIL để huấn luyện. PhishVN có 53.116 dòng gốc, nhãn phishing/benign, nguồn, tier, ngày ghi nhận, thời điểm thu thập, phân vùng và bảng CompPhish 21 đặc trưng. Test PhishVN chính thức tiếp tục giữ riêng 6.624 dòng.
+Pipeline huấn luyện kết hợp hai nguồn độc lập: PhishVN v3.1.0 từ `data/raw/PhishVN A Time-Stamped Vietnamese URL Phishing Dat.zip` và PhiUSIIL từ `data/raw/phiusiil+phishing+url+dataset.zip`. Archive PhiUSIIL được giữ nguyên cho công việc khác; script chỉ đọc cột URL và nhãn. Nhãn PhiUSIIL được đảo về quy ước SafeWeb (`1 = phishing`). Sau chuẩn hóa scheme-independent, 86 dòng thuộc URL xung đột nhãn và 3.586 dòng trùng được loại; 1.123 dòng thuộc 8.576 domain giao với PhishVN validation/test bị loại. Còn 231.000 URL PhiUSIIL để huấn luyện. PhishVN có 53.116 dòng gốc, nhãn phishing/benign, nguồn, tier, ngày ghi nhận, thời điểm thu thập, phân vùng và bảng CompPhish 21 đặc trưng. Test PhishVN chính thức tiếp tục giữ riêng 6.624 dòng.
 
-Quy trình PhishVN giữ 36.261 URL duy nhất sau khi gộp alias `www`/apex: 25.185 train, 4.452 validation và 6.624 test; nhãn gồm 19.909 phishing và 16.352 benign. Bốn mô hình fit trên 29.637 dòng PhishVN train+validation cùng 231.662 dòng PhiUSIIL (tổng 261.299). Mỗi nguồn nhận tổng trọng số bằng nhau và hai lớp được cân bằng bên trong từng nguồn; 6.624 PhishVN test giữ ngoài huấn luyện. Đặc trưng nguồn PhishVN khớp với 797.742 giá trị gốc; ba tín hiệu URL PhiUSIIL bổ sung là cờ obfuscation, số ký tự `%xx` được mã hóa và tỷ lệ của chúng trên URL. `scraped_at` và `collected_at` chỉ dùng truy xuất nguồn gốc.
+Quy trình PhishVN giữ 36.261 URL duy nhất sau khi gộp alias `www`/apex: 25.185 train, 4.452 validation và 6.624 test; nhãn gồm 19.909 phishing và 16.352 benign. Bốn mô hình fit trên 25.185 dòng PhishVN train cùng 231.000 dòng PhiUSIIL (tổng 256.185); validation chỉ dùng chọn ngưỡng SVM, còn test không tham gia fit hoặc tuning. Mỗi nguồn nhận tổng trọng số bằng nhau và hai lớp được cân bằng bên trong từng nguồn. Đặc trưng PhishVN được tính lại bằng bộ trích xuất dùng khi suy luận; ba tín hiệu URL PhiUSIIL bổ sung là cờ obfuscation, số ký tự `%xx` được mã hóa và tỷ lệ của chúng trên URL. `scraped_at` và `collected_at` chỉ dùng truy xuất nguồn gốc.
 
 `data/raw/urls.csv` và các CSV 5.000 dòng cũ là dữ liệu tương thích/nghiên cứu trước đây, không phải nguồn huấn luyện production. Archive gốc không bị chỉnh sửa. Dữ liệu đã chuẩn hóa được tạo trong `data/processed/` (được gitignore); chỉ mục tra cứu và bundle hồ sơ PhishVN được xuất vào `data/phishvn_database.json`, `web/static/model-data.js` và `web/static/database-records.json`.
 
@@ -38,12 +39,12 @@ Kết quả trên 6.624 URL test:
 
 | Mô hình | Accuracy | Precision | Recall | F1 | ROC-AUC | TN / FP / FN / TP |
 | --- | ---: | ---: | ---: | ---: | ---: | --- |
-| Random Forest | 0,8745 | 0,8075 | 0,9232 | 0,8615 | 0,9426 | 3209 / 616 / 215 / 2584 |
-| Gradient Boosting | 0,8789 | 0,7976 | 0,9561 | 0,8697 | 0,9436 | 3146 / 679 / 123 / 2676 |
-| SVM tuyến tính hiệu chuẩn | 0,5805 | 1,0000 | 0,0071 | 0,0142 | 0,9308 | 3825 / 0 / 2779 / 20 |
-| Logistic Regression | 0,8555 | 0,7996 | 0,8782 | 0,8371 | 0,9330 | 3209 / 616 / 341 / 2458 |
+| Random Forest | 0,8691 | 0,7872 | 0,9461 | 0,8593 | 0,9334 | 3109 / 716 / 151 / 2648 |
+| Gradient Boosting | 0,8730 | 0,7896 | 0,9536 | 0,8639 | 0,9359 | 3114 / 711 / 130 / 2669 |
+| SVM tuyến tính hiệu chuẩn | 0,8581 | 0,7802 | 0,9246 | 0,8463 | 0,9242 | 3096 / 729 / 211 / 2588 |
+| Logistic Regression | 0,8643 | 0,7758 | 0,9546 | 0,8560 | 0,9264 | 3053 / 772 / 127 / 2672 |
 
-SVM có ROC-AUC cao nhưng ngưỡng phân loại mặc định gần như bỏ sót toàn bộ phishing (recall 0,0071); không nên diễn giải xác suất/nhãn SVM hiện tại như kết quả hữu dụng trước khi hiệu chỉnh thêm. Các chỉ số còn lại cũng chỉ mô tả tập test này, không phải ước lượng hiệu năng ngoài thực tế. Tra cứu database là tầng riêng, không nằm trong các chỉ số ML.
+Ngưỡng nhị phân SVM 0,3146 được chọn để tối đa hóa F1 trên 4.452 URL validation; trên validation, recall đạt 0,9097 và F1 đạt 0,8419. Ngưỡng được khóa trước khi đánh giá tập test. Các chỉ số chỉ mô tả corpus/split này, không phải ước lượng hiệu năng ngoài thực tế. Tra cứu database và cảnh báo thương hiệu là các tầng riêng, không nằm trong các chỉ số ML.
 
 ## Kiến trúc
 

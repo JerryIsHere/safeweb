@@ -32,6 +32,14 @@ test("browser features handle IP hosts, paths, queries, and Unicode", () => {
   assert.equal(browserModel.extractFeatures("https://x.www.ck/").num_subdomains, 1);
 });
 
+test("www prefixes are removed before all feature extraction", () => {
+  const apex = browserModel.extractFeatures("https://divineskins.gg");
+  const www = browserModel.extractFeatures("https://www.divineskins.gg");
+
+  assert.deepEqual(www, apex);
+  assert.equal(www.phishvn_suspicious_tld, 0);
+});
+
 test("experimental browser features are opt-in and preserve the default schema", () => {
   const defaultFeatures = browserModel.extractFeatures("https://example.com/login?next=home");
   const experimentalFeatures = browserModel.extractFeatures(
@@ -68,6 +76,35 @@ test("browser model returns a four-tier risk score and transparent signal status
   assert.equal(Object.keys(result.features).length, 55);
   assert.equal(result.available_signals.url_obfuscation, "Checked");
   assert.equal(result.verification_stages.machine_learning, "evaluated");
+});
+
+test("browser SVM classification uses its exported validation threshold", () => {
+  const features = browserModel.extractFeatures("https://example.com/login");
+  const assessment = browserModel.predict(features).models.svm;
+  const threshold = globalThis.safewebModel.models.svm.decisionThreshold ?? 0.5;
+
+  assert.equal(assessment.prediction, assessment.probability >= threshold ? "phishing" : "legitimate");
+});
+
+test("lookalike brands trigger a high-risk warning without changing raw model scores", () => {
+  const result = browserModel.assessUrl("https://faceboook.com");
+
+  assert.equal(result.brand_impersonation, "Facebook");
+  assert.equal(result.prediction, "phishing");
+  assert.equal(result.risk_level, "VERY HIGH");
+  assert.equal(result.risk_theme, "danger");
+  assert.equal(result.risk_score, 100);
+  assert.ok(result.reasons.includes("Potential brand lookalike detected: Facebook."));
+  assert.equal(result.available_signals.brand_lookalike, "Warning");
+  assert.equal(result.probability, result.model_ensemble.probability);
+});
+
+test("neutral brand and TLD signals do not raise the legitimate DivineSkins URL", () => {
+  const result = browserModel.assessUrl("https://www.divineskins.gg");
+
+  assert.equal(result.brand_impersonation, null);
+  assert.equal(result.risk_level, "LOW");
+  assert.equal(result.features.phishvn_suspicious_tld, 0);
 });
 
 test("known PhishVN hosts are attributed and still pass through model verification", () => {
@@ -182,6 +219,9 @@ test("SafeWeb URL variants trigger the easter egg and URL intelligence", () => {
   assert.equal(identity.category_id, "banking_finance");
   assert.equal(identity.provider, "GitHub Pages");
   assert.equal(identity.brand, "Vietcombank");
+  const safeweb = browserModel.assessUrl("https://jerryishere.github.io/safeweb");
+  assert.equal(safeweb.brand_impersonation, null);
+  assert.equal(safeweb.risk_level, "LOW");
 });
 
 test("browser validation rejects empty, malformed, and non-HTTP URLs", () => {

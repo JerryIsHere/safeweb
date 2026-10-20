@@ -37,6 +37,43 @@ def test_prediction_uses_loaded_bundle_without_creating_model_file() -> None:
     assert result["risk_level"] == "VERY HIGH"
 
 
+def test_prediction_uses_validation_selected_bundle_threshold() -> None:
+    bundle = {
+        "model": FixedModel(),
+        "feature_names": list(extract_features("https://example.com")),
+        "decision_threshold": 0.9,
+    }
+
+    result = predict_url("https://example.com/login", bundle=bundle)
+
+    assert result["probability"] == 0.8
+    assert result["prediction"] == "legitimate"
+
+
+def test_brand_lookalike_overrides_risk_tier_without_changing_model_probability() -> None:
+    class LowRiskModel:
+        classes_ = [0, 1]
+
+        def predict_proba(self, features):
+            return [[0.9, 0.1]]
+
+        def predict(self, features):
+            return [0]
+
+    bundle = {
+        "model": LowRiskModel(),
+        "feature_names": list(extract_features("https://example.com")),
+    }
+
+    result = predict_url("https://faceboook.com", bundle=bundle)
+
+    assert result["brand_impersonation"] == "Facebook"
+    assert result["prediction"] == "phishing"
+    assert result["risk_level"] == "VERY HIGH"
+    assert result["probability"] == 0.1
+    assert "Potential brand lookalike detected: Facebook." in result["explanations"]
+
+
 def test_prediction_reports_phishvn_match_and_ml_stage() -> None:
     bundle = {
         "model": FixedModel(),

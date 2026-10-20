@@ -144,6 +144,10 @@ function translateExplanation(explanation, language) {
 
   if (typeof explanation === "string") {
     if (explanationKeys[explanation]) return translation(explanationKeys[explanation], language);
+    const brandLookalike = explanation.match(/^Potential brand lookalike detected: (.+)\.$/);
+    if (brandLookalike) {
+      return translation("signalBrandLookalike", language).replace("{brand}", brandLookalike[1]);
+    }
     if (explanation.startsWith("URL is unusually long:")) return translation("signalLong", language);
     if (explanation.startsWith("Hostname contains")) return translation("signalSubdomains", language);
     if (explanation.startsWith("Hostname uses an IP address")) return translation("signalIp", language);
@@ -422,12 +426,15 @@ function renderModelConsensus(result, language) {
   });
   const ensemble = result.model_ensemble || result;
   const ensembleText = `${translation(ensemble.prediction === "phishing" ? "ensemblePhishing" : "ensembleBenign", language)} · ${Math.round(ensemble.probability * 100)}%`;
+  const brandOverrideText = result.brand_impersonation
+    ? `${translation("brandOverrideSummary", language)} (${result.brand_impersonation}) · `
+    : "";
   const directLabel = result.direct_database_verdict?.label;
   document.querySelector("#ensemble-summary").textContent = result.easter_egg
     ? translation("easterEggBadge", language)
     : directLabel
-      ? `${directLabel === "Phishing" ? translation("directPhishingShort", language) : translation("directBenignShort", language)} · ${ensembleText}`
-      : ensembleText;
+      ? `${directLabel === "Phishing" ? translation("directPhishingShort", language) : translation("directBenignShort", language)} · ${brandOverrideText}${ensembleText}`
+      : `${brandOverrideText}${ensembleText}`;
 }
 
 function renderDirectVerdict(result, language) {
@@ -935,7 +942,7 @@ reportForm.addEventListener("submit", (event) => {
   const reportUrl = document.querySelector("#report-url").value.trim();
   const payload = {
     product: "SafeWeb",
-    version: "2.3.5",
+    version: "2.4.0",
     submitted_at: new Date().toISOString(),
     url: reportUrl,
     report_type: document.querySelector("#report-type").value,

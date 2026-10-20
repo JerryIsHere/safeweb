@@ -5,18 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#f1f2ec">
     <title data-i18n="pageTitle">SafeWeb | URL analysis</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.3.5">
-    <script src="{{ url_for('static', filename='translations.js') }}?v=2.3.5" defer></script>
-    <script src="{{ url_for('static', filename='model-data.js') }}?v=2.3.5" defer></script>
-    <script src="{{ url_for('static', filename='browser-model.js') }}?v=2.3.5" defer></script>
-    <script src="{{ url_for('static', filename='web-inspection.js') }}?v=2.3.5" defer></script>
-    <script src="{{ url_for('static', filename='script.js') }}?v=2.3.5" defer></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap&subset=vietnamese" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=2.4.0">
+    <script src="{{ url_for('static', filename='translations.js') }}?v=2.4.0" defer></script>
+    <script src="{{ url_for('static', filename='model-data.js') }}?v=2.4.0" defer></script>
+    <script src="{{ url_for('static', filename='browser-model.js') }}?v=2.4.0" defer></script>
+    <script src="{{ url_for('static', filename='web-inspection.js') }}?v=2.4.0" defer></script>
+    <script src="{{ url_for('static', filename='script.js') }}?v=2.4.0" defer></script>
   </head>
   <body>
     <header class="topbar">
       <a class="brand" href="{{ home_url }}" aria-label="SafeWeb home" data-i18n-attr="aria-label:homeLabel">
         <span class="brand-mark" aria-hidden="true">S</span>
-          <span>SafeWeb <small class="version-tag">v2.3.5</small></span>
+          <span>SafeWeb <small class="version-tag">v2.4.0</small></span>
       </a>
       <div class="header-actions">
         <div class="topbar-meta">
@@ -37,8 +40,8 @@
       <section class="hero" aria-labelledby="page-title">
         <div class="hero-content">
           <div class="eyebrow"><span data-i18n="researchLabel">RESEARCH PROTOTYPE</span><span class="eyebrow-rule" aria-hidden="true"></span><span data-i18n="reviewLabel">01 / URL REVIEW</span></div>
-          <h1 id="page-title"><span data-i18n="headlineOne">Read the signals.</span><br><em data-i18n="headlineTwo">Keep the context.</em></h1>
-          <p class="intro-copy" data-i18n="introCopy">Assess URL characteristics with a reference database and locally trained models. Live checks are optional.</p>
+          <h1 id="page-title"><span data-i18n="headlineOne">Check the website address.</span><br><em data-i18n="headlineTwo">Spot scam risks early.</em></h1>
+          <p class="intro-copy" data-i18n="introCopy">Analyze a link in your browser using a reference database and four AI models. Protect your personal information before opening an unfamiliar link.</p>
         </div>
         <form class="analysis-form" id="analysis-form" novalidate>
           <label for="url-input" data-i18n="inputLabel">URL to assess</label>
@@ -214,7 +217,7 @@
           <div class="report-actions"><button class="analyze-button" type="submit" data-i18n="reportDownload">Tạo tệp báo cáo</button><a id="report-download-link" class="report-download-link" hidden></a><p id="report-status" role="status" aria-live="polite"></p></div>
         </form>
       </section>
-      <footer class="page-footer"><span data-i18n="footerResearch">SAFEWEB · EDUCATIONAL RESEARCH</span><span>SafeWeb v2.3.5</span><span data-i18n="footerNetwork">LOCAL CHECKS · LIVE CHECKS OPTIONAL</span></footer>
+      <footer class="page-footer"><span data-i18n="footerResearch">SAFEWEB · EDUCATIONAL RESEARCH</span><span>SafeWeb v2.4.0</span><span data-i18n="footerNetwork">LOCAL CHECKS · LIVE CHECKS OPTIONAL</span></footer>
     </main>
 
     <dialog class="language-dialog" id="language-dialog" open aria-labelledby="language-title" aria-describedby="language-subtitle">

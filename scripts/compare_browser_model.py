@@ -14,6 +14,7 @@ from src.predict import DEFAULT_MODEL_PATH, load_model, predict_url
 from src.url_validation import validate_url
 
 
+PARITY_REPORT_PATH = PROJECT_ROOT / "reports" / "browser_model_parity.json"
 VALID_URLS = (
     "https://www.example.com/login?next=home",
     "http://one.two.example.co.uk/account/reset?id=123",
@@ -116,6 +117,15 @@ def main() -> None:
         if browser_result["ok"] != python_valid:
             raise AssertionError(f"Validation mismatch for {url!r}.")
 
+    result = {
+        "valid_url_cases": len(VALID_URLS),
+        "invalid_url_cases": len(INVALID_URLS),
+        "max_feature_delta": max_feature_delta,
+        "max_probability_delta": max_probability_delta,
+        "feature_tolerance": 1e-12,
+        "probability_tolerance": 1e-10,
+    }
+    PARITY_REPORT_PATH.write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(
         f"Parity passed for {len(VALID_URLS)} valid and {len(INVALID_URLS)} invalid URLs; "
         f"max feature delta={max_feature_delta:.3g}, "
