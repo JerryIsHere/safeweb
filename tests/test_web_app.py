@@ -17,18 +17,21 @@ def _bundle():
 
 
 def test_home_page_renders_model_state() -> None:
-    response = create_app(model_path="missing-model.joblib").test_client().get("/")
+    client = create_app(model_path="missing-model.joblib").test_client()
+    response = client.get("/")
 
     assert response.status_code == 200
     assert b"MODEL READY" in response.data
     assert b'id="live-inspection-toggle"' in response.data
     assert b'id="live-results"' in response.data
+    assert b'id="risk-score-breakdown"' in response.data
     assert b'id="score-value"' not in response.data
-    assert b"?v=2.4.0" in response.data
-    assert b"web-inspection.js?v=2.4.0" in response.data
-    assert b"SafeWeb v2.4.0" in response.data
+    assert b"?v=2.4.1" in response.data
+    assert b"web-inspection.js?v=2.4.1" in response.data
+    assert b"SafeWeb v2.4.1" in response.data
     assert b"safeweb-api-url" not in response.data
-    assert b"/static/model-data.js" in response.data
+    assert b"model-data.js" not in response.data
+    assert b"modelLoadFailed" in client.get("/static/script.js").data
 
 
 def test_home_page_exposes_language_selection_and_translation_assets() -> None:

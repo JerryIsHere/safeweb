@@ -1,12 +1,12 @@
 (function (root) {
   "use strict";
 
-  const model = root.safewebModel;
+  let model = root.safewebModel;
   let phishvnRecords = [];
   let recordsByUrl = new Map();
   let recordsByHost = new Map();
   const keywords = ["login", "signin", "verify", "account", "password", "bank", "payment", "confirm"];
-  const rules = new Set(model?.publicSuffixRules || []);
+  let rules = new Set(model?.publicSuffixRules || []);
   const lettersOrNumbers = /^[\p{L}\p{N}]$/u;
   const letters = /^\p{L}$/u;
   const whitespace = /[\s\u0085]/u;
@@ -68,6 +68,16 @@
     ["news_media", "Tin tức & Giải trí / News & Media", ["news", "media", "youtube", "netflix", "spotify", "movie", "stream"]],
     ["url_shortener", "Công cụ Rút gọn Link / URL Shortener", ["bit.ly", "tinyurl", "t.co", "shorturl", "url-short"]],
   ];
+
+  function officialBrandForHostname(hostname) {
+    const normalizedHostname = hostname.toLowerCase().replace(/\.+$/u, "");
+    for (const [, name, domains] of brandRules) {
+      const officialDomain = domains.find((domain) =>
+        normalizedHostname === domain || normalizedHostname.endsWith(`.${domain}`));
+      if (officialDomain) return { name, domain: officialDomain };
+    }
+    return null;
+  }
 
   function clamp(value, minimum, maximum) {
     return Math.min(Math.max(value, minimum), maximum);
@@ -191,6 +201,14 @@
       const host = record.url_key.split(/[/?]/u, 1)[0];
       if (!recordsByHost.has(host) || record.label === "Phishing") recordsByHost.set(host, record);
     });
+  }
+
+  function setModelData(data) {
+    if (!data || !Array.isArray(data.features) || !data.models) {
+      throw new TypeError("The browser model data is incomplete.");
+    }
+    model = data;
+    rules = new Set(model.publicSuffixRules || []);
   }
 
   function getPhishingExamples(value, limit = 5) {
@@ -472,11 +490,16 @@
     return "safe";
   }
 
-  function buildReasons(features, impersonatedBrand) {
+  function buildReasons(features, impersonatedBrand, trustedBrand, officialDomainAdjusted) {
     const reasons = [];
 
     if (impersonatedBrand) {
       reasons.push(`Potential brand lookalike detected: ${impersonatedBrand}.`);
+    }
+    if (trustedBrand) {
+      reasons.push(officialDomainAdjusted
+        ? `Official ${trustedBrand.name} domain recognized; the URL-only model warning was adjusted.`
+        : `Official ${trustedBrand.name} domain recognized; page content is not verified.`);
     }
     if (features.url_length >= 100) {
       reasons.push(`URL is unusually long: ${features.url_length} characters.`);
@@ -489,9 +512,6 @@
     }
     if (features.has_at) {
       reasons.push("URL contains user info or authentication-style syntax.");
-    }
-    if (features.num_special_chars >= 8) {
-      reasons.push(`URL contains ${features.num_special_chars} special characters.`);
     }
     if (features.has_percent) {
       reasons.push("URL includes percent-encoded content.");
@@ -540,9 +560,9 @@
     ];
   }
 
-  function buildAvailableSignals(features, databaseMatch, probability, impersonatedBrand) {
+  function buildAvailableSignals(features, databaseMatch, probability, impersonatedBrand, trustedBrand, urlCategory) {
     const hasKeyword = keywords.some((keyword) => features[`keyword_${keyword}`]);
-    const structuralWarning = features.has_at || features.has_percent || features.num_special_chars >= 8;
+    const structuralWarning = features.has_at || features.has_percent || features.num_special_chars >= 12;
     const hostWarning = features.has_ip || features.num_subdomains >= 3;
     return {
       url_structure: structuralWarning ? "Warning" : "Checked",
@@ -550,6 +570,8 @@
       keyword_scan: hasKeyword ? "Warning" : "Checked",
       phishvn_database: databaseMatch.matched ? "Database match" : "Checked",
       brand_lookalike: impersonatedBrand ? "Warning" : "Checked",
+      official_brand_domain: trustedBrand ? "Verified brand domain" : "Not checked",
+      url_category: urlCategory ? "Informational only" : "Not checked",
       url_obfuscation: features.phiusiil_has_obfuscation ? "Warning" : "Checked",
       machine_learning: probability >= 0.5 ? "Warning" : "Checked",
       https_status: features.has_https ? "HTTPS detected" : "HTTP detected",
@@ -603,7 +625,7 @@
     return { matched: false, type: null, provenance: null };
   }
 
-  function buildRiskAssessment(features, probability, sourceMatch, impersonatedBrand) {
+  function buildRiskAssessment(features, probability, sourceMatch, impersonatedBrand, trustedBrand, urlCategory) {
     const numericProbability = Number.isFinite(probability) ? clamp(Number(probability), 0, 1) : 0;
     let heuristicScore = 0;
 
@@ -611,18 +633,35 @@
     if (features.num_subdomains >= 3) heuristicScore += 16;
     if (features.has_ip) heuristicScore += 18;
     if (features.has_at) heuristicScore += 12;
-    if (features.num_special_chars >= 8) heuristicScore += 10;
     if (features.has_percent) heuristicScore += 8;
     if (features.url_entropy >= 4.5) heuristicScore += 10;
 
     const keywordCount = keywords.filter((keyword) => features[`keyword_${keyword}`]).length;
     heuristicScore += keywordCount * 8;
 
+    const significantStructure = Boolean(
+      features.has_ip
+      || features.has_at
+      || features.has_percent
+      || features.phiusiil_has_obfuscation
+      || features.url_length >= 120
+      || features.num_subdomains >= 3
+      || features.url_entropy >= 4.5
+      || keywordCount >= 2,
+    );
+    const officialDomainAdjusted = Boolean(
+      trustedBrand && !sourceMatch.matched && !impersonatedBrand && !significantStructure,
+    );
+    const adjustedProbability = officialDomainAdjusted ? Math.min(numericProbability, 0.15) : numericProbability;
+    const modelPoints = Math.round(numericProbability * 60);
+    const adjustedModelPoints = Math.round(adjustedProbability * 60);
+    const officialBrandAdjustment = adjustedModelPoints - modelPoints;
+    const brandPoints = impersonatedBrand ? 100 : 0;
     const score = impersonatedBrand
       ? 100
-      : clamp(Math.round((numericProbability * 100 * 0.6) + heuristicScore), 0, 100);
-    const level = impersonatedBrand ? "VERY HIGH" : riskLevelForProbability(numericProbability);
-    const reasons = buildReasons(features, impersonatedBrand);
+      : clamp(adjustedModelPoints + heuristicScore + brandPoints, 0, 100);
+    const level = impersonatedBrand ? "VERY HIGH" : riskLevelForProbability(adjustedProbability);
+    const reasons = buildReasons(features, impersonatedBrand, trustedBrand, officialDomainAdjusted);
     if (sourceMatch.matched) reasons.unshift("Matched in reference database.");
     const recommendations = buildRecommendations(level);
     const verdicts = {
@@ -634,12 +673,29 @@
 
     return {
       risk_score: score,
+      risk_score_components: {
+        model: modelPoints,
+        url_structure: heuristicScore,
+        brand: brandPoints,
+        official_brand_adjustment: officialBrandAdjustment,
+        url_category: 0,
+        database: 0,
+        total: score,
+      },
       risk_level: level,
       risk_theme: riskThemeForLevel(level),
       verdict: verdicts[level],
       reasons,
       recommendations,
-      available_signals: buildAvailableSignals(features, sourceMatch, numericProbability, impersonatedBrand),
+      available_signals: buildAvailableSignals(
+        features,
+        sourceMatch,
+        adjustedProbability,
+        impersonatedBrand,
+        trustedBrand,
+        urlCategory,
+      ),
+      official_domain_adjusted: officialDomainAdjusted,
       disclaimer: "This is a dataset-backed risk assessment, not proof that a destination is safe or malicious.",
     };
   }
@@ -732,7 +788,9 @@
       risk_level: modelAssessment.risk_level,
     };
     const sourceMatch = databaseMatch(url, features);
-    const impersonatedBrand = detectBrandImpersonation(parseParts(url).hostname);
+    const hostname = parseParts(url).hostname;
+    const impersonatedBrand = detectBrandImpersonation(hostname);
+    const trustedBrand = officialBrandForHostname(hostname);
     const urlCategory = classifyUrl(url, sourceMatch.record?.brand || "");
     if (sourceMatch.matched) {
       const recordLabel = sourceMatch.record?.label;
@@ -744,17 +802,35 @@
       modelAssessment.probability,
       sourceMatch,
       impersonatedBrand,
+      trustedBrand,
+      urlCategory,
     );
+    if (riskAssessment.official_domain_adjusted) {
+      modelAssessment.prediction = "legitimate";
+      modelAssessment.risk_level = riskAssessment.risk_level;
+    }
     if (sourceMatch.matched && !sourceMatch.record) {
       riskAssessment.risk_level = "VERY HIGH";
       riskAssessment.risk_theme = "danger";
       riskAssessment.risk_score = 100;
+      riskAssessment.risk_score_components = {
+        model: 0,
+        url_structure: 0,
+        brand: 0,
+        official_brand_adjustment: 0,
+        url_category: 0,
+        database: 100,
+        total: 100,
+      };
       riskAssessment.verdict = "Direct database result: confirmed phishing host or signature.";
     }
     if (sourceMatch.record) {
       riskAssessment.risk_level = sourceMatch.record.label === "Benign" ? "LOW" : "VERY HIGH";
       riskAssessment.risk_theme = sourceMatch.record.label === "Benign" ? "safe" : "danger";
       riskAssessment.risk_score = sourceMatch.record.label === "Benign" ? 0 : 100;
+      riskAssessment.risk_score_components = sourceMatch.record.label === "Benign"
+        ? { model: 0, url_structure: 0, brand: 0, official_brand_adjustment: 0, url_category: 0, database: 0, total: 0 }
+        : { model: 0, url_structure: 0, brand: 0, official_brand_adjustment: 0, url_category: 0, database: 100, total: 100 };
       riskAssessment.verdict = sourceMatch.record.label === "Benign"
         ? "Direct database result: verified benign URL."
         : "Direct database result: confirmed phishing URL.";
@@ -765,6 +841,15 @@
       riskAssessment.risk_level = "VERY HIGH";
       riskAssessment.risk_theme = "danger";
       riskAssessment.risk_score = 100;
+      riskAssessment.risk_score_components = {
+        model: 0,
+        url_structure: 0,
+        brand: 100,
+        official_brand_adjustment: 0,
+        url_category: 0,
+        database: 0,
+        total: 100,
+      };
       riskAssessment.verdict = `Potential brand lookalike detected: ${impersonatedBrand}.`;
     }
     const ownSite = isSafeWebUrl(url);
@@ -774,12 +859,22 @@
       riskAssessment.risk_level = "LOW";
       riskAssessment.risk_theme = "safe";
       riskAssessment.risk_score = 0;
+      riskAssessment.risk_score_components = {
+        model: 0,
+        url_structure: 0,
+        brand: 0,
+        official_brand_adjustment: 0,
+        url_category: 0,
+        database: 0,
+        total: 0,
+      };
     }
 
     return {
       url,
       ...modelAssessment,
       risk_score: riskAssessment.risk_score,
+      risk_score_components: riskAssessment.risk_score_components,
       risk_level: riskAssessment.risk_level,
       risk_theme: riskAssessment.risk_theme,
       verdict: riskAssessment.verdict,
@@ -813,6 +908,7 @@
     isSafeWebUrl,
     predict,
     setDatabaseRecords,
+    setModelData,
     validateUrl,
   };
   root.SafewebBrowserModel = api;

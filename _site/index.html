@@ -8,18 +8,17 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap&subset=vietnamese" rel="stylesheet">
-    <link rel="stylesheet" href="static/style.css?v=2.4.0">
-    <script src="static/translations.js?v=2.4.0" defer></script>
-    <script src="static/model-data.js?v=2.4.0" defer></script>
-    <script src="static/browser-model.js?v=2.4.0" defer></script>
-    <script src="static/web-inspection.js?v=2.4.0" defer></script>
-    <script src="static/script.js?v=2.4.0" defer></script>
+    <link rel="stylesheet" href="static/style.css?v=2.4.1">
+    <script src="static/translations.js?v=2.4.1" defer></script>
+    <script src="static/browser-model.js?v=2.4.1" defer></script>
+    <script src="static/web-inspection.js?v=2.4.1" defer></script>
+    <script src="static/script.js?v=2.4.1" defer></script>
   </head>
   <body>
     <header class="topbar">
       <a class="brand" href="./" aria-label="SafeWeb home" data-i18n-attr="aria-label:homeLabel">
         <span class="brand-mark" aria-hidden="true">S</span>
-          <span>SafeWeb <small class="version-tag">v2.4.0</small></span>
+          <span>SafeWeb <small class="version-tag">v2.4.1</small></span>
       </a>
       <div class="header-actions">
         <div class="topbar-meta">
@@ -100,6 +99,7 @@
             </div>
           </div>
           <div class="signal-meter" id="signal-meter" role="img" aria-label="No risk level"></div>
+          <p class="risk-score-breakdown" id="risk-score-breakdown"></p>
           <div class="verification-sources" id="verification-sources"></div>
           <section class="easter-egg-card" id="easter-egg-card" hidden>
             <p class="easter-egg-message" id="easter-egg-message"></p>
@@ -211,7 +211,7 @@
           <div class="report-actions"><button class="analyze-button" type="submit" data-i18n="reportDownload">Tạo tệp báo cáo</button><a id="report-download-link" class="report-download-link" hidden></a><p id="report-status" role="status" aria-live="polite"></p></div>
         </form>
       </section>
-      <footer class="page-footer"><span data-i18n="footerResearch">SAFEWEB · EDUCATIONAL RESEARCH</span><span>SafeWeb v2.4.0</span><span data-i18n="footerNetwork">LOCAL CHECKS · LIVE CHECKS OPTIONAL</span></footer>
+      <footer class="page-footer"><span data-i18n="footerResearch">SAFEWEB · EDUCATIONAL RESEARCH</span><span>SafeWeb v2.4.1</span><span data-i18n="footerNetwork">LOCAL CHECKS · LIVE CHECKS OPTIONAL</span></footer>
     </main>
 
     <dialog class="language-dialog" id="language-dialog" open aria-labelledby="language-title" aria-describedby="language-subtitle">

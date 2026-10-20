@@ -1,6 +1,6 @@
-# SafeWeb v2.4.0
+# SafeWeb v2.4.1
 
-SafeWeb là công cụ nghiên cứu hỗ trợ nhận diện URL có dấu hiệu lừa đảo. Bản 2.4.0 kết hợp tra cứu trực tiếp PhishVN, bốn mô hình ML chạy cục bộ trên trình duyệt, phát hiện tên miền nhái thương hiệu, khám phá dữ liệu tương tác, phân loại URL và các kiểm tra web tùy chọn. Kết quả là tín hiệu tham khảo, không phải chứng nhận một website an toàn hay độc hại.
+SafeWeb là công cụ nghiên cứu hỗ trợ nhận diện URL có dấu hiệu lừa đảo. Bản 2.4.1 kết hợp tra cứu trực tiếp PhishVN, bốn mô hình ML chạy cục bộ trên trình duyệt, phát hiện tên miền nhái thương hiệu, khám phá dữ liệu tương tác, phân loại URL và các kiểm tra web tùy chọn. Kết quả là tín hiệu tham khảo, không phải chứng nhận một website an toàn hay độc hại.
 
 ## Tính năng
 

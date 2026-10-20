@@ -4,6 +4,7 @@ const {
   classifyUrl,
   getPhishingExamples,
   setDatabaseRecords,
+  setModelData,
   validateUrl,
 } = window.SafewebBrowserModel || {};
 const supportedLanguages = ["vi", "en", "fr", "de"];
@@ -27,6 +28,8 @@ let latestNormalizedUrl = null;
 let currentMessageKey = null;
 let databaseRecords = [];
 let databaseRecordsPromise = null;
+let modelLoadPromise = null;
+let modelLoadFailed = false;
 let databasePage = 0;
 const databasePageSize = 25;
 
@@ -56,7 +59,14 @@ function applyLanguage(language) {
   languageCode.textContent = locale.toUpperCase();
   const modelState = document.querySelector(".model-state");
   if (modelState) {
-    modelState.textContent = translation(window.safewebModel?.trees?.length ? "modelReady" : "modelMissing", locale);
+    const stateKey = window.safewebModel?.trees?.length
+      ? "modelReady"
+      : modelLoadFailed
+        ? "modelLoadFailed"
+        : modelLoadPromise
+          ? "modelLoading"
+          : "modelMissing";
+    modelState.textContent = translation(stateKey, locale);
   }
   if (currentMessageKey) message.textContent = translation(currentMessageKey, locale);
   if (latestNormalizedUrl) {
@@ -77,6 +87,50 @@ function applyLanguage(language) {
     themeButton.setAttribute("aria-label", `${translation("themeControl", locale)}: ${translation(themeNextKey, locale)}`);
   }
   if (latestResult) renderResult(latestResult, locale);
+}
+
+function loadBrowserModel() {
+  if (window.safewebModel?.trees?.length) {
+    setModelData(window.safewebModel);
+    return Promise.resolve();
+  }
+  if (modelLoadPromise) return modelLoadPromise;
+
+  modelLoadFailed = false;
+  applyLanguage(currentLanguage);
+  const script = document.createElement("script");
+  script.async = true;
+  script.src = new URL("static/model-data.js?v=2.4.1", document.baseURI).href;
+  modelLoadPromise = new Promise((resolve, reject) => {
+    script.addEventListener("load", () => {
+      try {
+        setModelData(window.safewebModel);
+        applyLanguage(currentLanguage);
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    }, { once: true });
+    script.addEventListener("error", () => {
+      reject(new Error("The browser model could not be downloaded."));
+    }, { once: true });
+    document.head.append(script);
+  }).catch((error) => {
+    modelLoadPromise = null;
+    modelLoadFailed = true;
+    applyLanguage(currentLanguage);
+    throw error;
+  });
+  return modelLoadPromise;
+}
+
+function scheduleBrowserModelLoad() {
+  if (!hasConfirmedLanguage) return;
+  window.setTimeout(() => {
+    loadBrowserModel().catch((error) => {
+      console.error("SafeWeb model loading failed.", error);
+    });
+  }, 100);
 }
 
 function setMessage(key) {
@@ -136,7 +190,6 @@ function translateExplanation(explanation, language) {
     "The URL is unusually long, a signal considered by the model.": "signalLong",
     "The hostname contains several subdomain levels.": "signalSubdomains",
     "The hostname is an IP address rather than a domain name.": "signalIp",
-    "The URL contains many non-alphanumeric characters.": "signalSpecial",
     "The URL has relatively high character entropy.": "signalEntropy",
     "No configured URL signals stood out; this is not proof of safety.": "signalNone",
     "Matched in reference database.": "databaseMatchReason",
@@ -144,6 +197,14 @@ function translateExplanation(explanation, language) {
 
   if (typeof explanation === "string") {
     if (explanationKeys[explanation]) return translation(explanationKeys[explanation], language);
+    const officialBrand = explanation.match(/^Official (.+) domain recognized; the URL-only model warning was adjusted\.$/);
+    if (officialBrand) {
+      return translation("officialDomainAdjusted", language).replace("{brand}", officialBrand[1]);
+    }
+    const trustedBrand = explanation.match(/^Official (.+) domain recognized; page content is not verified\.$/);
+    if (trustedBrand) {
+      return translation("officialDomainRecognized", language).replace("{brand}", trustedBrand[1]);
+    }
     const brandLookalike = explanation.match(/^Potential brand lookalike detected: (.+)\.$/);
     if (brandLookalike) {
       return translation("signalBrandLookalike", language).replace("{brand}", brandLookalike[1]);
@@ -151,7 +212,6 @@ function translateExplanation(explanation, language) {
     if (explanation.startsWith("URL is unusually long:")) return translation("signalLong", language);
     if (explanation.startsWith("Hostname contains")) return translation("signalSubdomains", language);
     if (explanation.startsWith("Hostname uses an IP address")) return translation("signalIp", language);
-    if (explanation.startsWith("URL contains") && explanation.includes("special characters")) return translation("signalSpecial", language);
     if (explanation.startsWith("URL entropy is")) return translation("signalEntropy", language);
     if (explanation.startsWith("PhiUSIIL obfuscation signal:")) {
       const count = explanation.match(/(\d+) encoded characters?\./)?.[1] || "0";
@@ -286,6 +346,17 @@ function renderResult(result, language = currentLanguage) {
     return segment;
   }));
   meter.setAttribute("aria-label", riskLabel(level, language));
+  const scoreParts = result.risk_score_components;
+  document.querySelector("#risk-score-breakdown").textContent = scoreParts
+    ? translation("scoreBreakdown", language)
+      .replace("{model}", String(scoreParts.model))
+      .replace("{structure}", String(scoreParts.url_structure))
+      .replace("{brand}", String(scoreParts.brand))
+      .replace("{database}", String(scoreParts.database))
+      .replace("{category}", String(scoreParts.url_category))
+      .replace("{total}", String(scoreParts.total))
+      .replace("{adjustment}", String(scoreParts.official_brand_adjustment))
+    : "";
 
   const sources = document.querySelector("#verification-sources");
   sources.replaceChildren();
@@ -351,6 +422,8 @@ function renderResult(result, language = currentLanguage) {
       "Domain not found": "statusDomainMissing",
       Inspected: "statusInspected",
       "Not available": "statusUnavailable",
+      "Verified brand domain": "statusOfficialDomain",
+      "Informational only": "statusInformational",
     };
     status.textContent = translation(statusKeys[value] || "statusChecked", language);
     status.className = "criterion-status";
@@ -429,12 +502,15 @@ function renderModelConsensus(result, language) {
   const brandOverrideText = result.brand_impersonation
     ? `${translation("brandOverrideSummary", language)} (${result.brand_impersonation}) · `
     : "";
+  const officialDomainText = result.risk_score_components?.official_brand_adjustment < 0
+    ? `${translation("officialDomainAdjustmentSummary", language)} (${result.url_category?.brand || "brand"}) · `
+    : "";
   const directLabel = result.direct_database_verdict?.label;
   document.querySelector("#ensemble-summary").textContent = result.easter_egg
     ? translation("easterEggBadge", language)
     : directLabel
       ? `${directLabel === "Phishing" ? translation("directPhishingShort", language) : translation("directBenignShort", language)} · ${brandOverrideText}${ensembleText}`
-      : `${brandOverrideText}${ensembleText}`;
+      : `${brandOverrideText || officialDomainText}${ensembleText}`;
 }
 
 function renderDirectVerdict(result, language) {
@@ -951,7 +1027,7 @@ reportForm.addEventListener("submit", (event) => {
   const reportUrl = document.querySelector("#report-url").value.trim();
   const payload = {
     product: "SafeWeb",
-    version: "2.4.0",
+    version: "2.4.1",
     submitted_at: new Date().toISOString(),
     url: reportUrl,
     report_type: document.querySelector("#report-type").value,
@@ -1025,6 +1101,7 @@ dialog.addEventListener("close", () => {
   const focusTarget = returnFocusElement?.isConnected ? returnFocusElement : input;
   returnFocusElement = null;
   focusTarget.focus({ preventScroll: true });
+  scheduleBrowserModelLoad();
 });
 
 confirmLanguage.addEventListener("click", () => {
@@ -1032,6 +1109,7 @@ confirmLanguage.addEventListener("click", () => {
   hasConfirmedLanguage = true;
   savePreference(currentLanguage);
   dialog.close("confirm");
+  scheduleBrowserModelLoad();
 });
 
 cancelLanguage.addEventListener("click", () => dialog.close("cancel"));
@@ -1058,11 +1136,6 @@ form.addEventListener("submit", async (event) => {
   }
 
   input.removeAttribute("aria-invalid");
-  if (!window.safewebModel?.trees?.length || typeof assessUrl !== "function") {
-    setMessage("errorModelUnavailable");
-    return;
-  }
-
   const normalizedNote = document.querySelector("#normalized-note");
   latestEnteredUrl = enteredValue;
   latestNormalizedUrl = url;
@@ -1079,6 +1152,10 @@ form.addEventListener("submit", async (event) => {
   submitButton.querySelector(".button-label").textContent = translation("analyzing");
   try {
     await showScanStep("database", "active");
+    await loadBrowserModel();
+    if (typeof assessUrl !== "function") {
+      throw new Error("The browser model is unavailable.");
+    }
     await loadDatabaseRecords();
     latestResult = assessUrl(url);
     await showScanStep("database", "complete");
@@ -1094,7 +1171,11 @@ form.addEventListener("submit", async (event) => {
     renderResult(latestResult);
     await showScanStep("model", "complete");
   } catch (error) {
-    setMessage(error?.message === "The browser model is unavailable." ? "errorModelUnavailable" : "errorPredictionUnavailable");
+    setMessage(
+      error?.message === "The browser model is unavailable." || modelLoadFailed
+        ? "errorModelUnavailable"
+        : "errorPredictionUnavailable",
+    );
   } finally {
     submitButton.disabled = false;
     submitButton.querySelector(".button-label").textContent = translation("analyze");
@@ -1120,6 +1201,7 @@ if (preference.exists) {
   applyLanguage(currentLanguage);
   if (!preference.valid) savePreference(currentLanguage);
   document.documentElement.classList.remove("language-pending");
+  scheduleBrowserModelLoad();
 } else {
   applyLanguage("en");
   openLanguageDialog();

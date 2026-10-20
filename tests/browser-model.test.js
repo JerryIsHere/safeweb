@@ -107,6 +107,41 @@ test("neutral brand and TLD signals do not raise the legitimate DivineSkins URL"
   assert.equal(result.features.phishvn_suspicious_tld, 0);
 });
 
+test("official Google Drive URL overrides the model-only false positive transparently", () => {
+  const result = browserModel.assessUrl("https://drive.google.com/drive/my-drive");
+  const components = result.risk_score_components;
+
+  assert.equal(result.prediction, "legitimate");
+  assert.equal(result.risk_level, "LOW");
+  assert.equal(result.url_category.category_id, "cloud_hosting");
+  assert.equal(result.url_category.brand, "Google");
+  assert.equal(result.brand_impersonation, null);
+  assert.ok(result.model_ensemble.probability > 0.9);
+  assert.ok(components.official_brand_adjustment < 0);
+  assert.equal(components.url_category, 0);
+  assert.equal(components.total, result.risk_score);
+  assert.equal(
+    components.model
+      + components.url_structure
+      + components.brand
+      + components.official_brand_adjustment
+      + components.url_category
+      + components.database,
+    result.risk_score,
+  );
+  assert.equal(result.available_signals.official_brand_domain, "Verified brand domain");
+  assert.equal(result.available_signals.url_category, "Informational only");
+  assert.ok(result.reasons.some((reason) => reason.includes("URL-only model warning was adjusted")));
+});
+
+test("official brand adjustment does not suppress URL obfuscation warnings", () => {
+  const result = browserModel.assessUrl("https://drive.google.com/drive/my-drive?next=%2Flogin");
+
+  assert.equal(result.prediction, "phishing");
+  assert.equal(result.available_signals.url_obfuscation, "Warning");
+  assert.equal(result.risk_score_components.official_brand_adjustment, 0);
+});
+
 test("known PhishVN hosts are attributed and still pass through model verification", () => {
   const result = browserModel.assessUrl("http://tiktokshopseller-vn.com");
 
@@ -289,6 +324,8 @@ test("all four language dictionaries include local model states", () => {
 
   for (const language of ["vi", "en", "fr", "de"]) {
     assert.ok(context.window.safewebTranslations[language].modelReady);
+    assert.ok(context.window.safewebTranslations[language].modelLoading);
+    assert.ok(context.window.safewebTranslations[language].modelLoadFailed);
     assert.ok(context.window.safewebTranslations[language].errorModelUnavailable);
   }
 });
