@@ -160,26 +160,20 @@
           </details>
           <p class="result-disclaimer" id="result-disclaimer" data-i18n="disclaimer">Risk level is a model warning, not a determination that a URL is safe or malicious.</p>
         </section>
-        <aside class="result-aside" aria-label="Additional URL information">
+        <aside class="result-aside" aria-label="Live web inspection" data-i18n-attr="aria-label:liveResultsTitle">
           <article class="preview-panel live-card" id="screenshot-card">
             <div class="screenshot-heading"><h4 data-i18n="screenshotTitle">Destination preview</h4><label><input id="screenshot-toggle" type="checkbox" checked><span data-i18n="screenshotShow">Show preview</span></label></div>
             <div class="screenshot-frame" id="screenshot-frame"><div class="screenshot-skeleton" data-i18n="screenshotOptIn">Enable live checks to request a page preview.</div><img id="site-screenshot" alt="Destination website screenshot" data-i18n-attr="alt:screenshotAlt" hidden></div>
           </article>
           <section class="live-results" id="live-results" hidden aria-labelledby="live-results-title">
             <h3 id="live-results-title" data-i18n="liveResultsTitle">Live web inspection</h3>
+            <p class="live-inspection-note" id="live-inspection-note" data-i18n="liveInspectionPrompt">Enable live checks to inspect DNS, redirects, and page metadata.</p>
             <div class="live-grid">
               <article class="live-card"><h4 data-i18n="dnsTitle">DNS and domain status</h4><ul id="dns-summary" class="signal-list compact"></ul></article>
-              <article class="live-card"><h4 data-i18n="redirectTitle">Redirect chain</h4><ol id="redirect-chain" class="redirect-chain"></ol></article>
               <article class="live-card"><h4 data-i18n="metadataTitle">Page metadata</h4><dl id="metadata-summary" class="metadata-list"></dl></article>
+              <article class="live-card redirect-card"><h4 data-i18n="redirectTitle">Redirect chain</h4><ol id="redirect-chain" class="redirect-chain"></ol></article>
             </div>
           </section>
-          <article class="quick-panel live-card">
-            <span class="section-kicker" data-i18n="referenceKicker">REFERENCE & FEEDBACK</span>
-            <h3 data-i18n="quickPanelTitle">Kiểm tra thêm, góp ý dễ dàng</h3>
-            <p data-i18n="quickPanelCopy">Tìm trong các mẫu đã biết hoặc gửi thông tin về kết quả cần xem xét lại.</p>
-            <button class="database-open-button" type="button" data-action="open-database" data-i18n="databaseNav">Mở cơ sở dữ liệu</button>
-            <button class="database-open-button report-open-button" type="button" data-action="open-report" data-i18n="reportNav">Gửi báo cáo</button>
-          </article>
         </aside>
       </section>
       <section class="database-explorer" id="database-explorer" hidden aria-labelledby="database-title">

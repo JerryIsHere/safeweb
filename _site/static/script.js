@@ -660,8 +660,22 @@ async function showDatabaseExplorer() {
 
 function renderLiveInspection(inspection, language = currentLanguage) {
   const panel = document.querySelector("#live-results");
-  panel.hidden = !inspection;
-  if (!inspection) return;
+  panel.hidden = false;
+  const note = document.querySelector("#live-inspection-note");
+  note.hidden = Boolean(inspection);
+  if (!inspection) {
+    document.querySelector("#dns-summary").replaceChildren();
+    document.querySelector("#redirect-chain").replaceChildren();
+    document.querySelector("#metadata-summary").replaceChildren();
+    const screenshot = document.querySelector("#site-screenshot");
+    const screenshotNote = document.querySelector(".screenshot-skeleton");
+    screenshot.hidden = true;
+    screenshot.removeAttribute("src");
+    screenshotNote.textContent = translation("screenshotOptIn", language);
+    screenshotNote.hidden = false;
+    document.querySelector("#screenshot-frame").hidden = !document.querySelector("#screenshot-toggle").checked;
+    return;
+  }
   const screenshot = document.querySelector("#site-screenshot");
   const screenshotNote = document.querySelector(".screenshot-skeleton");
   screenshot.hidden = true;
@@ -876,6 +890,7 @@ function resetResult() {
   document.querySelector("#url-intelligence").hidden = true;
   document.querySelector("#easter-egg-card").hidden = true;
   document.querySelector("#counterexample-card").hidden = true;
+  renderLiveInspection(null);
   document.querySelector("#live-results").hidden = true;
   document.querySelector("#normalized-note").hidden = true;
   setMessage(null);
@@ -894,12 +909,6 @@ document.querySelector("#report-toggle").addEventListener("click", () => {
   }
   document.querySelector("#report-section").scrollIntoView({ behavior: "smooth", block: "start" });
   document.querySelector("#report-url").focus({ preventScroll: true });
-});
-document.querySelectorAll('[data-action="open-database"]').forEach((button) => {
-  button.addEventListener("click", showDatabaseExplorer);
-});
-document.querySelectorAll('[data-action="open-report"]').forEach((button) => {
-  button.addEventListener("click", () => document.querySelector("#report-toggle").click());
 });
 document.querySelector("#database-close").addEventListener("click", () => {
   document.querySelector("#database-explorer").hidden = true;
