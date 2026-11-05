@@ -5,6 +5,9 @@ SafeWeb là công cụ nghiên cứu hỗ trợ nhận diện URL có dấu hi�
 ## Tính năng
 
 - **Đồng thuận bốn mô hình:** Random Forest, Gradient Boosting, SVM tuyến tính hiệu chuẩn và Logistic Regression chạy cục bộ; từng xác suất và kết luận được hiển thị cạnh trung bình tổ hợp.
+- **Tiêu chí đánh giá riêng có ưu tiên cao:** URL thuộc tên miền chính phủ Việt Nam `.gov.vn`, URL khớp trực tiếp cơ sở dữ liệu tham chiếu, hoặc URL nhái thương hiệu sẽ bỏ qua đồng thuận ML; cả 4 mô hình và điểm đồng thuận được đặt về `0%` để tránh diễn giải sai.
+- **Quy tắc tên miền `.gov.vn`:** chỉ chấp nhận khớp hostname chuẩn (`gov.vn` hoặc hậu tố `.gov.vn`) và không có userinfo đánh lừa; các URL hợp lệ theo quy tắc này được đánh dấu an toàn ở mức thấp.
+- **Giao diện đơn ngữ theo ngôn ngữ đã chọn:** không còn ghép Việt-Anh trong cùng một nhãn; phần “Tôi nên làm gì?” được ưu tiên ngay dưới kết luận, còn tín hiệu kỹ thuật được gom vào mục thu gọn riêng.
 - **Chuẩn hóa và cảnh báo:** tiền tố `www.` được bỏ trước khi tính toàn bộ đặc trưng; cờ TLD được giữ trung tính. Tên miền gần giống thương hiệu được hiển thị như cảnh báo riêng, không làm thay đổi xác suất thô của mô hình.
 - **Kết luận PhishVN trực tiếp:** khớp URL chính xác trả về nhãn và metadata gốc; các điểm ML vẫn được giữ riêng để đối chiếu.
 - **Khám phá PhishVN:** tìm kiếm URL, lọc nhãn/category/tier, phân trang và gửi URL đã chọn tới máy quét.

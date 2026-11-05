@@ -21,7 +21,7 @@ def test_home_page_renders_model_state() -> None:
     response = client.get("/")
 
     assert response.status_code == 200
-    assert b"MODEL READY" in response.data
+    assert b"MODEL READY" not in response.data
     assert b'id="live-inspection-toggle"' in response.data
     assert b'id="live-results"' in response.data
     assert b'id="risk-score-breakdown"' in response.data
@@ -32,6 +32,8 @@ def test_home_page_renders_model_state() -> None:
     assert b"safeweb-api-url" not in response.data
     assert b"model-data.js" not in response.data
     assert b"modelLoadFailed" in client.get("/static/script.js").data
+    assert b"Check URL Safety" in response.data
+    assert b"URL signal analysis" not in response.data
 
 
 def test_home_page_exposes_language_selection_and_translation_assets() -> None:

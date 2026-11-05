@@ -27,8 +27,6 @@ body {
   min-height: 100vh;
   color: var(--ink);
   background-color: var(--paper);
-  background-image: linear-gradient(color-mix(in srgb, var(--text-muted, #68736e) 8%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--text-muted, #68736e) 8%, transparent) 1px, transparent 1px);
-  background-size: 28px 28px;
   font-family: "Be Vietnam Pro", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
 }
 
@@ -57,14 +55,14 @@ button, input { font: inherit; }
 .switcher-caret { color: var(--muted); font-size: 13px; line-height: 1; }
 
 .workspace { width: min(1050px, calc(100% - 40px)); margin: 0 auto; }
-.intro { padding: 64px 0 38px; animation: rise-in .45s ease-out both; }
+.intro { padding: 64px 0 38px; }
 .eyebrow { display: flex; gap: 11px; align-items: center; color: var(--green); font-size: 10px; font-weight: 750; letter-spacing: .12em; }
 .eyebrow-rule { width: 28px; height: 1px; background: var(--green); }
 h1 { margin: 21px 0 14px; font-family: "Be Vietnam Pro", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: clamp(43px, 5vw, 62px); font-weight: 700; line-height: 1.12; }
 h1 em { color: var(--green); font-weight: 400; }
 .intro-copy { max-width: 490px; margin: 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
 
-.analysis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); animation: rise-in .5s .08s ease-out both; }
+.analysis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .analysis-form { padding: 30px 36px 30px 0; }
 .analysis-form label { display: block; margin-bottom: 10px; font-size: 13px; font-weight: 700; }
 .input-wrap { display: flex; align-items: center; border: 1px solid #aebbb1; background: var(--panel); transition: border-color .16s, box-shadow .16s; }
@@ -260,7 +258,7 @@ body[data-theme="cyber-dark"] .analysis-form, body[data-theme="cyber-dark"] .res
 .input-wrap:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px color-mix(in srgb, var(--green) 17%, transparent); }
 .input-wrap input { color: var(--text-primary); }
 .field-note, .method-note p { color: var(--muted); }
-.analyze-button { justify-content: center; gap: 12px; border-radius: 11px; box-shadow: 0 8px 20px color-mix(in srgb, var(--brand, var(--green)) 22%, transparent); }
+.analyze-button { justify-content: center; gap: 12px; border-radius: 11px; }
 .analyze-button:hover { transform: translateY(-1px); }
 .contract-panel { margin: 18px 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--panel) 88%, var(--paper)); }
 .contract-panel summary { color: var(--green); cursor: pointer; font-size: 12px; font-weight: 750; }
@@ -277,7 +275,7 @@ body[data-theme="cyber-dark"] .analysis-form, body[data-theme="cyber-dark"] .res
 .result-heading h2 { font-family: "Be Vietnam Pro", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 20px; font-weight: 750; line-height: 1.25; }
 .risk-badge { padding: 7px 12px; border-radius: 999px; }
 .risk-summary { align-items: center; margin-top: 24px; padding: 18px; border: 1px solid color-mix(in srgb, var(--brand, var(--green)) 38%, var(--line)); border-radius: 13px; background: color-mix(in srgb, var(--brand-soft, var(--green-soft)) 60%, var(--panel)); }
-.verdict-icon { display: grid; flex: 0 0 46px; width: 46px; aspect-ratio: 1; place-items: center; color: var(--panel); border-radius: 14px; background: var(--brand, var(--green)); font-size: 25px; font-weight: 900; box-shadow: 0 0 22px color-mix(in srgb, var(--brand, var(--green)) 24%, transparent); }
+.verdict-icon { display: grid; flex: 0 0 46px; width: 46px; aspect-ratio: 1; place-items: center; color: var(--panel); border-radius: 14px; background: var(--brand, var(--green)); font-size: 25px; font-weight: 900; }
 .risk-summary-body { min-width: 0; }
 .risk-level-label { color: var(--brand, var(--green)); }
 .risk-verdict { color: var(--ink); font-size: 14px; font-weight: 600; }
@@ -303,7 +301,7 @@ body[data-theme="cyber-dark"] .analysis-form, body[data-theme="cyber-dark"] .res
 .criterion-status { flex: 0 0 auto; color: var(--green); font-size: 9px; font-weight: 750; text-align: right; }
 .criterion.warning .criterion-status { color: var(--caution); }
 .criterion.unchecked .criterion-status { color: var(--muted); }
-.live-results { min-width: 0; margin-top: 0; padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--panel) 80%, var(--paper)); animation: rise-in .32s ease-out both; }
+.live-results { min-width: 0; margin-top: 0; padding: 15px; border: 1px solid var(--line); border-radius: 12px; background: color-mix(in srgb, var(--panel) 80%, var(--paper)); }
 .live-results h3 { margin-bottom: 8px; }
 .live-inspection-note { margin: 0 0 12px; color: var(--muted); font-size: 10px; line-height: 1.5; }
 .live-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
@@ -321,7 +319,28 @@ body[data-theme="cyber-dark"] .analysis-form, body[data-theme="cyber-dark"] .res
 .screenshot-frame { position: relative; display: grid; width: 100%; min-width: 0; min-height: 190px; aspect-ratio: 16 / 7; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 9px; background: color-mix(in srgb, var(--paper) 88%, var(--green)); }
 .screenshot-frame[hidden] { display: none !important; }
 .screenshot-frame img { display: block; width: 100%; height: 100%; max-height: 420px; object-fit: contain; }
-.screenshot-skeleton { color: var(--muted); font-size: 11px; animation: scan-pulse .8s ease-in-out infinite alternate; }
+.screenshot-skeleton { color: var(--muted); font-size: 11px; }
+.priority-guidance {
+  margin-top: 14px;
+  border-left: 6px solid var(--brand, var(--green));
+}
+.technical-details {
+  margin-top: 14px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 85%, var(--paper));
+}
+.technical-details > summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 700;
+}
+.technical-details h3 {
+  margin: 12px 0 6px;
+  font-size: 12px;
+}
 .feature-details { margin-top: 16px; }
 .page-footer { color: var(--muted); }
 .language-dialog { border-radius: 16px; }
@@ -594,13 +613,12 @@ body[data-verdict-state="verdict-easter-egg"] {
   --brand: var(--verdict-easter);
   --brand-soft: var(--verdict-easter-bg);
   --verdict-state-border: var(--verdict-easter);
-  background-image: radial-gradient(ellipse at 88% 4%, color-mix(in srgb, var(--verdict-easter-alt) 18%, transparent), transparent 48%),
-    radial-gradient(ellipse at 12% 0%, color-mix(in srgb, var(--verdict-easter) 16%, transparent), transparent 52%);
+  background-image: none;
 }
 body[data-verdict-state] .topbar { border-bottom-color: var(--verdict-state-border); }
-body[data-verdict-state] .analysis-form, body[data-verdict-state] .result-panel { border-color: color-mix(in srgb, var(--verdict-state-border) 58%, var(--border-subtle)); box-shadow: 0 16px 42px color-mix(in srgb, var(--verdict-state-border) 13%, transparent); }
+body[data-verdict-state] .analysis-form, body[data-verdict-state] .result-panel { border-color: color-mix(in srgb, var(--verdict-state-border) 58%, var(--border-subtle)); }
 body[data-verdict-state] .risk-summary { border-color: color-mix(in srgb, var(--verdict-state-border) 58%, var(--border-subtle)); }
-body[data-verdict-state="verdict-danger"] .result-panel { animation: danger-border 1.8s ease-in-out infinite alternate; }
+body[data-verdict-state="verdict-danger"] .result-panel { animation: none; }
 body[data-verdict-state="verdict-easter-egg"] .result-panel { border-color: var(--verdict-easter); box-shadow: 0 0 24px color-mix(in srgb, var(--verdict-easter) 22%, transparent); }
 
 @keyframes danger-border { from { box-shadow: 0 0 0 1px color-mix(in srgb, var(--verdict-danger) 24%, transparent); } to { box-shadow: 0 0 0 3px color-mix(in srgb, var(--verdict-danger) 48%, transparent); } }
@@ -654,20 +672,13 @@ body[data-verdict-state="verdict-easter-egg"] .result-panel { border-color: var(
   color: var(--text-primary);
   border-block: 1px solid var(--border-subtle);
   background-color: var(--bg-surface);
-  background-image: linear-gradient(color-mix(in srgb, var(--text-muted) 7%, transparent) 1px, transparent 1px),
-    linear-gradient(90deg, color-mix(in srgb, var(--text-muted) 7%, transparent) 1px, transparent 1px),
-    radial-gradient(ellipse at 50% 0%, color-mix(in srgb, var(--verdict-safe) 18%, transparent), transparent 62%);
-  background-size: 30px 30px, 30px 30px, auto;
-  animation: rise-in .45s ease-out both;
+  background-image: none;
 }
-.hero-content { width: min(790px, 100%); margin: 0 auto; text-align: center; }
+.hero-content { width: min(790px, 100%); margin: 0 auto; text-align: left; }
 .hero .intro { padding: 0; }
-.hero .eyebrow { justify-content: center; color: var(--verdict-safe); }
-.hero .eyebrow-rule { background: var(--verdict-safe); }
 .hero h1 { margin: 15px 0 10px; color: var(--text-primary); font-family: "Be Vietnam Pro", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 42px; font-weight: 750; line-height: 1.2; }
-.hero h1 em { color: var(--verdict-safe); font-style: normal; }
-.hero .intro-copy { max-width: 720px; margin: 0 auto; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
-.hero .analysis-form { display: grid; grid-template-columns: minmax(0, 1fr) 160px; align-items: center; gap: 9px 12px; width: min(800px, 100%); margin: 24px auto 0; padding: 13px; border: 1px solid var(--border-subtle); border-radius: 11px; background: color-mix(in srgb, var(--bg-card) 88%, transparent); box-shadow: 0 14px 36px rgba(0, 0, 0, .12); }
+.hero .intro-copy { max-width: 720px; margin: 0; color: var(--text-secondary); font-size: 14px; line-height: 1.6; }
+.hero .analysis-form { display: grid; grid-template-columns: minmax(0, 1fr) 160px; align-items: center; gap: 9px 12px; width: min(800px, 100%); margin: 24px 0 0; padding: 13px; border: 1px solid var(--border-subtle); border-radius: 11px; background: color-mix(in srgb, var(--bg-card) 88%, transparent); }
 .hero .analysis-form > label:first-child { grid-column: 1 / -1; margin: 0; color: var(--text-primary); font-size: 12px; }
 .hero .input-wrap { grid-column: 1; grid-row: 2; border: 1px solid var(--verdict-safe); border-radius: 7px; background: var(--bg-input); }
 .hero .input-wrap input { height: 48px; color: var(--text-primary); font-size: 14px; }
@@ -700,7 +711,7 @@ body[data-verdict-state="verdict-easter-egg"] .result-panel { border-color: var(
 .preview-panel .screenshot-frame { min-height: 270px; aspect-ratio: 4 / 5; }
 .preview-panel .screenshot-skeleton { padding: 20px; text-align: center; line-height: 1.6; }
 .counterexample-card h3 { line-height: 1.4; }
-.report-section { margin: 32px 0 8px; padding: 25px 0 30px; border-top: 1px solid var(--border-subtle); scroll-margin-top: 24px; animation: rise-in .38s ease-out both; }
+.report-section { margin: 32px 0 8px; padding: 25px 0 30px; border-top: 1px solid var(--border-subtle); scroll-margin-top: 24px; }
 .report-heading { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
 .report-heading h2 { color: var(--text-primary); font-family: "Be Vietnam Pro", "Inter", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; font-size: 23px; font-weight: 750; }
 .report-mark { color: var(--verdict-safe); font-size: 30px; font-weight: 300; }

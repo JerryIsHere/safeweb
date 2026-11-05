@@ -21,12 +21,6 @@
           <span>SafeWeb <small class="version-tag">v2.4.1</small></span>
       </a>
       <div class="header-actions">
-        <div class="topbar-meta">
-          <span class="status-dot" aria-hidden="true"></span>
-          <span data-i18n="headerAnalysis">URL signal analysis</span>
-          <span class="topbar-divider" aria-hidden="true"></span>
-          <span class="model-state" data-i18n="modelReady">MODEL READY</span>
-        </div>
         <button class="language-switcher" id="language-switcher" type="button" aria-haspopup="dialog" aria-controls="language-dialog" data-i18n-attr="aria-label:changeLanguage">
           <span aria-hidden="true" id="language-code">EN</span>
           <span class="switcher-caret" aria-hidden="true">⌄</span>
@@ -38,8 +32,7 @@
     <main class="workspace">
       <section class="hero" aria-labelledby="page-title">
         <div class="hero-content">
-          <div class="eyebrow"><span data-i18n="researchLabel">RESEARCH PROTOTYPE</span><span class="eyebrow-rule" aria-hidden="true"></span><span data-i18n="reviewLabel">01 / URL REVIEW</span></div>
-          <h1 id="page-title"><span data-i18n="headlineOne">Check the website address.</span><br><em data-i18n="headlineTwo">Spot scam risks early.</em></h1>
+          <h1 id="page-title" data-i18n="headlineMain">Check URL Safety</h1>
           <p class="intro-copy" data-i18n="introCopy">Analyze a link in your browser using a reference database and four AI models. Protect your personal information before opening an unfamiliar link.</p>
         </div>
         <form class="analysis-form" id="analysis-form" novalidate>
@@ -87,7 +80,7 @@
               <h2 id="result-title" data-i18n="awaitingUrl">Awaiting a URL</h2>
             </div>
             <div class="result-heading-actions">
-              <button class="reset-button" id="reset-result" type="button" hidden aria-label="Reset / Xóa kết quả">× <span>Xóa kết quả</span></button>
+              <button class="reset-button" id="reset-result" type="button" hidden data-i18n-attr="aria-label:resetResult"><span aria-hidden="true">×</span> <span data-i18n="resetResult">Reset result</span></button>
               <span class="risk-badge risk-idle" id="risk-badge" data-i18n="noResult">NO RESULT</span>
             </div>
           </div>
@@ -115,10 +108,20 @@
             <span class="intelligence-pill" id="provider-pill"></span>
             <span class="intelligence-pill" id="brand-pill"></span>
           </section>
+          <article class="insight-card priority-guidance">
+            <h3 data-i18n="whatShouldIDo">What should I do?</h3>
+            <ul class="signal-list compact" id="recommendation-list"></ul>
+          </article>
+          <article class="insight-card">
+            <h3 data-i18n="whyThisResult">Why this result?</h3>
+            <ul class="signal-list" id="reason-list">
+              <li class="empty-signal" data-i18n="emptySignals">Signals will appear after analysis.</li>
+            </ul>
+          </article>
           <article class="consensus-card">
             <div class="consensus-heading">
-              <div><span class="section-kicker">MODEL CONSENSUS</span><h3>Đồng thuận Đa Mô hình AI / Multi-Model AI Consensus</h3></div>
-              <strong id="ensemble-summary">Awaiting analysis</strong>
+              <div><span class="section-kicker" data-i18n="modelConsensusKicker">MODEL CONSENSUS</span><h3 data-i18n="modelConsensusTitle">Multi-Model AI Consensus</h3></div>
+              <strong id="ensemble-summary" data-i18n="awaitingAnalysis">Awaiting analysis</strong>
             </div>
             <div class="model-consensus-grid" id="model-consensus"></div>
           </article>
@@ -127,35 +130,19 @@
             <p data-i18n="counterexampleNote">Chỉ hiển thị mẫu lừa đảo có độ tin cậy cao, đã ghi nhận và tương đồng tên miền ít nhất 80%.</p>
             <div class="counterexample-list" id="counterexample-list"></div>
           </article>
-          <div class="result-divider"></div>
-          <div class="detail-grid">
-            <article class="insight-card">
-              <h3 data-i18n="whyThisResult">Why this result?</h3>
-              <ul class="signal-list" id="reason-list">
-                <li class="empty-signal" data-i18n="emptySignals">Signals will appear after analysis.</li>
-              </ul>
-            </article>
-            <article class="insight-card">
-              <h3 data-i18n="availableSignals">Available signals</h3>
-              <ul class="signal-list compact" id="signal-summary"></ul>
-            </article>
-          </div>
-          <div class="detail-grid">
-            <article class="insight-card">
-              <h3 data-i18n="whatShouldIDo">What should I do?</h3>
-              <ul class="signal-list compact" id="recommendation-list"></ul>
-            </article>
-            <article class="insight-card">
-              <h3 data-i18n="limitations">Limitations</h3>
-              <p class="limit-text" id="result-limitations" data-i18n="disclaimer">This is a dataset-backed risk assessment, not proof that a destination is safe or malicious.</p>
-            </article>
-          </div>
-          <div class="signals-heading"><h3 data-i18n="observedSignals">Observed signals</h3><span id="signal-count">0</span></div>
-          <ul class="signal-list" id="signal-list">
-            <li class="empty-signal" data-i18n="emptySignals">Signals will appear after analysis.</li>
-          </ul>
-          <details class="feature-details">
-            <summary data-i18n="featureSummary">View extracted features</summary>
+          <article class="insight-card">
+            <h3 data-i18n="limitations">Limitations</h3>
+            <p class="limit-text" id="result-limitations" data-i18n="disclaimer">This is a dataset-backed risk assessment, not proof that a destination is safe or malicious.</p>
+          </article>
+          <details class="technical-details">
+            <summary data-i18n="technicalDetails">Technical details &amp; available signals</summary>
+            <h3 data-i18n="availableSignals">Available signals</h3>
+            <ul class="signal-list compact" id="signal-summary"></ul>
+            <div class="signals-heading"><h3 data-i18n="observedSignals">Observed signals</h3><span id="signal-count">0</span></div>
+            <ul class="signal-list" id="signal-list">
+              <li class="empty-signal" data-i18n="emptySignals">Signals will appear after analysis.</li>
+            </ul>
+            <h3 data-i18n="featureSummary">Extracted features</h3>
             <dl id="feature-list"></dl>
           </details>
           <p class="result-disclaimer" id="result-disclaimer" data-i18n="disclaimer">Risk level is a model warning, not a determination that a URL is safe or malicious.</p>
@@ -178,24 +165,24 @@
       </section>
       <section class="database-explorer" id="database-explorer" hidden aria-labelledby="database-title">
         <div class="explorer-heading">
-          <div><span class="section-kicker">URL REFERENCE INDEX</span><h2 id="database-title">Cơ sở dữ liệu URL / URL Database</h2></div>
-          <button class="explorer-close" id="database-close" type="button" aria-label="Close database explorer">×</button>
+          <div><span class="section-kicker" data-i18n="databaseKicker">URL REFERENCE INDEX</span><h2 id="database-title" data-i18n="databaseTitle">URL Database</h2></div>
+          <button class="explorer-close" id="database-close" type="button" data-i18n-attr="aria-label:databaseCloseLabel">×</button>
         </div>
         <p class="explorer-attribution">Thai Nguyen Vu, PhishVN v3.1.0 (2026) · <a href="https://doi.org/10.17632/b97hxbxtpd.4" rel="noreferrer">DOI 10.17632/b97hxbxtpd.4</a> · CC BY 4.0</p>
         <div class="database-stats" id="database-stats" aria-live="polite"></div>
         <div class="database-filters">
-          <label>Search URL or domain<input id="database-search" type="search" autocomplete="off" placeholder="domain.example"></label>
-          <label>Label<select id="database-label-filter"><option value="all">Tất cả / All</option><option value="Phishing">Lừa đảo / Phishing</option><option value="Benign">Hợp lệ / Benign</option></select></label>
-          <label>Category<select id="database-category-filter"><option value="all">All categories</option></select></label>
-          <label>Tier<select id="database-tier-filter"><option value="all">All tiers</option><option>Gold</option><option>Silver</option><option>Bronze</option></select></label>
+          <label><span data-i18n="databaseSearchLabel">Search URL or domain</span><input id="database-search" type="search" autocomplete="off" placeholder="domain.example" data-i18n-attr="placeholder:databaseSearchPlaceholder"></label>
+          <label><span data-i18n="databaseFilterLabel">Label</span><select id="database-label-filter"><option value="all" data-i18n="databaseFilterAll">All</option><option value="Phishing" data-i18n="databaseFilterPhishing">Phishing</option><option value="Benign" data-i18n="databaseFilterBenign">Benign</option></select></label>
+          <label><span data-i18n="databaseCategoryLabel">Category</span><select id="database-category-filter"><option value="all" data-i18n="databaseCategoryAll">All categories</option></select></label>
+          <label><span data-i18n="databaseTierLabel">Tier</span><select id="database-tier-filter"><option value="all" data-i18n="databaseTierAll">All tiers</option><option>Gold</option><option>Silver</option><option>Bronze</option></select></label>
         </div>
         <div class="database-table-wrap">
           <table class="database-table">
-            <thead><tr><th>URL</th><th>Label</th><th>Date detected</th><th>Tier</th><th>Category / brand</th><th>Key features</th><th>Action</th></tr></thead>
-            <tbody id="database-rows"><tr><td colspan="7">Open the explorer to load database records.</td></tr></tbody>
+            <thead><tr><th data-i18n="databaseColumnUrl">URL</th><th data-i18n="databaseColumnLabel">Label</th><th data-i18n="databaseColumnDetected">Date detected</th><th data-i18n="databaseColumnTier">Tier</th><th data-i18n="databaseColumnCategoryBrand">Category and brand</th><th data-i18n="databaseColumnFeatures">Key features</th><th data-i18n="databaseColumnAction">Action</th></tr></thead>
+            <tbody id="database-rows"><tr><td colspan="7" data-i18n="databaseOpenToLoad">Open the explorer to load database records.</td></tr></tbody>
           </table>
         </div>
-        <div class="database-pagination"><span id="database-page-status" aria-live="polite"></span><div><button id="database-previous" type="button" disabled>Previous</button><button id="database-next" type="button" disabled>Next</button></div></div>
+        <div class="database-pagination"><span id="database-page-status" aria-live="polite"></span><div><button id="database-previous" type="button" disabled data-i18n="databasePrevious">Previous</button><button id="database-next" type="button" disabled data-i18n="databaseNext">Next</button></div></div>
       </section>
       <section class="report-section" id="report-section" aria-labelledby="report-title">
         <div class="report-heading">

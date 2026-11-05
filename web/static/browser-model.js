@@ -58,15 +58,15 @@
     ["tiktok", "TikTok", ["tiktok.com"]],
   ];
   const categoryRules = [
-    ["gambling", "Cá cược / Cờ bạc / Gambling & Betting", ["casino", "gambling", "betting", "lottery", "slot", "kubet", "789bet", "bong88", "xoso", "lode"]],
-    ["gaming", "Trò chơi trực tuyến / Online Gaming", ["muonline", "volam", "volamtruyenky", "gunny", "sro", "game", "gaming", "steam"]],
-    ["crypto_wallet", "Ví điện tử & Tiền mã hóa / Crypto & E-Wallet", ["crypto", "bitcoin", "ethereum", "wallet", "metamask", "binance", "coinbase", "momo", "zalopay", "vnpay"]],
-    ["banking_finance", "Ngân hàng & Tài chính / Banking & Finance", ["bank", "banking", "vietcombank", "vietinbank", "bidv", "vpbank", "sacombank", "techcombank", "agribank", "mbbank", "tpbank", "acb", "paypal"]],
-    ["social_messaging", "Mạng xã hội & Nhắn tin / Social & Messaging", ["facebook", "instagram", "whatsapp", "zalo", "messenger", "tiktok", "telegram", "social"]],
-    ["e_commerce", "Thương mại điện tử / E-Commerce", ["shopee", "lazada", "tiki", "amazon", "ecommerce", "shopping", "checkout", "cart"]],
-    ["cloud_hosting", "Dịch vụ Đám mây & Lưu trữ / Cloud & Hosting", ["github", "appspot", "weebly", "blogspot", "wordpress", "netlify", "vercel", "cloudflare", "hosting", "drive", "dropbox"]],
-    ["news_media", "Tin tức & Giải trí / News & Media", ["news", "media", "youtube", "netflix", "spotify", "movie", "stream"]],
-    ["url_shortener", "Công cụ Rút gọn Link / URL Shortener", ["bit.ly", "tinyurl", "t.co", "shorturl", "url-short"]],
+    ["gambling", "Gambling and betting", ["casino", "gambling", "betting", "lottery", "slot", "kubet", "789bet", "bong88", "xoso", "lode"]],
+    ["gaming", "Online gaming", ["muonline", "volam", "volamtruyenky", "gunny", "sro", "game", "gaming", "steam"]],
+    ["crypto_wallet", "Crypto and e-wallet", ["crypto", "bitcoin", "ethereum", "wallet", "metamask", "binance", "coinbase", "momo", "zalopay", "vnpay"]],
+    ["banking_finance", "Banking and finance", ["bank", "banking", "vietcombank", "vietinbank", "bidv", "vpbank", "sacombank", "techcombank", "agribank", "mbbank", "tpbank", "acb", "paypal"]],
+    ["social_messaging", "Social and messaging", ["facebook", "instagram", "whatsapp", "zalo", "messenger", "tiktok", "telegram", "social"]],
+    ["e_commerce", "E-commerce", ["shopee", "lazada", "tiki", "amazon", "ecommerce", "shopping", "checkout", "cart"]],
+    ["cloud_hosting", "Cloud and hosting", ["github", "appspot", "weebly", "blogspot", "wordpress", "netlify", "vercel", "cloudflare", "hosting", "drive", "dropbox"]],
+    ["news_media", "News and media", ["news", "media", "youtube", "netflix", "spotify", "movie", "stream"]],
+    ["url_shortener", "URL shortener", ["bit.ly", "tinyurl", "t.co", "shorturl", "url-short"]],
   ];
 
   function officialBrandForHostname(hostname) {
@@ -179,7 +179,7 @@
     const hostname = parts.hostname.toLowerCase();
     const searchable = `${hostname} ${parts.path} ${parts.query}`.toLowerCase();
     const match = categoryRules.find(([, , terms]) => terms.some((term) => searchable.includes(term)));
-    const category = match || ["general", "Trang Web Tổng hợp / General Website"];
+    const category = match || ["general", "General website"];
     const provider = providers.find(([suffix]) => hostname === suffix || hostname.endsWith(`.${suffix}`));
     const brand = (impersonatedBrand && impersonatedBrand !== "No known brand signature")
       || detectBrandImpersonation(hostname)
@@ -760,6 +760,15 @@
     return { prediction, probability, risk_level: riskLevel, models: assessments };
   }
 
+  function zeroModelConsensus() {
+    return {
+      random_forest: { prediction: "legitimate", probability: 0, risk_level: "LOW" },
+      gradient_boosting: { prediction: "legitimate", probability: 0, risk_level: "LOW" },
+      svm: { prediction: "legitimate", probability: 0, risk_level: "LOW" },
+      logistic_regression: { prediction: "legitimate", probability: 0, risk_level: "LOW" },
+    };
+  }
+
   function explainFeatures(features) {
     const explanations = [];
     if (features.url_length >= 100) explanations.push("The URL is unusually long, a signal considered by the model.");
@@ -782,16 +791,31 @@
     const includeExperimental = Boolean(options.includeExperimental);
     const features = extractFeatures(url, includeExperimental);
     const modelAssessment = predict(features, thresholds || defaultThresholds);
-    const modelEnsemble = {
-      prediction: modelAssessment.prediction,
-      probability: modelAssessment.probability,
-      risk_level: modelAssessment.risk_level,
-    };
     const sourceMatch = databaseMatch(url, features);
     const hostname = parseParts(url).hostname;
+    const parsedUrl = new URL(url);
+    const hasUserInfo = Boolean(parsedUrl.username || parsedUrl.password);
+    const isVietnameseGovernmentDomain = !hasUserInfo
+      && (hostname === "gov.vn" || hostname.endsWith(".gov.vn"));
     const impersonatedBrand = detectBrandImpersonation(hostname);
     const trustedBrand = officialBrandForHostname(hostname);
     const urlCategory = classifyUrl(url, sourceMatch.record?.brand || "");
+    const ownSite = isSafeWebUrl(url);
+    const bypassedBy = isVietnameseGovernmentDomain
+      ? "gov_vn"
+      : sourceMatch.matched
+        ? "database_match"
+        : impersonatedBrand
+          ? "brand_rule"
+          : ownSite
+            ? "safeweb_official"
+            : null;
+    if (bypassedBy) {
+      modelAssessment.probability = 0;
+      modelAssessment.models = zeroModelConsensus();
+      modelAssessment.prediction = "legitimate";
+      modelAssessment.risk_level = "LOW";
+    }
     if (sourceMatch.matched) {
       const recordLabel = sourceMatch.record?.label;
       modelAssessment.prediction = recordLabel === "Benign" ? "legitimate" : "phishing";
@@ -835,6 +859,29 @@
         ? "Direct database result: verified benign URL."
         : "Direct database result: confirmed phishing URL.";
     }
+    if (isVietnameseGovernmentDomain) {
+      modelAssessment.prediction = "legitimate";
+      modelAssessment.risk_level = "LOW";
+      riskAssessment.risk_level = "LOW";
+      riskAssessment.risk_theme = "safe";
+      riskAssessment.risk_score = 0;
+      riskAssessment.risk_score_components = {
+        model: 0,
+        url_structure: 0,
+        brand: 0,
+        official_brand_adjustment: 0,
+        url_category: 0,
+        database: 0,
+        total: 0,
+      };
+      riskAssessment.verdict = "Official Vietnamese government domain (.gov.vn) recognized.";
+      riskAssessment.reasons = [
+        "Official Vietnamese government domain (.gov.vn) recognized.",
+      ];
+      riskAssessment.recommendations = [
+        "This URL uses an official Vietnamese government domain suffix (.gov.vn).",
+      ];
+    }
     if (impersonatedBrand) {
       modelAssessment.prediction = "phishing";
       modelAssessment.risk_level = "VERY HIGH";
@@ -852,7 +899,6 @@
       };
       riskAssessment.verdict = `Potential brand lookalike detected: ${impersonatedBrand}.`;
     }
-    const ownSite = isSafeWebUrl(url);
     if (ownSite) {
       modelAssessment.prediction = "legitimate";
       modelAssessment.risk_level = "LOW";
@@ -869,6 +915,16 @@
         total: 0,
       };
     }
+    if (bypassedBy) {
+      riskAssessment.available_signals.machine_learning = "Bypassed";
+    }
+    const modelEnsemble = bypassedBy
+      ? { prediction: "legitimate", probability: 0, risk_level: "LOW" }
+      : {
+        prediction: modelAssessment.prediction,
+        probability: modelAssessment.probability,
+        risk_level: modelAssessment.risk_level,
+      };
 
     return {
       url,
@@ -888,11 +944,13 @@
         record: sourceMatch.record,
       } : null,
       model_ensemble: modelEnsemble,
+      model_consensus_bypassed: Boolean(bypassedBy),
+      model_consensus_bypass_reason: bypassedBy,
       brand_impersonation: impersonatedBrand,
       easter_egg: ownSite,
       verification_stages: {
         database: sourceMatch.matched ? "matched" : "checked_no_match",
-        machine_learning: "evaluated",
+        machine_learning: bypassedBy ? "bypassed" : "evaluated",
       },
       features,
       explanations: explainFeatures(features),

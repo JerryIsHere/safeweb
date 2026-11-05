@@ -209,6 +209,19 @@ function translateExplanation(explanation, language) {
     if (brandLookalike) {
       return translation("signalBrandLookalike", language).replace("{brand}", brandLookalike[1]);
     }
+    if (explanation === "Official Vietnamese government domain (.gov.vn) recognized.") {
+      return translation("signalGovVnOfficial", language);
+    }
+    if (explanation === "Custom rule applied: official Vietnamese government domain (.gov.vn).") {
+      return translation("consensusBypassedGov", language);
+    }
+    if (explanation === "Custom rule applied: matched in reference database.") {
+      return translation("consensusBypassedDatabase", language);
+    }
+    const bypassBrandRule = explanation.match(/^Custom rule applied: potential brand lookalike \((.+)\)\.$/);
+    if (bypassBrandRule) {
+      return translation("consensusBypassedBrandRule", language).replace("{brand}", bypassBrandRule[1]);
+    }
     if (explanation.startsWith("URL is unusually long:")) return translation("signalLong", language);
     if (explanation.startsWith("Hostname contains")) return translation("signalSubdomains", language);
     if (explanation.startsWith("Hostname uses an IP address")) return translation("signalIp", language);
@@ -277,6 +290,7 @@ function translateBackendText(text, language = currentLanguage) {
     "Verify the site through an official channel before you trust it.": "recommendationHigh2",
     "Do not continue to this page or enter credentials, banking details, or MFA codes.": "recommendationVeryHigh1",
     "Close the page and reach the service through the official website or app.": "recommendationVeryHigh2",
+    "This URL uses an official Vietnamese government domain suffix (.gov.vn).": "recommendationGovVn1",
     "This assessment uses only URL text and local model features. Domain age, DNS status, reputation feeds, and page content are not checked unless a trusted client-side source is available.": "disclaimer",
     "This is a dataset-backed risk assessment, not proof that a destination is safe or malicious.": "disclaimer",
   };
@@ -424,6 +438,7 @@ function renderResult(result, language = currentLanguage) {
       "Not available": "statusUnavailable",
       "Verified brand domain": "statusOfficialDomain",
       "Informational only": "statusInformational",
+      Bypassed: "statusBypassed",
     };
     status.textContent = translation(statusKeys[value] || "statusChecked", language);
     status.className = "criterion-status";
@@ -498,7 +513,10 @@ function renderModelConsensus(result, language) {
     panel.append(card);
   });
   const ensemble = result.model_ensemble || result;
-  const ensembleText = `${translation(ensemble.prediction === "phishing" ? "ensemblePhishing" : "ensembleBenign", language)} · ${Math.round(ensemble.probability * 100)}%`;
+  const bypassed = Boolean(result.model_consensus_bypassed);
+  const ensembleText = bypassed
+    ? translation("consensusBypassed", language)
+    : `${translation(ensemble.prediction === "phishing" ? "ensemblePhishing" : "ensembleBenign", language)} · ${Math.round(ensemble.probability * 100)}%`;
   const brandOverrideText = result.brand_impersonation
     ? `${translation("brandOverrideSummary", language)} (${result.brand_impersonation}) · `
     : "";
@@ -526,11 +544,11 @@ function renderDirectVerdict(result, language) {
   );
   document.querySelector("#database-verdict-note").textContent = `${translation("directDatabaseModelNote", language)}${record ? "" : ` ${translation("directMetadataUnavailable", language)}`}`;
   const labels = [
-    ["Detected date", record?.detected_at || "Not recorded"],
-    ["Tier", record?.tier || "Not recorded"],
-    ["Category", record?.category || "Not recorded"],
-    ["Target brand", record?.brand || "Not recorded"],
-    ["Provider", record?.provider || "Not recorded"],
+    [translation("databaseMetaDetected", language), record?.detected_at || translation("notRecorded", language)],
+    [translation("databaseMetaTier", language), record?.tier || translation("notRecorded", language)],
+    [translation("databaseMetaCategory", language), record?.category || translation("notRecorded", language)],
+    [translation("databaseMetaBrand", language), record?.brand || translation("notRecorded", language)],
+    [translation("databaseMetaProvider", language), record?.provider || translation("notRecorded", language)],
   ];
   const details = document.querySelector("#database-meta");
   details.replaceChildren();
@@ -543,15 +561,19 @@ function renderDirectVerdict(result, language) {
   });
 }
 
-function renderUrlIntelligence(result) {
+function renderUrlIntelligence(result, language = currentLanguage) {
   const panel = document.querySelector("#url-intelligence");
   const category = result.url_category
     || (typeof classifyUrl === "function" && result.url ? classifyUrl(result.url) : null);
   panel.hidden = !category;
   if (!category) return;
-  document.querySelector("#category-pill").textContent = `Loại URL / Category: ${category.category}`;
-  document.querySelector("#provider-pill").textContent = `Nhà cung cấp / Provider: ${category.provider}`;
-  document.querySelector("#brand-pill").textContent = `Thương hiệu / Brand: ${category.brand}`;
+  const categoryName = translation(`categories.${category.category_id}`, language);
+  const translatedCategory = categoryName === `categories.${category.category_id}`
+    ? category.category
+    : categoryName;
+  document.querySelector("#category-pill").textContent = `${translation("urlCategoryLabel", language)}: ${translatedCategory}`;
+  document.querySelector("#provider-pill").textContent = `${translation("urlProviderLabel", language)}: ${category.provider}`;
+  document.querySelector("#brand-pill").textContent = `${translation("urlBrandLabel", language)}: ${category.brand}`;
 }
 
 function renderEasterEgg(result, language) {
@@ -630,8 +652,11 @@ function populateDatabaseCategories() {
   const currentValue = select.value;
   const categories = [...new Map(databaseRecords.map((record) => [record.category_id, record.category])).entries()]
     .sort((left, right) => left[1].localeCompare(right[1]));
-  select.replaceChildren(new Option("All categories", "all"));
-  categories.forEach(([id, name]) => select.add(new Option(name, id)));
+  select.replaceChildren(new Option(translation("databaseCategoryAll"), "all"));
+  categories.forEach(([id, name]) => {
+    const translatedName = translation(`categories.${id}`);
+    select.add(new Option(translatedName === `categories.${id}` ? name : translatedName, id));
+  });
   if (categories.some(([id]) => id === currentValue)) select.value = currentValue;
 }
 
@@ -678,7 +703,7 @@ function renderDatabaseExplorer() {
     const empty = document.createElement("tr");
     const cell = document.createElement("td");
     cell.colSpan = 7;
-    cell.textContent = "No matching database records.";
+    cell.textContent = translation("databaseNoMatch");
     empty.append(cell);
     tableBody.append(empty);
   }
@@ -690,7 +715,10 @@ function renderDatabaseExplorer() {
       ["date", record.detected_at || "—"],
       ["tier", record.tier || "—"],
       ["category", `${record.category} · ${record.brand}`],
-      ["features", `len ${record.key_features.url_length} · subdomains ${record.key_features.subdomains} · ${record.key_features.ip_host ? "IP host" : "domain host"}`],
+      ["features", translation("databaseFeaturesSummary")
+        .replace("{length}", String(record.key_features.url_length))
+        .replace("{subdomains}", String(record.key_features.subdomains))
+        .replace("{host}", record.key_features.ip_host ? translation("databaseHostIp") : translation("databaseHostDomain"))],
     ];
     values.forEach(([kind, value]) => {
       const cell = document.createElement("td");
@@ -706,7 +734,7 @@ function renderDatabaseExplorer() {
     const analyzeButton = document.createElement("button");
     analyzeButton.type = "button";
     analyzeButton.className = "database-analyze";
-    analyzeButton.textContent = "Analyze URL";
+    analyzeButton.textContent = translation("analyze");
     analyzeButton.addEventListener("click", () => {
       input.value = record.url;
       document.querySelector("#database-explorer").hidden = true;
@@ -717,7 +745,10 @@ function renderDatabaseExplorer() {
     row.append(actionCell);
     tableBody.append(row);
   });
-  document.querySelector("#database-page-status").textContent = `${filtered.length.toLocaleString()} records · Page ${databasePage + 1} of ${pages}`;
+  document.querySelector("#database-page-status").textContent = translation("databasePageStatus")
+    .replace("{count}", filtered.length.toLocaleString())
+    .replace("{page}", String(databasePage + 1))
+    .replace("{pages}", String(pages));
   document.querySelector("#database-previous").disabled = databasePage === 0;
   document.querySelector("#database-next").disabled = databasePage >= pages - 1;
 }
@@ -730,7 +761,7 @@ async function showDatabaseExplorer() {
     renderDatabaseExplorer();
     explorer.scrollIntoView({ behavior: "smooth", block: "start" });
   } catch {
-    document.querySelector("#database-rows").textContent = "Database records could not be loaded.";
+    document.querySelector("#database-rows").textContent = translation("databaseLoadFailed");
   }
 }
 

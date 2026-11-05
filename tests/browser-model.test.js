@@ -86,7 +86,7 @@ test("browser SVM classification uses its exported validation threshold", () => 
   assert.equal(assessment.prediction, assessment.probability >= threshold ? "phishing" : "legitimate");
 });
 
-test("lookalike brands trigger a high-risk warning without changing raw model scores", () => {
+test("lookalike brands bypass model consensus and keep high-risk verdict", () => {
   const result = browserModel.assessUrl("https://faceboook.com");
 
   assert.equal(result.brand_impersonation, "Facebook");
@@ -96,7 +96,9 @@ test("lookalike brands trigger a high-risk warning without changing raw model sc
   assert.equal(result.risk_score, 100);
   assert.ok(result.reasons.includes("Potential brand lookalike detected: Facebook."));
   assert.equal(result.available_signals.brand_lookalike, "Warning");
-  assert.equal(result.probability, result.model_ensemble.probability);
+  assert.equal(result.model_consensus_bypassed, true);
+  assert.equal(result.model_ensemble.probability, 0);
+  assert.equal(result.models.random_forest.probability, 0);
 });
 
 test("neutral brand and TLD signals do not raise the legitimate DivineSkins URL", () => {
@@ -142,7 +144,7 @@ test("official brand adjustment does not suppress URL obfuscation warnings", () 
   assert.equal(result.risk_score_components.official_brand_adjustment, 0);
 });
 
-test("known PhishVN hosts are attributed and still pass through model verification", () => {
+test("known PhishVN hosts are attributed and bypass model consensus", () => {
   const result = browserModel.assessUrl("http://tiktokshopseller-vn.com");
 
   assert.equal(result.database_match.matched, true);
@@ -151,7 +153,9 @@ test("known PhishVN hosts are attributed and still pass through model verificati
   assert.equal(result.database_match.provenance, "Matched in reference database");
   assert.equal(result.prediction, "phishing");
   assert.equal(result.risk_level, "VERY HIGH");
-  assert.equal(result.verification_stages.machine_learning, "evaluated");
+  assert.equal(result.verification_stages.machine_learning, "bypassed");
+  assert.equal(result.model_ensemble.probability, 0);
+  assert.equal(result.models.svm.probability, 0);
 });
 
 test("comparison examples require a high-confidence phishing record and 80% host similarity", () => {
@@ -197,7 +201,7 @@ test("comparison examples require a high-confidence phishing record and 80% host
   assert.ok(examples[0].similarity >= 0.8);
 });
 
-test("exact PhishVN benign records decide the verdict without changing model scores", () => {
+test("exact PhishVN benign records decide the verdict and bypass model consensus", () => {
   browserModel.setDatabaseRecords([{
     url: "https://verified.example/account",
     url_key: "verified.example/account",
@@ -217,10 +221,10 @@ test("exact PhishVN benign records decide the verdict without changing model sco
   assert.equal(result.direct_database_verdict.label, "Benign");
   assert.equal(result.prediction, "legitimate");
   assert.equal(result.risk_level, "LOW");
-  assert.equal(result.model_ensemble.prediction, "phishing");
-  assert.ok(result.model_ensemble.probability > 0.5);
+  assert.equal(result.model_ensemble.prediction, "legitimate");
+  assert.equal(result.model_ensemble.probability, 0);
   assert.equal(Object.keys(result.models).length, 4);
-  assert.equal(result.models.random_forest.probability >= 0, true);
+  assert.equal(result.models.random_forest.probability, 0);
 });
 
   test("known phishing host matches attach their PhishVN source record", () => {
@@ -257,6 +261,20 @@ test("SafeWeb URL variants trigger the easter egg and URL intelligence", () => {
   const safeweb = browserModel.assessUrl("https://jerryishere.github.io/safeweb");
   assert.equal(safeweb.brand_impersonation, null);
   assert.equal(safeweb.risk_level, "LOW");
+  assert.equal(safeweb.model_consensus_bypassed, true);
+});
+
+test("official .gov.vn domains are forced to safe and bypass model consensus", () => {
+  const result = browserModel.assessUrl("https://dichvucong.gov.vn/portal");
+
+  assert.equal(result.prediction, "legitimate");
+  assert.equal(result.probability, 0);
+  assert.equal(result.risk_level, "LOW");
+  assert.equal(result.model_consensus_bypassed, true);
+  assert.equal(result.model_consensus_bypass_reason, "gov_vn");
+  assert.equal(result.model_ensemble.probability, 0);
+  assert.equal(result.models.gradient_boosting.probability, 0);
+  assert.ok(result.reasons.includes("Official Vietnamese government domain (.gov.vn) recognized."));
 });
 
 test("browser validation rejects empty, malformed, and non-HTTP URLs", () => {

@@ -35,6 +35,7 @@ def test_prediction_uses_loaded_bundle_without_creating_model_file() -> None:
     assert result["prediction"] == "phishing"
     assert result["probability"] == 0.8
     assert result["risk_level"] == "VERY HIGH"
+    assert result["model_consensus_bypassed"] is False
 
 
 def test_prediction_uses_validation_selected_bundle_threshold() -> None:
@@ -70,7 +71,10 @@ def test_brand_lookalike_overrides_risk_tier_without_changing_model_probability(
     assert result["brand_impersonation"] == "Facebook"
     assert result["prediction"] == "phishing"
     assert result["risk_level"] == "VERY HIGH"
-    assert result["probability"] == 0.1
+    assert result["probability"] == 0.0
+    assert result["model_consensus_bypassed"] is True
+    assert result["model_consensus_bypass_reason"] == "brand_rule"
+    assert result["models"]["random_forest"]["probability"] == 0.0
     assert "Potential brand lookalike detected: Facebook." in result["explanations"]
 
 
@@ -90,8 +94,26 @@ def test_prediction_reports_phishvn_match_and_ml_stage() -> None:
     assert result["prediction"] == "phishing"
     assert result["verification_stages"] == {
         "database": "matched",
-        "machine_learning": "evaluated",
+        "machine_learning": "bypassed",
     }
+    assert result["probability"] == 0.0
+    assert result["model_consensus_bypass_reason"] == "database_match"
+
+
+def test_gov_vn_domains_are_marked_safe_with_consensus_bypass() -> None:
+    bundle = {
+        "model": FixedModel(),
+        "feature_names": list(extract_features("https://example.com")),
+    }
+
+    result = predict_url("https://dichvucong.gov.vn/portal", bundle=bundle)
+
+    assert result["prediction"] == "legitimate"
+    assert result["risk_level"] == "LOW"
+    assert result["probability"] == 0.0
+    assert result["model_consensus_bypassed"] is True
+    assert result["model_consensus_bypass_reason"] == "gov_vn"
+    assert result["verification_stages"]["machine_learning"] == "bypassed"
 
 
 def test_risk_levels_follow_the_explicit_score_scale() -> None:

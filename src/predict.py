@@ -22,6 +22,15 @@ DEFAULT_MODEL_PATH = PROJECT_ROOT / "model" / "random_forest.joblib"
 DEFAULT_DATABASE_PATH = PROJECT_ROOT / "data" / "phishvn_database.json"
 
 
+def _zero_model_consensus() -> dict[str, dict[str, str | float]]:
+    return {
+        "random_forest": {"prediction": "legitimate", "probability": 0.0, "risk_level": "LOW"},
+        "gradient_boosting": {"prediction": "legitimate", "probability": 0.0, "risk_level": "LOW"},
+        "svm": {"prediction": "legitimate", "probability": 0.0, "risk_level": "LOW"},
+        "logistic_regression": {"prediction": "legitimate", "probability": 0.0, "risk_level": "LOW"},
+    }
+
+
 @lru_cache(maxsize=2)
 def load_phishvn_database(path: str = str(DEFAULT_DATABASE_PATH)) -> dict[str, Any]:
     """Load the compact PhishVN URL/host/signature index when available."""
@@ -111,7 +120,12 @@ def predict_url(
     """Return a model assessment or explicit no-model state without network access."""
     normalized_url = validate_url(url)
     database = load_phishvn_database()
-    host = (urlsplit(normalized_url).hostname or "").lower().removeprefix("www.")
+    parsed_url = urlsplit(normalized_url)
+    host = (parsed_url.hostname or "").lower().removeprefix("www.")
+    is_vietnamese_government_domain = (
+        not (parsed_url.username or parsed_url.password)
+        and (host == "gov.vn" or host.endswith(".gov.vn"))
+    )
     features = extract_features(
         normalized_url,
         domain_profile=_profile_for_host(host, database),
@@ -122,6 +136,45 @@ def predict_url(
     explanations = explain_features(features)
     if impersonated_brand:
         explanations.insert(0, f"Potential brand lookalike detected: {impersonated_brand}.")
+    if is_vietnamese_government_domain:
+        explanations.insert(0, "Official Vietnamese government domain (.gov.vn) recognized.")
+
+    if is_vietnamese_government_domain or database_match["matched"] or impersonated_brand:
+        if is_vietnamese_government_domain:
+            prediction = "legitimate"
+            risk_level_value = "LOW"
+            bypass_reason = "gov_vn"
+            explanations.insert(0, "Custom rule applied: official Vietnamese government domain (.gov.vn).")
+        elif database_match["matched"]:
+            prediction = "phishing"
+            risk_level_value = "VERY HIGH"
+            bypass_reason = "database_match"
+            explanations.insert(0, "Custom rule applied: matched in reference database.")
+        else:
+            prediction = "phishing"
+            risk_level_value = "VERY HIGH"
+            bypass_reason = "brand_rule"
+            explanations.insert(0, f"Custom rule applied: potential brand lookalike ({impersonated_brand}).")
+        return {
+            "status": "ok",
+            "prediction": prediction,
+            "probability": 0.0,
+            "risk_level": risk_level_value,
+            "models": _zero_model_consensus(),
+            "model_ensemble": {"prediction": "legitimate", "probability": 0.0, "risk_level": "LOW"},
+            "model_consensus_bypassed": True,
+            "model_consensus_bypass_reason": bypass_reason,
+            "features": features,
+            "database_match": database_match,
+            "brand_impersonation": impersonated_brand,
+            "verification_stages": {
+                "database": "matched" if database_match["matched"] else "checked_no_match",
+                "machine_learning": "bypassed",
+            },
+            "explanations": explanations,
+            "disclaimer": "This is a dataset-backed risk assessment, not proof that a destination is safe or malicious.",
+        }
+
     selected_model_path = Path(model_path) if model_path is not None else configured_model_path()
     if bundle is None:
         if not selected_model_path.is_file():
@@ -150,17 +203,20 @@ def predict_url(
         if decision_threshold is not None
         else int(model.predict(row)[0])
     )
-    if database_match["matched"]:
-        probability = max(probability, 0.99)
-        predicted_label = 1
-    if impersonated_brand:
-        predicted_label = 1
-    level = "VERY HIGH" if impersonated_brand else risk_level(probability, thresholds)
+    level = risk_level(probability, thresholds)
     return {
         "status": "ok",
         "prediction": "phishing" if predicted_label == 1 else "legitimate",
         "probability": probability,
         "risk_level": level,
+        "models": {},
+        "model_ensemble": {
+            "prediction": "phishing" if predicted_label == 1 else "legitimate",
+            "probability": probability,
+            "risk_level": level,
+        },
+        "model_consensus_bypassed": False,
+        "model_consensus_bypass_reason": None,
         "features": features,
         "database_match": database_match,
         "brand_impersonation": impersonated_brand,
