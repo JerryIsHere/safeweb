@@ -18,8 +18,8 @@ const languageCode = document.querySelector("#language-code");
 const languageOptions = [...document.querySelectorAll(".language-option")];
 const confirmLanguage = document.querySelector("#language-confirm");
 const cancelLanguage = document.querySelector("#language-cancel");
-let currentLanguage = "en";
-let selectedLanguage = "en";
+let currentLanguage = "vi";
+let selectedLanguage = "vi";
 let hasConfirmedLanguage = false;
 let returnFocusElement = null;
 let latestResult = null;
@@ -87,6 +87,9 @@ function applyLanguage(language) {
     themeButton.setAttribute("aria-label", `${translation("themeControl", locale)}: ${translation(themeNextKey, locale)}`);
   }
   if (latestResult) renderResult(latestResult, locale);
+  if (databaseRecords.length && !document.querySelector("#database-explorer").hidden) {
+    renderDatabaseExplorer(locale);
+  }
 }
 
 function loadBrowserModel() {
@@ -171,9 +174,9 @@ function readPreference() {
   try {
     const value = localStorage.getItem(storageKey);
     const valid = supportedLanguages.includes(value);
-    return { exists: value !== null, valid, language: valid ? value : "en" };
+    return { exists: value !== null, valid, language: valid ? value : "vi" };
   } catch {
-    return { exists: false, valid: false, language: "en" };
+    return { exists: false, valid: false, language: "vi" };
   }
 }
 
@@ -299,6 +302,8 @@ function translateBackendText(text, language = currentLanguage) {
 
 function renderResult(result, language = currentLanguage) {
   const level = result.risk_level || "LOW";
+  document.querySelector(".analysis-grid").hidden = false;
+  document.body.classList.add("has-result");
   document.body.dataset.riskState = riskTheme(level);
   const verdictState = result.easter_egg
     ? "verdict-easter-egg"
@@ -336,7 +341,7 @@ function renderResult(result, language = currentLanguage) {
   const badge = document.querySelector("#risk-badge");
   badge.textContent = result.easter_egg
     ? translation("easterEggBadge", language)
-    : riskLabel(level, language);
+    : `${riskLabel(level, language)} · ${result.risk_score ?? Math.round((result.probability || 0) * 100)}% ${translation("riskScoreLabel", language)}`;
   badge.className = `risk-badge risk-${result.easter_egg ? "easter" : riskClass(level)}`;
 
   const levelLabel = document.querySelector("#risk-level-label");
@@ -371,6 +376,7 @@ function renderResult(result, language = currentLanguage) {
       .replace("{total}", String(scoreParts.total))
       .replace("{adjustment}", String(scoreParts.official_brand_adjustment))
     : "";
+  renderIdentity(result, language);
 
   const sources = document.querySelector("#verification-sources");
   sources.replaceChildren();
@@ -383,12 +389,6 @@ function renderResult(result, language = currentLanguage) {
     badge.className = `source-pill${name === "database" && result.database_match?.matched ? " matched" : ""}`;
     badge.textContent = translation(key, language);
     sources.append(badge);
-  });
-  Object.entries(result.models || {}).forEach(([name, assessment]) => {
-    const pill = document.createElement("span");
-    pill.className = "source-pill model-source";
-    pill.textContent = `${name.replaceAll("_", " ")}: ${Math.round(assessment.probability * 100)}%`;
-    sources.append(pill);
   });
   if (result.live_inspection) {
     const badge = document.createElement("span");
@@ -491,25 +491,36 @@ function renderResult(result, language = currentLanguage) {
 
 function renderModelConsensus(result, language) {
   const modelNames = {
-    random_forest: language === "vi" ? "Random Forest" : "Random Forest",
-    gradient_boosting: language === "vi" ? "Gradient Boosting" : "Gradient Boosting",
-    svm: "SVM",
+    gradient_boosting: "Gradient Boosting",
+    random_forest: "Random Forest",
     logistic_regression: language === "vi" ? "Hồi quy Logistic" : "Logistic Regression",
   };
+  const displayOrder = ["gradient_boosting", "random_forest", "logistic_regression"];
   const panel = document.querySelector("#model-consensus");
   panel.replaceChildren();
-  Object.entries(result.models || {}).forEach(([name, assessment]) => {
+  displayOrder.forEach((name) => {
+    const assessment = result.models?.[name];
+    if (!assessment) return;
     const card = document.createElement("div");
     card.className = `model-score model-score-${assessment.prediction === "phishing" ? "danger" : "safe"}`;
     const title = document.createElement("h4");
     const verdict = document.createElement("strong");
     const score = document.createElement("span");
+    const progress = document.createElement("span");
+    const bypassed = Boolean(result.model_consensus_bypassed);
+    const probability = bypassed ? 0 : Math.round(assessment.probability * 100);
     title.textContent = modelNames[name] || name;
     verdict.textContent = assessment.prediction === "phishing"
       ? translation("predictionSuspicious", language)
       : translation("predictionLegitimate", language);
-    score.textContent = `${Math.round(assessment.probability * 100)}% ${translation("phishingRisk", language)}`;
-    card.append(title, verdict, score);
+    score.textContent = `${probability}% ${translation("phishingRisk", language)}`;
+    progress.className = "model-score-bar";
+    progress.setAttribute("role", "img");
+    progress.setAttribute("aria-label", score.textContent);
+    const fill = document.createElement("span");
+    fill.style.width = `${probability}%`;
+    progress.append(fill);
+    card.append(title, verdict, score, progress);
     panel.append(card);
   });
   const ensemble = result.model_ensemble || result;
@@ -529,6 +540,45 @@ function renderModelConsensus(result, language) {
     : directLabel
       ? `${directLabel === "Phishing" ? translation("directPhishingShort", language) : translation("directBenignShort", language)} · ${brandOverrideText}${ensembleText}`
       : `${brandOverrideText || officialDomainText}${ensembleText}`;
+}
+
+function renderIdentity(result, language) {
+  let url;
+  try {
+    url = new URL(result.url);
+  } catch {
+    return;
+  }
+  const hostname = url.hostname.toLowerCase().replace(/^www\./u, "");
+  const labels = hostname.split(".");
+  const multiLabelSuffixes = new Set([
+    "gov.vn", "com.vn", "co.uk", "org.uk", "ac.uk", "gov.uk", "com.au",
+    "net.au", "org.au", "co.nz", "org.nz", "co.jp", "co.kr", "com.br",
+    "com.cn", "com.sg", "com.tw", "co.in", "co.za",
+  ]);
+  const suffix = labels.slice(-2).join(".");
+  const rootDomain = labels.length > 2 && multiLabelSuffixes.has(suffix)
+    ? labels.slice(-3).join(".")
+    : suffix;
+  const directLabel = result.direct_database_verdict?.label;
+  const governmentDomain = hostname === "gov.vn" || hostname.endsWith(".gov.vn");
+  document.querySelector("#identity-domain").textContent = rootDomain || hostname;
+  document.querySelector("#identity-https").textContent = translation(
+    url.protocol === "https:" ? "identityHttpsActive" : "identityHttpOnly",
+    language,
+  );
+  document.querySelector("#identity-database").textContent = translation(
+    directLabel === "Benign"
+      ? "identityWhitelist"
+      : directLabel === "Phishing"
+        ? "identityBlacklist"
+        : "identityNotRecorded",
+    language,
+  );
+  document.querySelector("#identity-government").textContent = translation(
+    governmentDomain ? "identityOfficialGovernment" : "identityNotGovernment",
+    language,
+  );
 }
 
 function renderDirectVerdict(result, language) {
@@ -647,20 +697,24 @@ async function loadDatabaseRecords() {
   return databaseRecordsPromise;
 }
 
-function populateDatabaseCategories() {
+function populateDatabaseCategories(language = currentLanguage) {
   const select = document.querySelector("#database-category-filter");
   const currentValue = select.value;
   const categories = [...new Map(databaseRecords.map((record) => [record.category_id, record.category])).entries()]
-    .sort((left, right) => left[1].localeCompare(right[1]));
-  select.replaceChildren(new Option(translation("databaseCategoryAll"), "all"));
+    .sort((left, right) => {
+      const leftLabel = translation(`categories.${left[0]}`, language);
+      const rightLabel = translation(`categories.${right[0]}`, language);
+      return leftLabel.localeCompare(rightLabel, language);
+    });
+  select.replaceChildren(new Option(translation("databaseCategoryAll", language), "all"));
   categories.forEach(([id, name]) => {
-    const translatedName = translation(`categories.${id}`);
+    const translatedName = translation(`categories.${id}`, language);
     select.add(new Option(translatedName === `categories.${id}` ? name : translatedName, id));
   });
   if (categories.some(([id]) => id === currentValue)) select.value = currentValue;
 }
 
-function renderDatabaseExplorer() {
+function renderDatabaseExplorer(language = currentLanguage) {
   const counts = databaseRecords.reduce((summary, record) => {
     summary[record.label] = (summary[record.label] || 0) + 1;
     return summary;
@@ -668,21 +722,21 @@ function renderDatabaseExplorer() {
   const categories = new Set(databaseRecords.map((record) => record.category_id));
   const brands = new Set(databaseRecords.map((record) => record.brand).filter((brand) => brand !== "No known brand signature"));
   document.querySelector("#database-stats").replaceChildren(...[
-    ["Total URLs", databaseRecords.length],
-    ["Phishing", counts.Phishing || 0],
-    ["Benign", counts.Benign || 0],
-    ["Categories", categories.size],
-    ["Brands", brands.size],
+    [translation("databaseStatTotal", language), databaseRecords.length],
+    [translation("databaseStatPhishing", language), counts.Phishing || 0],
+    [translation("databaseStatBenign", language), counts.Benign || 0],
+    [translation("databaseStatCategories", language), categories.size],
+    [translation("databaseStatBrands", language), brands.size],
   ].map(([label, value]) => {
     const item = document.createElement("div");
     const amount = document.createElement("strong");
     const caption = document.createElement("span");
-    amount.textContent = Number(value).toLocaleString();
+    amount.textContent = Number(value).toLocaleString(language);
     caption.textContent = label;
     item.append(amount, caption);
     return item;
   }));
-  populateDatabaseCategories();
+  populateDatabaseCategories(language);
 
   const query = document.querySelector("#database-search").value.trim().toLowerCase();
   const labelFilter = document.querySelector("#database-label-filter").value;
@@ -703,22 +757,27 @@ function renderDatabaseExplorer() {
     const empty = document.createElement("tr");
     const cell = document.createElement("td");
     cell.colSpan = 7;
-    cell.textContent = translation("databaseNoMatch");
+    cell.textContent = translation("databaseNoMatch", language);
     empty.append(cell);
     tableBody.append(empty);
   }
   pageRows.forEach((record) => {
     const row = document.createElement("tr");
+    const categoryKey = `categories.${record.category_id}`;
+    const localizedCategory = translation(categoryKey, language);
+    const tierKeys = { Gold: "tierGold", Silver: "tierSilver", Bronze: "tierBronze" };
     const values = [
       ["url", record.url],
-      ["label", record.label],
+      ["label", translation(record.label === "Phishing" ? "databaseFilterPhishing" : "databaseFilterBenign", language)],
       ["date", record.detected_at || "—"],
-      ["tier", record.tier || "—"],
-      ["category", `${record.category} · ${record.brand}`],
-      ["features", translation("databaseFeaturesSummary")
+      ["tier", tierKeys[record.tier] ? translation(tierKeys[record.tier], language) : record.tier || "—"],
+      ["category", `${localizedCategory === categoryKey ? record.category : localizedCategory} · ${record.brand}`],
+      ["features", translation("databaseFeaturesSummary", language)
         .replace("{length}", String(record.key_features.url_length))
         .replace("{subdomains}", String(record.key_features.subdomains))
-        .replace("{host}", record.key_features.ip_host ? translation("databaseHostIp") : translation("databaseHostDomain"))],
+        .replace("{host}", record.key_features.ip_host
+          ? translation("databaseHostIp", language)
+          : translation("databaseHostDomain", language))],
     ];
     values.forEach(([kind, value]) => {
       const cell = document.createElement("td");
@@ -734,7 +793,7 @@ function renderDatabaseExplorer() {
     const analyzeButton = document.createElement("button");
     analyzeButton.type = "button";
     analyzeButton.className = "database-analyze";
-    analyzeButton.textContent = translation("analyze");
+    analyzeButton.textContent = translation("analyze", language);
     analyzeButton.addEventListener("click", () => {
       input.value = record.url;
       document.querySelector("#database-explorer").hidden = true;
@@ -745,8 +804,8 @@ function renderDatabaseExplorer() {
     row.append(actionCell);
     tableBody.append(row);
   });
-  document.querySelector("#database-page-status").textContent = translation("databasePageStatus")
-    .replace("{count}", filtered.length.toLocaleString())
+  document.querySelector("#database-page-status").textContent = translation("databasePageStatus", language)
+    .replace("{count}", filtered.length.toLocaleString(language))
     .replace("{page}", String(databasePage + 1))
     .replace("{pages}", String(pages));
   document.querySelector("#database-previous").disabled = databasePage === 0;
@@ -767,7 +826,8 @@ async function showDatabaseExplorer() {
 
 function renderLiveInspection(inspection, language = currentLanguage) {
   const panel = document.querySelector("#live-results");
-  panel.hidden = false;
+  document.querySelector("#screenshot-card").hidden = !inspection;
+  panel.hidden = !inspection;
   const note = document.querySelector("#live-inspection-note");
   note.hidden = Boolean(inspection);
   if (!inspection) {
@@ -964,6 +1024,8 @@ function resetResult() {
   latestResult = null;
   latestEnteredUrl = null;
   latestNormalizedUrl = null;
+  document.querySelector(".analysis-grid").hidden = true;
+  document.body.classList.remove("has-result");
   input.value = "";
   document.body.removeAttribute("data-verdict-state");
   document.body.removeAttribute("data-risk-state");
@@ -991,7 +1053,7 @@ function resetResult() {
   document.querySelector("#signal-list").replaceChildren(emptyObserved);
   document.querySelector("#feature-list").replaceChildren();
   document.querySelector("#model-consensus").replaceChildren();
-  document.querySelector("#ensemble-summary").textContent = "Awaiting analysis";
+  document.querySelector("#ensemble-summary").textContent = translation("awaitingAnalysis");
   document.querySelector("#signal-count").textContent = "0";
   document.querySelector("#database-verdict").hidden = true;
   document.querySelector("#url-intelligence").hidden = true;
@@ -1209,7 +1271,7 @@ form.addEventListener("submit", async (event) => {
     );
   } finally {
     submitButton.disabled = false;
-    submitButton.querySelector(".button-label").textContent = translation("analyze");
+    submitButton.querySelector(".button-label").textContent = translation("analyzeBtn");
     progress.hidden = true;
   }
 });
@@ -1234,7 +1296,7 @@ if (preference.exists) {
   document.documentElement.classList.remove("language-pending");
   scheduleBrowserModelLoad();
 } else {
-  applyLanguage("en");
+  applyLanguage("vi");
   openLanguageDialog();
   document.documentElement.classList.remove("language-pending");
 }

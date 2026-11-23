@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en" class="language-pending">
+<html lang="vi" class="language-pending">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#f1f2ec">
-    <title data-i18n="pageTitle">SafeWeb | URL analysis</title>
+    <meta name="theme-color" content="#0a0e17">
+    <title data-i18n="pageTitle">SafeWeb | Phân tích URL</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap&subset=vietnamese" rel="stylesheet">
@@ -16,81 +16,94 @@
   </head>
   <body>
     <header class="topbar">
-      <a class="brand" href="./" aria-label="SafeWeb home" data-i18n-attr="aria-label:homeLabel">
-        <span class="brand-mark" aria-hidden="true">S</span>
-          <span>SafeWeb <small class="version-tag">v2.4.1</small></span>
+      <a class="brand" href="./" aria-label="Trang chủ SafeWeb" data-i18n-attr="aria-label:homeLabel">
+        <span class="brand-mark" aria-hidden="true">✓</span>
+        <span class="brand-name"><span>Safe</span><strong>Web</strong></span>
       </a>
+      <nav class="nav-actions" aria-label="Công cụ SafeWeb">
+        <button class="database-open-button" id="database-toggle" type="button" data-i18n="databaseNav">Kho dữ liệu URL</button>
+        <button class="database-open-button report-open-button" id="report-toggle" type="button" data-i18n="reportNav">Gửi báo cáo sự cố</button>
+      </nav>
       <div class="header-actions">
         <button class="language-switcher" id="language-switcher" type="button" aria-haspopup="dialog" aria-controls="language-dialog" data-i18n-attr="aria-label:changeLanguage">
-          <span aria-hidden="true" id="language-code">EN</span>
+          <span class="language-codes" aria-hidden="true">VI <i>|</i> EN <i>|</i> FR <i>|</i> DE</span>
+          <span aria-hidden="true" id="language-code">VI</span>
           <span class="switcher-caret" aria-hidden="true">⌄</span>
         </button>
-        <button class="theme-switcher" id="theme-switcher" type="button" data-i18n="themeDark" aria-label="Change contrast theme" data-i18n-attr="aria-label:themeControl"></button>
+        <button class="theme-switcher" id="theme-switcher" type="button" data-i18n="themeContrast">Tương phản cao</button>
       </div>
     </header>
 
     <main class="workspace">
       <section class="hero" aria-labelledby="page-title">
         <div class="hero-content">
-          <h1 id="page-title" data-i18n="headlineMain">Check URL Safety</h1>
-          <p class="intro-copy" data-i18n="introCopy">Analyze a link in your browser using a reference database and four AI models. Protect your personal information before opening an unfamiliar link.</p>
+          <p class="hero-eyebrow"><span class="status-dot" aria-hidden="true"></span><span data-i18n="heroEyebrow">PHÂN TÍCH URL TRÊN TRÌNH DUYỆT</span></p>
+          <h1 id="page-title" data-i18n="heroTitle">Phân tích bảo mật chuyên sâu cho mọi đường dẫn</h1>
+          <p class="intro-copy" data-i18n="heroSubtitle">Nhận diện tức thì liên kết độc hại, mạo danh và bảo vệ dữ liệu cá nhân ngay trên trình duyệt.</p>
+          <form class="analysis-form" id="analysis-form" novalidate>
+            <label for="url-input" data-i18n="inputPrompt">Nhập URL để bắt đầu 👇</label>
+            <div class="input-wrap">
+              <span class="input-prefix" aria-hidden="true">↗</span>
+              <input id="url-input" name="url" type="text" inputmode="url" placeholder="Ví dụ: example.com hoặc vietcombank.com.vn" autocomplete="url" required aria-describedby="field-note normalized-note form-message" data-i18n-attr="placeholder:inputPlaceholder">
+            </div>
+            <p class="field-note" id="field-note" data-i18n="fieldNote">Chỉ phân tích nội dung URL. Không nhập mật khẩu, mã xác thực hoặc liên kết riêng tư.</p>
+            <p class="normalized-note" id="normalized-note" hidden></p>
+            <button class="analyze-button" type="submit">
+              <span class="button-label" data-i18n="analyzeBtn">Phân tích URL</span><span class="button-arrow" aria-hidden="true">↗</span>
+            </button>
+            <details class="contract-panel">
+              <summary data-i18n="contractTitle">Phạm vi xác minh</summary>
+              <p data-i18n="contractLocal">Chế độ cục bộ kiểm tra cấu trúc URL, cơ sở dữ liệu tham chiếu và bốn mô hình học máy. Không gửi yêu cầu ra ngoài.</p>
+              <label class="contract-toggle"><input id="live-inspection-toggle" type="checkbox"><span data-i18n="contractLive">Bật kiểm tra DNS, chuyển hướng, siêu dữ liệu và ảnh chụp; URL sẽ được chia sẻ với dịch vụ tra cứu.</span></label>
+            </details>
+            <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
+            <ol class="scan-progress" id="scan-progress" hidden aria-live="polite">
+              <li data-step="database" data-i18n="scanDatabase">Chuẩn hóa URL và đối chiếu cơ sở dữ liệu tham chiếu</li>
+              <li data-step="live" data-i18n="scanLive">Kiểm tra DNS và phân tích chuyển hướng</li>
+              <li data-step="model" data-i18n="scanModel">Đánh giá các mô hình và chuẩn bị bản xem trước</li>
+            </ol>
+            <div class="method-note">
+              <span class="note-index" data-i18n="scopeLabel">PHẠM VI</span>
+              <p data-i18n="methodNote">Dự đoán mô tả các mẫu được học từ dữ liệu huấn luyện, không phải kết luận về một trang web.</p>
+            </div>
+          </form>
         </div>
-        <form class="analysis-form" id="analysis-form" novalidate>
-          <label for="url-input" data-i18n="inputLabel">URL to assess</label>
-          <div class="input-wrap">
-            <span class="input-prefix" aria-hidden="true">↳</span>
-            <input id="url-input" name="url" type="text" inputmode="url" placeholder="https://example.com/account" autocomplete="url" required aria-describedby="field-note normalized-note form-message" data-i18n-attr="placeholder:inputPlaceholder">
-          </div>
-          <p class="field-note" id="field-note" data-i18n="fieldNote">Only the URL text is analyzed. Do not include passwords, tokens, or private links.</p>
-          <p class="normalized-note" id="normalized-note" hidden></p>
-          <details class="contract-panel">
-            <summary data-i18n="contractTitle">Verification contract</summary>
-            <p data-i18n="contractLocal">Local mode: URL structure, the reference database, and four models. No external request.</p>
-            <label class="contract-toggle"><input id="live-inspection-toggle" type="checkbox"><span data-i18n="contractLive">Enable live DNS, redirect, metadata, and screenshot checks (shares the URL with lookup services).</span></label>
-          </details>
-          <button class="analyze-button" type="submit">
-            <span class="button-label" data-i18n="analyze">Analyze URL</span><span class="button-arrow" aria-hidden="true">↗</span>
-          </button>
-          <p class="form-message" id="form-message" role="status" aria-live="polite"></p>
-          <ol class="scan-progress" id="scan-progress" hidden aria-live="polite">
-            <li data-step="database" data-i18n="scanDatabase">Normalize URL and check the reference database</li>
-            <li data-step="live" data-i18n="scanLive">Check DNS and inspect redirects</li>
-            <li data-step="model" data-i18n="scanModel">Evaluate the four-model consensus and retrieve page preview</li>
-          </ol>
-          <div class="method-note">
-            <span class="note-index" data-i18n="scopeLabel">SCOPE</span>
-            <p data-i18n="methodNote">Predictions describe patterns learned from training data. They are not a verdict about a website.</p>
-          </div>
-        </form>
+        <div class="scan-visual" aria-hidden="true">
+          <div class="scan-orbit orbit-outer"></div>
+          <div class="scan-orbit orbit-inner"></div>
+          <div class="scan-core"><span class="scan-shield">✓</span><strong>SAFE<span>WEB</span></strong><small>URL INTELLIGENCE</small></div>
+          <div class="scan-layer layer-one"><span>01</span><strong data-i18n="scanLayerDatabase">TRA CỨU CSDL &amp; .GOV.VN</strong><i>●</i></div>
+          <div class="scan-layer layer-two"><span>02</span><strong data-i18n="scanLayerFeatures">55 ĐẶC TRƯNG CÚ PHÁP</strong><i>●</i></div>
+          <div class="scan-layer layer-three"><span>03</span><strong data-i18n="scanLayerModels">HỘI ĐỒNG AI · GB / RF / LR</strong><i>●</i></div>
+          <div class="scan-layer layer-four"><span>04</span><strong data-i18n="scanLayerInspection">KIỂM TRA MỞ RỘNG</strong><i>●</i></div>
+          <div class="visual-caption"><span class="visual-pulse"></span><span data-i18n="visualCaption">BẢO MẬT NHIỀU LỚP · ƯU TIÊN RIÊNG TƯ</span></div>
+        </div>
       </section>
 
-      <nav class="workspace-nav" aria-label="SafeWeb tools">
-        <span class="nav-caption" data-i18n="quickActions">SAFEWEB TOOLS</span>
-        <div class="nav-actions">
-          <button class="database-open-button" id="database-toggle" type="button" data-i18n="databaseNav">Cơ sở dữ liệu URL</button>
-          <button class="database-open-button report-open-button" id="report-toggle" type="button" data-i18n="reportNav">Gửi báo cáo</button>
-        </div>
-      </nav>
-      <section class="analysis-grid" aria-label="URL analysis" data-i18n-attr="aria-label:analysisLabel">
+      <section class="analysis-grid" hidden aria-label="Phân tích URL" data-i18n-attr="aria-label:analysisLabel">
 
         <section class="result-panel" aria-labelledby="result-title" aria-live="polite">
           <div class="result-heading">
             <div>
-              <div class="section-kicker" data-i18n="resultKicker">TWO-STAGE VERIFICATION</div>
-              <h2 id="result-title" data-i18n="awaitingUrl">Awaiting a URL</h2>
+              <div class="section-kicker" data-i18n="resultKicker">XÁC MINH QUA NHIỀU LỚP</div>
+              <h2 id="result-title" data-i18n="awaitingUrl">Đang chờ URL</h2>
             </div>
             <div class="result-heading-actions">
-              <button class="reset-button" id="reset-result" type="button" hidden data-i18n-attr="aria-label:resetResult"><span aria-hidden="true">×</span> <span data-i18n="resetResult">Reset result</span></button>
-              <span class="risk-badge risk-idle" id="risk-badge" data-i18n="noResult">NO RESULT</span>
+              <button class="reset-button" id="reset-result" type="button" hidden data-i18n-attr="aria-label:resetResult"><span aria-hidden="true">×</span> <span data-i18n="resetResult">Xóa kết quả</span></button>
+              <span class="risk-badge risk-idle" id="risk-badge" data-i18n="noResult">CHƯA CÓ KẾT QUẢ</span>
             </div>
           </div>
           <div class="risk-summary">
             <div class="verdict-icon" id="verdict-icon" aria-hidden="true">?</div>
             <div class="risk-summary-body">
-              <div class="risk-level-label" id="risk-level-label" data-i18n="riskLevelUnknown">NO RESULT</div>
-              <p class="risk-verdict" id="risk-verdict" data-i18n="awaitingUrl">Awaiting a URL</p>
+              <div class="risk-level-label" id="risk-level-label" data-i18n="riskLevelUnknown">CHƯA CÓ KẾT QUẢ</div>
+              <p class="risk-verdict" id="risk-verdict" data-i18n="awaitingUrl">Đang chờ URL</p>
             </div>
           </div>
+          <article class="insight-card priority-guidance">
+            <h3 data-i18n="whatShouldIDo">Tôi nên làm gì?</h3>
+            <ul class="signal-list compact" id="recommendation-list"></ul>
+          </article>
           <div class="signal-meter" id="signal-meter" role="img" aria-label="No risk level"></div>
           <p class="risk-score-breakdown" id="risk-score-breakdown"></p>
           <div class="verification-sources" id="verification-sources"></div>
@@ -108,85 +121,90 @@
             <span class="intelligence-pill" id="provider-pill"></span>
             <span class="intelligence-pill" id="brand-pill"></span>
           </section>
-          <article class="insight-card priority-guidance">
-            <h3 data-i18n="whatShouldIDo">What should I do?</h3>
-            <ul class="signal-list compact" id="recommendation-list"></ul>
-          </article>
           <article class="insight-card">
-            <h3 data-i18n="whyThisResult">Why this result?</h3>
+            <h3 data-i18n="whyThisResult">Vì sao có kết quả này?</h3>
             <ul class="signal-list" id="reason-list">
-              <li class="empty-signal" data-i18n="emptySignals">Signals will appear after analysis.</li>
+              <li class="empty-signal" data-i18n="emptySignals">Tín hiệu sẽ xuất hiện sau khi phân tích.</li>
             </ul>
           </article>
           <article class="consensus-card">
             <div class="consensus-heading">
-              <div><span class="section-kicker" data-i18n="modelConsensusKicker">MODEL CONSENSUS</span><h3 data-i18n="modelConsensusTitle">Multi-Model AI Consensus</h3></div>
-              <strong id="ensemble-summary" data-i18n="awaitingAnalysis">Awaiting analysis</strong>
+              <div><span class="section-kicker" data-i18n="modelConsensusKicker">HỘI ĐỒNG MÔ HÌNH HỌC MÁY</span><h3 data-i18n="modelConsensusTitle">Đồng thuận đa mô hình AI</h3></div>
+              <strong id="ensemble-summary" data-i18n="awaitingAnalysis">Đang chờ phân tích</strong>
             </div>
             <div class="model-consensus-grid" id="model-consensus"></div>
           </article>
+          <article class="insight-card identity-card">
+            <h3 data-i18n="identityTitle">Định danh đường dẫn &amp; cơ sở dữ liệu</h3>
+            <dl class="identity-list">
+              <div><dt data-i18n="identityDomain">Tên miền gốc</dt><dd id="identity-domain">—</dd></div>
+              <div><dt data-i18n="identityHttps">Giao thức</dt><dd id="identity-https">—</dd></div>
+              <div><dt data-i18n="identityDatabase">Đối chiếu cơ sở dữ liệu</dt><dd id="identity-database">—</dd></div>
+              <div><dt data-i18n="identityGovernment">Tên miền chính phủ</dt><dd id="identity-government">—</dd></div>
+            </dl>
+          </article>
           <article class="counterexample-card" id="counterexample-card" hidden>
-            <h3 data-i18n="counterexampleTitle">Cảnh giác: Các trang giả mạo tương tự trong cơ sở dữ liệu</h3>
+            <h3 data-i18n="counterexampleTitle">Tên miền lừa đảo tương tự trong dữ liệu tham chiếu</h3>
             <p data-i18n="counterexampleNote">Chỉ hiển thị mẫu lừa đảo có độ tin cậy cao, đã ghi nhận và tương đồng tên miền ít nhất 80%.</p>
             <div class="counterexample-list" id="counterexample-list"></div>
           </article>
           <article class="insight-card">
-            <h3 data-i18n="limitations">Limitations</h3>
-            <p class="limit-text" id="result-limitations" data-i18n="disclaimer">This is a dataset-backed risk assessment, not proof that a destination is safe or malicious.</p>
+            <h3 data-i18n="limitations">Hạn chế</h3>
+            <p class="limit-text" id="result-limitations" data-i18n="disclaimer">Đây là đánh giá rủi ro dựa trên dữ liệu, không chứng minh trang đích an toàn hay độc hại.</p>
           </article>
           <details class="technical-details">
-            <summary data-i18n="technicalDetails">Technical details &amp; available signals</summary>
-            <h3 data-i18n="availableSignals">Available signals</h3>
+            <summary data-i18n="technicalDetails">Chi tiết kỹ thuật &amp; 55 đặc trưng</summary>
+            <h3 data-i18n="availableSignals">Tín hiệu khả dụng</h3>
             <ul class="signal-list compact" id="signal-summary"></ul>
-            <div class="signals-heading"><h3 data-i18n="observedSignals">Observed signals</h3><span id="signal-count">0</span></div>
+            <div class="signals-heading"><h3 data-i18n="observedSignals">Tín hiệu quan sát được</h3><span id="signal-count">0</span></div>
             <ul class="signal-list" id="signal-list">
-              <li class="empty-signal" data-i18n="emptySignals">Signals will appear after analysis.</li>
+              <li class="empty-signal" data-i18n="emptySignals">Tín hiệu sẽ xuất hiện sau khi phân tích.</li>
             </ul>
-            <h3 data-i18n="featureSummary">Extracted features</h3>
+            <h3 data-i18n="featureSummary">Đặc trưng đã trích xuất</h3>
             <dl id="feature-list"></dl>
           </details>
-          <p class="result-disclaimer" id="result-disclaimer" data-i18n="disclaimer">Risk level is a model warning, not a determination that a URL is safe or malicious.</p>
+          <p class="result-disclaimer" id="result-disclaimer" data-i18n="disclaimer">Mức độ rủi ro là cảnh báo từ mô hình, không khẳng định URL an toàn hay độc hại.</p>
         </section>
-        <aside class="result-aside" aria-label="Live web inspection" data-i18n-attr="aria-label:liveResultsTitle">
-          <article class="preview-panel live-card" id="screenshot-card">
-            <div class="screenshot-heading"><h4 data-i18n="screenshotTitle">Destination preview</h4><label><input id="screenshot-toggle" type="checkbox" checked><span data-i18n="screenshotShow">Show preview</span></label></div>
-            <div class="screenshot-frame" id="screenshot-frame"><div class="screenshot-skeleton" data-i18n="screenshotOptIn">Enable live checks to request a page preview.</div><img id="site-screenshot" alt="Destination website screenshot" data-i18n-attr="alt:screenshotAlt" hidden></div>
+        <aside class="result-aside" aria-label="Kiểm tra web trực tuyến" data-i18n-attr="aria-label:liveResultsTitle">
+          <article class="preview-panel live-card" id="screenshot-card" hidden>
+            <div class="screenshot-heading"><h4 data-i18n="screenshotTitle">Xem trước trang đích</h4><label><input id="screenshot-toggle" type="checkbox" checked><span data-i18n="screenshotShow">Hiện bản xem trước</span></label></div>
+            <div class="screenshot-frame" id="screenshot-frame"><div class="screenshot-skeleton" data-i18n="screenshotOptIn">Bật kiểm tra trực tuyến để tạo bản xem trước trang.</div><img id="site-screenshot" alt="Ảnh chụp trang web đích" data-i18n-attr="alt:screenshotAlt" hidden></div>
           </article>
           <section class="live-results" id="live-results" hidden aria-labelledby="live-results-title">
-            <h3 id="live-results-title" data-i18n="liveResultsTitle">Live web inspection</h3>
-            <p class="live-inspection-note" id="live-inspection-note" data-i18n="liveInspectionPrompt">Enable live checks to inspect DNS, redirects, and page metadata.</p>
+            <h3 id="live-results-title" data-i18n="liveResultsTitle">Kiểm tra web trực tuyến</h3>
+            <p class="live-inspection-note" id="live-inspection-note" data-i18n="liveInspectionPrompt">Bật kiểm tra trực tuyến để xem DNS, chuyển hướng và thông tin trang.</p>
             <div class="live-grid">
-              <article class="live-card"><h4 data-i18n="dnsTitle">DNS and domain status</h4><ul id="dns-summary" class="signal-list compact"></ul></article>
-              <article class="live-card"><h4 data-i18n="metadataTitle">Page metadata</h4><dl id="metadata-summary" class="metadata-list"></dl></article>
-              <article class="live-card redirect-card"><h4 data-i18n="redirectTitle">Redirect chain</h4><ol id="redirect-chain" class="redirect-chain"></ol></article>
+              <article class="live-card"><h4 data-i18n="dnsTitle">Trạng thái DNS và tên miền</h4><ul id="dns-summary" class="signal-list compact"></ul></article>
+              <article class="live-card"><h4 data-i18n="metadataTitle">Siêu dữ liệu trang</h4><dl id="metadata-summary" class="metadata-list"></dl></article>
+              <article class="live-card redirect-card"><h4 data-i18n="redirectTitle">Chuỗi chuyển hướng</h4><ol id="redirect-chain" class="redirect-chain"></ol></article>
             </div>
           </section>
         </aside>
       </section>
       <section class="database-explorer" id="database-explorer" hidden aria-labelledby="database-title">
         <div class="explorer-heading">
-          <div><span class="section-kicker" data-i18n="databaseKicker">URL REFERENCE INDEX</span><h2 id="database-title" data-i18n="databaseTitle">URL Database</h2></div>
+          <div><span class="section-kicker" data-i18n="databaseKicker">CHỈ MỤC DỮ LIỆU URL</span><h2 id="database-title" data-i18n="databaseTitle">Kho dữ liệu URL</h2></div>
           <button class="explorer-close" id="database-close" type="button" data-i18n-attr="aria-label:databaseCloseLabel">×</button>
         </div>
         <p class="explorer-attribution">Thai Nguyen Vu, PhishVN v3.1.0 (2026) · <a href="https://doi.org/10.17632/b97hxbxtpd.4" rel="noreferrer">DOI 10.17632/b97hxbxtpd.4</a> · CC BY 4.0</p>
         <div class="database-stats" id="database-stats" aria-live="polite"></div>
         <div class="database-filters">
-          <label><span data-i18n="databaseSearchLabel">Search URL or domain</span><input id="database-search" type="search" autocomplete="off" placeholder="domain.example" data-i18n-attr="placeholder:databaseSearchPlaceholder"></label>
-          <label><span data-i18n="databaseFilterLabel">Label</span><select id="database-label-filter"><option value="all" data-i18n="databaseFilterAll">All</option><option value="Phishing" data-i18n="databaseFilterPhishing">Phishing</option><option value="Benign" data-i18n="databaseFilterBenign">Benign</option></select></label>
-          <label><span data-i18n="databaseCategoryLabel">Category</span><select id="database-category-filter"><option value="all" data-i18n="databaseCategoryAll">All categories</option></select></label>
-          <label><span data-i18n="databaseTierLabel">Tier</span><select id="database-tier-filter"><option value="all" data-i18n="databaseTierAll">All tiers</option><option>Gold</option><option>Silver</option><option>Bronze</option></select></label>
+          <label><span data-i18n="databaseSearchLabel">Tìm URL hoặc tên miền</span><input id="database-search" type="search" autocomplete="off" placeholder="domain.example" data-i18n-attr="placeholder:databaseSearchPlaceholder"></label>
+          <label><span data-i18n="databaseFilterLabel">Nhãn</span><select id="database-label-filter"><option value="all" data-i18n="databaseFilterAll">Tất cả</option><option value="Phishing" data-i18n="databaseFilterPhishing">Lừa đảo</option><option value="Benign" data-i18n="databaseFilterBenign">Hợp lệ</option></select></label>
+          <label><span data-i18n="databaseCategoryLabel">Danh mục</span><select id="database-category-filter"><option value="all" data-i18n="databaseCategoryAll">Tất cả danh mục</option></select></label>
+          <label><span data-i18n="databaseTierLabel">Mức độ tin cậy</span><select id="database-tier-filter"><option value="all" data-i18n="databaseTierAll">Tất cả mức</option><option value="Gold" data-i18n="tierGold">Vàng</option><option value="Silver" data-i18n="tierSilver">Bạc</option><option value="Bronze" data-i18n="tierBronze">Đồng</option></select></label>
         </div>
         <div class="database-table-wrap">
           <table class="database-table">
-            <thead><tr><th data-i18n="databaseColumnUrl">URL</th><th data-i18n="databaseColumnLabel">Label</th><th data-i18n="databaseColumnDetected">Date detected</th><th data-i18n="databaseColumnTier">Tier</th><th data-i18n="databaseColumnCategoryBrand">Category and brand</th><th data-i18n="databaseColumnFeatures">Key features</th><th data-i18n="databaseColumnAction">Action</th></tr></thead>
-            <tbody id="database-rows"><tr><td colspan="7" data-i18n="databaseOpenToLoad">Open the explorer to load database records.</td></tr></tbody>
+            <thead><tr><th data-i18n="databaseColumnUrl">URL</th><th data-i18n="databaseColumnLabel">Nhãn</th><th data-i18n="databaseColumnDetected">Ngày ghi nhận</th><th data-i18n="databaseColumnTier">Mức</th><th data-i18n="databaseColumnCategoryBrand">Danh mục và thương hiệu</th><th data-i18n="databaseColumnFeatures">Đặc trưng chính</th><th data-i18n="databaseColumnAction">Thao tác</th></tr></thead>
+            <tbody id="database-rows"><tr><td colspan="7" data-i18n="databaseOpenToLoad">Mở kho dữ liệu để tải bản ghi.</td></tr></tbody>
           </table>
         </div>
-        <div class="database-pagination"><span id="database-page-status" aria-live="polite"></span><div><button id="database-previous" type="button" disabled data-i18n="databasePrevious">Previous</button><button id="database-next" type="button" disabled data-i18n="databaseNext">Next</button></div></div>
+        <div class="database-pagination"><span id="database-page-status" aria-live="polite"></span><div><button id="database-previous" type="button" disabled data-i18n="databasePrevious">Trước</button><button id="database-next" type="button" disabled data-i18n="databaseNext">Sau</button></div></div>
       </section>
       <section class="report-section" id="report-section" aria-labelledby="report-title">
         <div class="report-heading">
-          <div><span class="section-kicker" data-i18n="reportKicker">USER FEEDBACK</span><h2 id="report-title" data-i18n="reportTitle">Báo cáo kết quả cần xem xét</h2></div>
+          <div><span class="section-kicker" data-i18n="reportKicker">Ý KIẾN NGƯỜI DÙNG</span><h2 id="report-title" data-i18n="reportTitle">Báo cáo kết quả cần xem xét</h2></div>
           <span class="report-mark" aria-hidden="true">+</span>
         </div>
         <p class="report-intro" data-i18n="reportIntro">Thông tin được đóng gói thành tệp trên thiết bị của bạn. SafeWeb không tự gửi dữ liệu đi.</p>
@@ -198,24 +216,24 @@
           <div class="report-actions"><button class="analyze-button" type="submit" data-i18n="reportDownload">Tạo tệp báo cáo</button><a id="report-download-link" class="report-download-link" hidden></a><p id="report-status" role="status" aria-live="polite"></p></div>
         </form>
       </section>
-      <footer class="page-footer"><span data-i18n="footerResearch">SAFEWEB · EDUCATIONAL RESEARCH</span><span>SafeWeb v2.4.1</span><span data-i18n="footerNetwork">LOCAL CHECKS · LIVE CHECKS OPTIONAL</span></footer>
+      <footer class="page-footer"><span data-i18n="footerResearch">SAFEWEB · NGHIÊN CỨU GIÁO DỤC</span><span>SafeWeb v2.4.1</span><span data-i18n="footerNetwork">KIỂM TRA CỤC BỘ · KIỂM TRA TRỰC TUYẾN TÙY CHỌN</span></footer>
     </main>
 
     <dialog class="language-dialog" id="language-dialog" open aria-labelledby="language-title" aria-describedby="language-subtitle">
       <div class="language-dialog-heading">
-        <span class="section-kicker" data-i18n="languageKicker">LANGUAGE SETTINGS</span>
-        <h2 id="language-title" data-i18n="languageTitle">Choose your language</h2>
-        <p id="language-subtitle" data-i18n="languageSubtitle">Select your preferred language to continue.</p>
+        <span class="section-kicker" data-i18n="languageKicker">CÀI ĐẶT NGÔN NGỮ</span>
+        <h2 id="language-title" data-i18n="languageTitle">Chọn ngôn ngữ</h2>
+        <p id="language-subtitle" data-i18n="languageSubtitle">Chọn ngôn ngữ bạn muốn dùng để tiếp tục.</p>
       </div>
       <div class="language-options" id="language-options" role="radiogroup" aria-label="Select your preferred language" data-i18n-attr="aria-label:languageLegend">
-        <button class="language-option" type="button" role="radio" aria-checked="false" data-language="vi"><span class="language-flag" aria-hidden="true">🇻🇳</span><span lang="vi">Tiếng Việt</span></button>
-        <button class="language-option" type="button" role="radio" aria-checked="true" data-language="en"><span class="language-flag" aria-hidden="true">🇬🇧</span><span lang="en">English</span></button>
+        <button class="language-option" type="button" role="radio" aria-checked="true" data-language="vi"><span class="language-flag" aria-hidden="true">🇻🇳</span><span lang="vi">Tiếng Việt</span></button>
+        <button class="language-option" type="button" role="radio" aria-checked="false" data-language="en"><span class="language-flag" aria-hidden="true">🇬🇧</span><span lang="en">English</span></button>
         <button class="language-option" type="button" role="radio" aria-checked="false" data-language="fr"><span class="language-flag" aria-hidden="true">🇫🇷</span><span lang="fr">Français</span></button>
         <button class="language-option" type="button" role="radio" aria-checked="false" data-language="de"><span class="language-flag" aria-hidden="true">🇩🇪</span><span lang="de">Deutsch</span></button>
       </div>
       <div class="language-dialog-actions">
-        <button class="language-cancel" id="language-cancel" type="button" hidden data-i18n="languageCancel">Cancel</button>
-        <button class="language-confirm" id="language-confirm" type="button" data-i18n="languageConfirm">Continue</button>
+        <button class="language-cancel" id="language-cancel" type="button" hidden data-i18n="languageCancel">Hủy</button>
+        <button class="language-confirm" id="language-confirm" type="button" data-i18n="languageConfirm">Tiếp tục</button>
       </div>
     </dialog>
   </body>

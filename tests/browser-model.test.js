@@ -339,17 +339,103 @@ test("all four language dictionaries include local model states", () => {
   const context = { window: {} };
   const translationsPath = path.join(__dirname, "../web/static/translations.js");
   vm.runInNewContext(fs.readFileSync(translationsPath, "utf8"), context);
+  const dictionaries = context.window.safewebTranslations;
+  const flattenKeys = (dictionary, prefix = "") => Object.entries(dictionary).flatMap(([key, value]) => {
+    const name = prefix ? `${prefix}.${key}` : key;
+    return value && typeof value === "object" ? flattenKeys(value, name) : [name];
+  });
+  const englishKeys = flattenKeys(dictionaries.en).sort();
 
   for (const language of ["vi", "en", "fr", "de"]) {
-    assert.ok(context.window.safewebTranslations[language].modelReady);
-    assert.ok(context.window.safewebTranslations[language].modelLoading);
-    assert.ok(context.window.safewebTranslations[language].modelLoadFailed);
-    assert.ok(context.window.safewebTranslations[language].errorModelUnavailable);
+    const dictionary = dictionaries[language];
+    assert.ok(dictionary.modelReady);
+    assert.ok(dictionary.modelLoading);
+    assert.ok(dictionary.modelLoadFailed);
+    assert.ok(dictionary.errorModelUnavailable);
+    assert.deepEqual(flattenKeys(dictionary).sort(), englishKeys);
   }
+
+  const template = fs.readFileSync(path.join(__dirname, "../web/templates/index.html"), "utf8");
+  const referencedKeys = [...template.matchAll(/data-i18n(?:-attr)?="([^"]+)"/g)]
+    .flatMap(([, declaration]) => declaration.split(";").map((entry) => entry.split(":").at(-1).trim()));
+  const clientScript = fs.readFileSync(path.join(__dirname, "../web/static/script.js"), "utf8");
+  const dynamicKeys = [...clientScript.matchAll(/\btranslation\(["']([^"']+)["']/g)].map(([, key]) => key);
+  const dictionaryKeys = new Set(englishKeys);
+  referencedKeys.forEach((key) => assert.ok(dictionaryKeys.has(key), `Missing translation key: ${key}`));
+  dynamicKeys.forEach((key) => assert.ok(dictionaryKeys.has(key), `Missing dynamic translation key: ${key}`));
+  const resultStateKeys = [
+    "riskLevelUnknown",
+    "riskLevelLow",
+    "riskLevelCaution",
+    "riskLevelHigh",
+    "riskLevelVeryHigh",
+    "verdictLow",
+    "verdictCaution",
+    "verdictHigh",
+    "verdictVeryHigh",
+    "recommendationVeryHigh1",
+    "consensusBypassed",
+    "directPhishingTitle",
+    "signalObfuscation",
+    "features.phishvn_entropy",
+  ];
+  const valueAt = (dictionary, key) => key.split(".").reduce((value, part) => value?.[part], dictionary);
+  for (const key of resultStateKeys) {
+    const englishValue = valueAt(dictionaries.en, key);
+    for (const language of ["vi", "fr", "de"]) {
+      const localizedValue = valueAt(dictionaries[language], key);
+      assert.equal(typeof localizedValue, "string", `${language}.${key} must be a translated string`);
+      assert.ok(localizedValue.trim(), `${language}.${key} must not be empty`);
+      assert.notEqual(localizedValue, englishValue, `${language}.${key} must not fall back to English`);
+    }
+  }
+  for (const language of ["vi", "en", "fr", "de"]) {
+    assert.match(dictionaries[language].signalObfuscation, /\{count\}/);
+    assert.match(dictionaries[language].consensusBypassedBrandRule, /\{brand\}/);
+  }
+  assert.equal(dictionaries.vi.heroTitle, "Phân tích bảo mật chuyên sâu cho mọi đường dẫn");
+  assert.equal(dictionaries.en.heroTitle, "In-Depth Security Analysis for Web Links");
+  assert.equal(dictionaries.fr.heroTitle, "Analyse de sécurité approfondie pour les liens Web");
+  assert.equal(dictionaries.de.heroTitle, "Tiefgehende Sicherheitsanalyse für Web-Links");
 });
 
-test("backend report text is translated using the selected locale", () => {
-  const context = { window: { safewebTranslations: {} }, document: {}, localStorage: {} };
+test("result states, recommendations, and .gov.vn model bypass render in all languages", async () => {
+  const context = {
+    window: {
+      safewebTranslations: {},
+      SafewebBrowserModel: {
+        getPhishingExamples: () => [],
+        classifyUrl: () => null,
+        setDatabaseRecords() {},
+      },
+    },
+    document: {},
+    localStorage: {},
+    URL,
+    Option: class {
+      constructor(text, value) { this.textContent = text; this.value = value; }
+    },
+    fetch: async () => ({
+      ok: true,
+      json: async () => ({
+        records: [[
+          "https://bank.example/login",
+          0,
+          "2025-01-02",
+          "gold",
+          "banking_finance",
+          "Custom domain",
+          "Example Bank",
+          23,
+          0,
+          0,
+          0,
+          2.5,
+        ]],
+        categories: { banking_finance: "Banking and finance" },
+      }),
+    }),
+  };
   const elementMap = new Map();
   const makeElement = () => ({
     textContent: "",
@@ -361,26 +447,40 @@ test("backend report text is translated using the selected locale", () => {
       add() {},
     },
     items: [],
-    replaceChildren() { this.items = []; },
-    append(item) { this.items.push(item); },
-    addEventListener() {},
+    listeners: {},
+    value: "",
+    replaceChildren(...items) { this.items = items; },
+    append(...items) { this.items.push(...items); },
+    addEventListener(type, callback) { this.listeners[type] = callback; },
+    add(option) { this.items.push(option); },
     setAttribute() {},
     removeAttribute() {},
     showModal() {},
     hidden: false,
+    scrollIntoView() {},
+    focus() {},
+    requestSubmit() {},
   });
 
   context.document.querySelector = (selector) => {
-    if (!elementMap.has(selector)) elementMap.set(selector, makeElement());
+    if (!elementMap.has(selector)) {
+      const element = makeElement();
+      if (selector === "#database-explorer") element.hidden = true;
+      if (["#database-label-filter", "#database-category-filter", "#database-tier-filter"].includes(selector)) {
+        element.value = "all";
+      }
+      elementMap.set(selector, element);
+    }
     return elementMap.get(selector);
   };
-  const languageOption = () => ({
-    dataset: { language: "en" },
-    addEventListener() {},
+  const languageOption = (language) => ({
+    dataset: { language },
+    listeners: {},
+    addEventListener(type, callback) { this.listeners[type] = callback; },
     focus() {},
     setAttribute() {},
   });
-  const options = [languageOption(), languageOption(), languageOption(), languageOption()];
+  const options = ["vi", "en", "fr", "de"].map(languageOption);
   context.document.querySelectorAll = (selector) => {
     if (selector === ".language-option") return options;
     if (selector === "button:not([hidden]):not([disabled])") return options;
@@ -388,6 +488,7 @@ test("backend report text is translated using the selected locale", () => {
     return [];
   };
   context.document.documentElement = { lang: "en", classList: { remove() {} } };
+  context.document.baseURI = "https://safeweb.test/";
   context.document.body = makeElement();
   context.document.body.dataset = {};
   context.document.body.classList = { add() {}, remove() {} };
@@ -397,10 +498,13 @@ test("backend report text is translated using the selected locale", () => {
     textContent: "",
     style: {},
     classList: { toggle() {} },
-    append() {},
-    appendChild() {},
-    replaceChildren() {},
-    setAttribute() {},
+    items: [],
+    listeners: {},
+    append(...items) { this.items.push(...items); },
+    appendChild(item) { this.items.push(item); },
+    replaceChildren(...items) { this.items = items; },
+    addEventListener(type, callback) { this.listeners[type] = callback; },
+    setAttribute(name, value) { this[name] = value; },
     focus() {},
   });
   context.requestAnimationFrame = (callback) => callback();
@@ -408,7 +512,8 @@ test("backend report text is translated using the selected locale", () => {
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../web/static/translations.js"), "utf8"), context);
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "../web/static/script.js"), "utf8"), context);
 
-  context.renderResult({
+  const dictionaries = context.window.safewebTranslations;
+  const assessment = {
     risk_level: "HIGH",
     risk_score: 80,
     verdict: "This URL shows multiple suspicious characteristics.",
@@ -422,16 +527,62 @@ test("backend report text is translated using the selected locale", () => {
     explanations: [],
     features: {},
     prediction: "phishing",
-  }, "fr");
+  };
+  for (const language of ["vi", "en", "fr", "de"]) {
+    context.renderResult(assessment, language);
+    const dictionary = dictionaries[language];
+    assert.equal(elementMap.get("#result-title").textContent, dictionary.verdictHigh);
+    assert.equal(elementMap.get("#risk-verdict").textContent, dictionary.verdictHigh);
+    assert.equal(
+      elementMap.get("#risk-badge").textContent,
+      `${dictionary.riskLevelHigh} · 80% ${dictionary.riskScoreLabel}`,
+    );
+    assert.equal(elementMap.get("#result-limitations").textContent, dictionary.disclaimer);
+    assert.deepEqual(
+      elementMap.get("#recommendation-list").items.map((item) => item.textContent),
+      [dictionary.recommendationHigh1, dictionary.recommendationHigh2],
+    );
+  }
 
-  assert.equal(elementMap.get("#result-title").textContent, "Cette URL présente plusieurs caractéristiques suspectes.");
-  assert.equal(elementMap.get("#risk-verdict").textContent, "Cette URL présente plusieurs caractéristiques suspectes.");
-  assert.equal(elementMap.get("#result-limitations").textContent, "Le niveau de risque est un avertissement du modèle, pas une preuve qu’une URL est sûre ou malveillante.");
-  assert.deepEqual(
-    elementMap.get("#recommendation-list").items.map((item) => item.textContent),
-    [
-      "Ne vous connectez pas et ne fournissez pas d’informations personnelles sur cette URL.",
-      "Vérifiez le site via un canal officiel avant de lui faire confiance.",
-    ],
-  );
+  const governmentAssessment = browserModel.assessUrl("https://dichvucong.gov.vn/portal");
+  assert.equal(governmentAssessment.risk_score, 0);
+  assert.equal(governmentAssessment.model_consensus_bypassed, true);
+  for (const language of ["vi", "en", "fr", "de"]) {
+    context.renderResult(governmentAssessment, language);
+    const dictionary = dictionaries[language];
+    assert.equal(
+      elementMap.get("#ensemble-summary").textContent,
+      dictionary.consensusBypassed,
+    );
+    assert.equal(elementMap.get("#identity-government").textContent, dictionary.identityOfficialGovernment);
+    assert.equal(elementMap.get("#identity-domain").textContent, "dichvucong.gov.vn");
+    const modelCards = elementMap.get("#model-consensus").items;
+    assert.equal(modelCards.length, 3);
+    assert.deepEqual(
+      modelCards.map((card) => card.items[2]?.textContent),
+      Array(3).fill(`0% ${dictionary.phishingRisk}`),
+    );
+  }
+
+  await elementMap.get("#database-toggle").listeners.click();
+  const databaseRows = elementMap.get("#database-rows");
+  for (const language of ["vi", "en", "fr", "de"]) {
+    options.find((option) => option.dataset.language === language).listeners.click();
+    const dictionary = dictionaries[language];
+    assert.deepEqual(
+      elementMap.get("#database-stats").items.map((stat) => stat.items[1].textContent),
+      [
+        dictionary.databaseStatTotal,
+        dictionary.databaseStatPhishing,
+        dictionary.databaseStatBenign,
+        dictionary.databaseStatCategories,
+        dictionary.databaseStatBrands,
+      ],
+    );
+    const row = databaseRows.items[0];
+    assert.equal(row.items[1].textContent, dictionary.databaseFilterBenign);
+    assert.equal(row.items[3].textContent, dictionary.tierGold);
+    assert.equal(row.items[4].textContent, `${dictionary.categories.banking_finance} · Example Bank`);
+    assert.equal(elementMap.get("#database-category-filter").items[1].textContent, dictionary.categories.banking_finance);
+  }
 });

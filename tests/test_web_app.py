@@ -32,7 +32,7 @@ def test_home_page_renders_model_state() -> None:
     assert b"safeweb-api-url" not in response.data
     assert b"model-data.js" not in response.data
     assert b"modelLoadFailed" in client.get("/static/script.js").data
-    assert b"Check URL Safety" in response.data
+    assert "Phân tích bảo mật chuyên sâu cho mọi đường dẫn".encode() in response.data
     assert b"URL signal analysis" not in response.data
 
 
