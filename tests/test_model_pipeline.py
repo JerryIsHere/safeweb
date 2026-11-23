@@ -54,5 +54,5 @@ def test_train_predict_and_evaluate_generate_artifacts(tmp_path) -> None:
     assert (report_path / "error_analysis.csv").exists()
 
     client = create_app(model_path=model_path).test_client()
-    assert b"Check URL Safety" in client.get("/").data
+    assert "Phân tích bảo mật chuyên sâu cho mọi đường dẫn".encode() in client.get("/").data
     assert client.post("/predict", json={"url": "https://sample.example/login"}).status_code == 200
